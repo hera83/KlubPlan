@@ -8,6 +8,12 @@
 
 /* ── CSS Custom Properties ───────────────────────────────────── */
 :root {
+  /* Native kontroller (dato-vælger, spinner-knapper, scrollbars m.m.) følger
+     ellers OS/browser-præferencen frem for [data-theme] — uden dette matcher
+     f.eks. kalender-ikonet i <input type="date"> ikke det aktive tema og kan
+     blive usynligt (mørkt ikon på mørk baggrund). */
+  color-scheme: dark;
+
   /* Palette */
   --clr-bg:           #0d1117;
   --clr-surface:      #161b22;
@@ -60,6 +66,8 @@
    (JS resolver "system" til "light"/"dark" inden CSS renderes)
    ════════════════════════════════════════════════════════════ */
 [data-theme="light"] {
+  color-scheme: light;
+
   --clr-bg:           #f0f2f5;
   --clr-surface:      #ffffff;
   --clr-surface-2:    #e8ecf1;
@@ -745,7 +753,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--clr-border);
 }
-.table tbody tr:hover > * { background: rgba(255,255,255,.03); }
+.table tbody tr:hover > * { background: var(--clr-surface-2); }
 .table tbody td { color: var(--clr-text); }
 
 /* ── Pagination ── */
@@ -755,7 +763,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
   color: var(--clr-text);
 }
 .pagination .page-link:hover {
-  background: rgba(255,255,255,.06);
+  background: color-mix(in srgb, var(--clr-surface-2), var(--clr-text) 10%);
   border-color: var(--clr-border-hover);
   color: var(--clr-text);
 }
@@ -787,7 +795,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .nav-tabs .nav-link:hover {
   color: var(--clr-text);
   border-color: var(--clr-border) var(--clr-border) transparent;
-  background: rgba(255,255,255,.04);
+  background: var(--clr-surface-2);
 }
 .nav-tabs .nav-link.active {
   color: var(--clr-text);
@@ -989,6 +997,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
 /* ── Misc utilities ── */
 .text-muted { color: var(--clr-text-muted) !important; }
 .form-text { color: var(--clr-text-muted); }
+.border { border: 1px solid var(--clr-border) !important; }
 .border-top { border-top: 1px solid var(--clr-border) !important; }
 .border-bottom { border-bottom: 1px solid var(--clr-border) !important; }
 
@@ -1446,7 +1455,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
   font-size: 0.875rem;
   cursor: pointer;
 }
-.form-builder-type-picker-item:hover { background: rgba(255,255,255,.06); }
+.form-builder-type-picker-item:hover { background: var(--clr-surface-2); }
 .form-builder-type-picker-item i { color: var(--clr-text-muted); width: 1.1rem; text-align: center; }
 
 /* ── Udfyldelse ── */

@@ -369,7 +369,7 @@ namespace web.Repositories.People
 
         private static string ToTitleCaseName(string name)
         {
-            var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var words = name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < words.Length; i++)
             {
                 words[i] = DanishCulture.TextInfo.ToTitleCase(words[i].ToLower(DanishCulture));
