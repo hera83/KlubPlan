@@ -1,0 +1,111 @@
+@model web.ViewModels.FormFilterViewModel
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Titel</th>
+                <th>Felter</th>
+                <th>Svar</th>
+                <th>Status</th>
+                <th>Oprettet</th>
+                <th class="text-end">Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Forms.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="text-muted">Ingen formularer fundet.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var form in Model.Forms)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@form.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(form.Description))
+                            {
+                                <div class="text-muted small">@form.Description</div>
+                            }
+                        </td>
+                        <td>@form.FieldCount</td>
+                        <td>@form.ResponseCount</td>
+                        <td>
+                            @if (form.IsAcceptingResponses)
+                            {
+                                <span class="badge-ok">Åben</span>
+                            }
+                            else
+                            {
+                                <span class="badge-warn">Lukket</span>
+                            }
+                            @if (form.HasCurrentUserSubmitted)
+                            {
+                                <span class="badge-info ms-1">Besvaret</span>
+                            }
+                        </td>
+                        <td>@form.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                @if (form.IsAcceptingResponses)
+                                {
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Fill" asp-route-id="@form.Id" title="Udfyld" aria-label="Udfyld">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                }
+                                @if (Model.IsAdmin)
+                                {
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Responses" asp-route-id="@form.Id" title="Se svar" aria-label="Se svar">
+                                        <i class="bi bi-bar-chart-line"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-toggle-accepting
+                                            data-url="@Url.Action("ToggleAcceptingResponses", new { id = form.Id })"
+                                            title="@(form.IsAcceptingResponses ? "Luk for svar" : "Åbn for svar")"
+                                            aria-label="@(form.IsAcceptingResponses ? "Luk for svar" : "Åbn for svar")">
+                                        <i class="bi @(form.IsAcceptingResponses ? "bi-lock" : "bi-unlock")"></i>
+                                    </button>
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Edit" asp-route-id="@form.Id" title="Rediger" aria-label="Rediger">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteFormModal"
+                                            data-id="@form.Id" data-title="@form.Title" title="Slet" aria-label="Slet">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel
+        {
+            Page = Model.Page,
+            TotalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)
+        })
+    </div>
+</div>

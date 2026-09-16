@@ -1,0 +1,79 @@
+@model web.ViewModels.FormBuilderViewModel
+@{
+    ViewData["Title"] = Model.Id > 0 ? "Rediger formular" : "Opret formular";
+    var seed = new
+    {
+        Fields = Model.Fields
+            .OrderBy(f => f.Order)
+            .Select(f => new
+            {
+                f.Id,
+                f.Label,
+                f.HelpText,
+                FieldType = f.FieldType.ToString(),
+                f.IsRequired,
+                f.Order,
+                f.OptionsJson
+            })
+    };
+}
+
+<div class="form-builder-page">
+    <form asp-action="Save" method="post" id="formBuilderForm" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div id="fieldsHiddenInputs"></div>
+
+        <div class="form-builder-topbar">
+            <a asp-action="Index" class="btn btn-secondary btn-icon" title="Tilbage til formularer" aria-label="Tilbage til formularer">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+
+            <div class="form-check form-switch form-builder-accepting-toggle" title="Om formularen tager imod svar lige nu">
+                <input class="form-check-input" type="checkbox" asp-for="IsAcceptingResponses" id="isAcceptingResponses" />
+                <label class="form-check-label" for="isAcceptingResponses">Tager imod svar</label>
+            </div>
+
+            <div class="form-builder-topbar-spacer"></div>
+
+            <button type="submit" class="btn btn-primary" id="saveFormBtn">
+                <i class="bi bi-floppy2 me-1"></i> Gem
+            </button>
+        </div>
+
+        <div id="builderAlert" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="form-builder-canvas">
+            <div class="form-builder-titlecard">
+                <input type="text" class="form-builder-title-input" asp-for="Title" placeholder="Unavngiven formular" autocomplete="off" maxlength="200" />
+                <textarea class="form-builder-desc-input" asp-for="Description" placeholder="Beskrivelse (valgfri)" rows="1" maxlength="2000"></textarea>
+            </div>
+
+            <div id="fieldCards" class="form-field-cards"></div>
+
+            <div class="form-builder-add-wrap">
+                <button type="button" class="btn btn-outline-secondary form-builder-add-btn" id="addFieldBtn">
+                    <i class="bi bi-plus-lg me-1"></i> Tilføj spørgsmål
+                </button>
+                <div class="form-builder-type-picker d-none" id="typePicker"></div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script id="formBuilderSeed" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(seed))</script>
+<script src="~/js/forms-builder.js" asp-append-version="true"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        window.FvFormsBuilder?.init({
+            formEl: document.getElementById('formBuilderForm'),
+            cardsContainer: document.getElementById('fieldCards'),
+            hiddenContainer: document.getElementById('fieldsHiddenInputs'),
+            addFieldBtn: document.getElementById('addFieldBtn'),
+            typePicker: document.getElementById('typePicker'),
+            alertEl: document.getElementById('builderAlert'),
+            titleInput: document.querySelector('.form-builder-title-input'),
+            seed: JSON.parse(document.getElementById('formBuilderSeed').textContent)
+        });
+    });
+</script>

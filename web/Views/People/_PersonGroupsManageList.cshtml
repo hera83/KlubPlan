@@ -1,0 +1,48 @@
+@model List<web.ViewModels.PersonGroupViewModel>
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped align-middle mb-0">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>Antal personer</th>
+                <th class="text-end">Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr>
+                    <td colspan="3" class="text-muted">Ingen grupper oprettet endnu.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var group in Model)
+                {
+                    <tr>
+                        <td>@group.Name</td>
+                        <td>@group.MemberCount</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#editPersonGroupModal"
+                                        data-id="@group.Id" data-name="@group.Name" title="Omdøb" aria-label="Omdøb">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-group-import
+                                        data-id="@group.Id" data-name="@group.Name" title="Importér personer" aria-label="Importér personer">
+                                    <i class="bi bi-upload"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deletePersonGroupModal"
+                                        data-id="@group.Id" data-name="@group.Name"
+                                        data-membercount="@group.MemberCount" title="Slet" aria-label="Slet">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

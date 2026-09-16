@@ -1,0 +1,140 @@
+@model web.ViewModels.FormFillViewModel
+@using web.Constants
+@{
+    ViewData["Title"] = Model.Title;
+    var fieldErrors = ViewBag.FieldErrors as Dictionary<int, string>;
+}
+
+<div class="form-fill-page">
+    <a asp-action="Index" class="btn btn-secondary btn-icon mb-3" title="Tilbage til formularer" aria-label="Tilbage til formularer">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+
+    @if (!Model.IsAcceptingResponses)
+    {
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-lock" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
+                <h2 class="mt-3">@Model.Title</h2>
+                <p class="text-muted">Denne formular tager ikke længere imod svar.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h1>@Model.Title</h1>
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="text-muted">@Model.Description</p>
+                }
+
+                <form asp-action="Submit" asp-route-id="@Model.FormId" method="post" class="mt-3">
+                    @Html.AntiForgeryToken()
+                    @{ var i = 0; }
+                    @foreach (var field in Model.Fields)
+                    {
+                        if (field.FieldType == FormFieldType.SectionHeading)
+                        {
+                            <div class="form-fill-section">
+                                @if (!string.IsNullOrWhiteSpace(field.Label))
+                                {
+                                    <h5>@field.Label</h5>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                {
+                                    <p class="text-muted small form-fill-section-text">@field.HelpText</p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            var hasError = fieldErrors != null && fieldErrors.ContainsKey(field.FormFieldId);
+                            var answerIndex = i;
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    @field.Label
+                                    @if (field.IsRequired)
+                                    {
+                                        <span class="form-fill-required">*</span>
+                                    }
+                                </label>
+                                @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                {
+                                    <div class="form-text mb-1">@field.HelpText</div>
+                                }
+                                <input type="hidden" name="Answers[@answerIndex].FormFieldId" value="@field.FormFieldId" />
+
+                                @switch (field.FieldType)
+                                {
+                                    case FormFieldType.LongText:
+                                        <textarea class="form-control @(hasError ? "input-validation-error" : "")" rows="3" name="Answers[@answerIndex].Value" required="@field.IsRequired">@field.SubmittedValue</textarea>
+                                        break;
+                                    case FormFieldType.Number:
+                                        <input type="number" class="form-control @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                        break;
+                                    case FormFieldType.Email:
+                                        <input type="email" class="form-control @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                        break;
+                                    case FormFieldType.Phone:
+                                        <input type="tel" class="form-control @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                        break;
+                                    case FormFieldType.Date:
+                                        <input type="date" class="form-control @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                        break;
+                                    case FormFieldType.Dropdown:
+                                        <select class="form-select @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" required="@field.IsRequired">
+                                            <option value="">Vælg...</option>
+                                            @foreach (var option in field.Options)
+                                            {
+                                                <option value="@option" selected="@(field.SubmittedValue == option)">@option</option>
+                                            }
+                                        </select>
+                                        break;
+                                    case FormFieldType.MultipleChoice:
+                                        <div>
+                                            @foreach (var option in field.Options)
+                                            {
+                                                var optionId = $"f{field.FormFieldId}_{option.GetHashCode()}";
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="Answers[@answerIndex].Value" id="@optionId" value="@option" required="@field.IsRequired" checked="@(field.SubmittedValue == option)" />
+                                                    <label class="form-check-label" for="@optionId">@option</label>
+                                                </div>
+                                            }
+                                        </div>
+                                        break;
+                                    case FormFieldType.Checkboxes:
+                                        <div>
+                                            @foreach (var option in field.Options)
+                                            {
+                                                var optionId = $"f{field.FormFieldId}_{option.GetHashCode()}";
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="Answers[@answerIndex].Values" id="@optionId" value="@option" checked="@field.SubmittedValues.Contains(option)" />
+                                                    <label class="form-check-label" for="@optionId">@option</label>
+                                                </div>
+                                            }
+                                        </div>
+                                        break;
+                                    default:
+                                        <input type="text" class="form-control @(hasError ? "input-validation-error" : "")" name="Answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                        break;
+                                }
+
+                                @if (hasError)
+                                {
+                                    <div class="field-validation-error mt-1">@fieldErrors![field.FormFieldId]</div>
+                                }
+                            </div>
+                            i++;
+                        }
+                    }
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-1"></i> Send svar
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,616 @@
+@model web.ViewModels.PersonFilterViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+
+<div>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-people me-2"></i>Personer</h1>
+            <p>Personregister med grupper og forældre-/værgeoplysninger</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="peopleTableRoot" data-table-endpoint="@Url.Action("PeopleTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <button class="btn btn-icon btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#peopleFilterPanel" title="Filtre" aria-label="Filtre">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg navn, UID, mobil eller mail..." data-table-search autocomplete="off" value="@Model.SearchText" />
+                        </div>
+                    </div>
+                    <div class="table-toolbar-end">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#manageGroupsModal" title="Grupper" aria-label="Grupper">
+                            <i class="bi bi-tags"></i> Grupper
+                        </button>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createPersonModal" title="Opret person" aria-label="Opret person">
+                            <i class="bi bi-person-plus"></i> Opret person
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse mb-3" id="peopleFilterPanel">
+                    <div class="table-filter-panel" data-table-filter-panel>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Gruppe</label>
+                                <select class="form-select" name="GroupId" id="peopleFilterGroup">
+                                    <option value="">Alle</option>
+                                    @foreach (var group in Model.Groups)
+                                    {
+                                        <option value="@group.Id" selected="@(Model.GroupId == group.Id)">@group.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Alder</label>
+                                <select class="form-select" name="AgeGroup">
+                                    <option value="">Alle</option>
+                                    <option value="under18" selected="@(Model.AgeGroup == "under18")">Under 18 år</option>
+                                    <option value="over18" selected="@(Model.AgeGroup == "over18")">18 år eller derover</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Værgeoplysninger</label>
+                                <select class="form-select" name="HasGuardian">
+                                    <option value="">Alle</option>
+                                    <option value="true" selected="@(Model.HasGuardian == true)">Har værge registreret</option>
+                                    <option value="false" selected="@(Model.HasGuardian == false)">Ingen værge registreret</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end gap-2">
+                                <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
+                                    <i class="bi bi-floppy2"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-icon" data-table-filter-reset title="Nulstil filtre" aria-label="Nulstil filtre">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_PeopleTableBody", Model)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skabelon til en værge-række (klones af JS) -->
+<template id="guardianRowTemplate">
+    <div class="row g-2 align-items-start mb-2 guardian-row">
+        <div class="col-md-4">
+            <input type="text" class="form-control guardian-name" placeholder="Navn" required maxlength="200" />
+        </div>
+        <div class="col-md-3">
+            <input type="tel" class="form-control guardian-mobile" placeholder="Mobil" maxlength="20" />
+        </div>
+        <div class="col-md-4">
+            <input type="email" class="form-control guardian-email" placeholder="Mail" maxlength="256" />
+        </div>
+        <div class="col-md-1 d-flex">
+            <button type="button" class="btn btn-outline-danger btn-icon guardian-remove" title="Fjern værge" aria-label="Fjern værge">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- Opret person modal -->
+<div class="modal fade" id="createPersonModal" tabindex="-1" aria-labelledby="createPersonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="CreatePerson" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createPersonModalLabel"><i class="bi bi-person-plus me-2"></i>Opret person</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">UID</label>
+                            <input name="Uid" class="form-control" maxlength="50" placeholder="Efterlades tomt for automatisk tildeling" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Navn</label>
+                            <input name="Name" class="form-control" required maxlength="200" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fødselsdag</label>
+                            <input name="BirthDate" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mobil</label>
+                            <input name="Mobile" type="tel" class="form-control" maxlength="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mail</label>
+                            <input name="Email" type="email" class="form-control" maxlength="256" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Grupper</label>
+                            <div class="border rounded p-2 people-group-checkboxes" id="createPersonGroups" style="max-height:150px;overflow-y:auto;">
+                                @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "createPersonGroups" })
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <label class="form-label mb-0">Forældre / værge</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary guardian-add" data-target="createPersonGuardians">
+                                    <i class="bi bi-plus-lg me-1"></i> Tilføj værge
+                                </button>
+                            </div>
+                            <div id="createPersonGuardians" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy2 me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Rediger person modal -->
+<div class="modal fade" id="editPersonModal" tabindex="-1" aria-labelledby="editPersonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="EditPerson" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editPersonId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPersonModalLabel"><i class="bi bi-pencil me-2"></i>Rediger person</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">UID</label>
+                            <input name="Uid" id="editPersonUid" class="form-control" maxlength="50" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Navn</label>
+                            <input name="Name" id="editPersonName" class="form-control" required maxlength="200" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fødselsdag</label>
+                            <input name="BirthDate" id="editPersonBirthDate" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mobil</label>
+                            <input name="Mobile" id="editPersonMobile" type="tel" class="form-control" maxlength="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mail</label>
+                            <input name="Email" id="editPersonEmail" type="email" class="form-control" maxlength="256" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Grupper</label>
+                            <div class="border rounded p-2 people-group-checkboxes" id="editPersonGroups" style="max-height:150px;overflow-y:auto;">
+                                @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "editPersonGroups" })
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <label class="form-label mb-0">Forældre / værge</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary guardian-add" data-target="editPersonGuardians">
+                                    <i class="bi bi-plus-lg me-1"></i> Tilføj værge
+                                </button>
+                            </div>
+                            <div id="editPersonGuardians" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy2 me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Slet person modal -->
+<div class="modal fade" id="deletePersonModal" tabindex="-1" aria-labelledby="deletePersonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deletePersonModalLabel"><i class="bi bi-trash me-2"></i>Slet person</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette personen <strong id="deletePersonName"></strong>? Eventuelle registrerede
+                værgeoplysninger slettes samtidig. Denne handling kan ikke fortrydes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="DeletePerson" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deletePersonId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Administrer grupper modal -->
+<div class="modal fade" id="manageGroupsModal" tabindex="-1" aria-labelledby="manageGroupsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manageGroupsModalLabel"><i class="bi bi-tags me-2"></i>Grupper</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div id="groupsListView">
+                    <form id="createPersonGroupForm" asp-action="CreatePersonGroup" method="post" class="d-flex gap-2 mb-3">
+                        @Html.AntiForgeryToken()
+                        <input name="Name" class="form-control" placeholder="Navn på ny gruppe" required maxlength="100" />
+                        <button type="submit" class="btn btn-primary text-nowrap">
+                            <i class="bi bi-plus-lg me-1"></i> Opret
+                        </button>
+                    </form>
+                    <div id="personGroupsManageList">
+                        @await Html.PartialAsync("_PersonGroupsManageList", ViewData["Groups"] as List<web.ViewModels.PersonGroupViewModel> ?? new())
+                    </div>
+                </div>
+                <div id="groupsImportView" class="d-none">
+                    <form id="importPersonsToGroupForm" asp-action="ImportPersonsToGroup" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="GroupId" id="importGroupId" />
+                        <p class="mb-2">Importerer personer til gruppen <strong id="importGroupName"></strong>.</p>
+                        <div id="importErrors" class="alert alert-warning d-none" role="alert"></div>
+                        <div class="mb-3">
+                            <label class="form-label">Navne (ét navn pr. linje)</label>
+                            <textarea name="RawNames" id="importRawNames" class="form-control" rows="10" required placeholder="Navn 1&#10;Navn 2&#10;Navn 3"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" id="importCancelBtn">
+                                <i class="bi bi-x-lg me-1"></i> Annuller
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload me-1"></i> Importér
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Omdøb gruppe modal -->
+<div class="modal fade" id="editPersonGroupModal" tabindex="-1" aria-labelledby="editPersonGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="EditPersonGroup" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editPersonGroupId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPersonGroupModalLabel"><i class="bi bi-pencil me-2"></i>Omdøb gruppe</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Navn</label>
+                    <input name="Name" id="editPersonGroupName" class="form-control" required maxlength="100" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy2 me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Slet gruppe modal -->
+<div class="modal fade" id="deletePersonGroupModal" tabindex="-1" aria-labelledby="deletePersonGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deletePersonGroupModalLabel"><i class="bi bi-trash me-2"></i>Slet gruppe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette gruppen <strong id="deletePersonGroupName"></strong>?
+                <span id="deletePersonGroupMemberWarning"></span>
+                Personerne i gruppen bliver <strong>ikke</strong> slettet, de mister blot denne gruppetilknytning.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="DeletePersonGroup" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deletePersonGroupId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const peopleRoot = document.getElementById('peopleTableRoot');
+        const guardianTemplate = document.getElementById('guardianRowTemplate');
+
+        // ─── AJAX-formularer (opret/rediger/slet) ──────────────────────────────
+        const handleAjaxSubmit = (form, modalEl, onSuccess) => {
+            if (!form) return;
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+                const data = await window.FvForm.submit(form);
+                if (submitBtn) submitBtn.disabled = false;
+                if (data.success) {
+                    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                    form.reset();
+                    onSuccess?.();
+                }
+            });
+        };
+
+        // ─── Værge-rækker (dynamisk liste) ─────────────────────────────────────
+        const addGuardianRow = (containerId, guardian) => {
+            const container = document.getElementById(containerId);
+            if (!container || !guardianTemplate) return;
+
+            const index = container.querySelectorAll('.guardian-row').length;
+            const fragment = guardianTemplate.content.cloneNode(true);
+            const row = fragment.querySelector('.guardian-row');
+
+            const nameInput = row.querySelector('.guardian-name');
+            const mobileInput = row.querySelector('.guardian-mobile');
+            const emailInput = row.querySelector('.guardian-email');
+
+            nameInput.name = `Guardians[${index}].Name`;
+            mobileInput.name = `Guardians[${index}].Mobile`;
+            emailInput.name = `Guardians[${index}].Email`;
+
+            if (guardian) {
+                nameInput.value = guardian.name || '';
+                mobileInput.value = guardian.mobile || '';
+                emailInput.value = guardian.email || '';
+            }
+
+            row.querySelector('.guardian-remove').addEventListener('click', () => {
+                row.remove();
+                reindexGuardianRows(containerId);
+            });
+
+            container.appendChild(row);
+        };
+
+        const reindexGuardianRows = (containerId) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.querySelectorAll('.guardian-row').forEach((row, index) => {
+                row.querySelector('.guardian-name').name = `Guardians[${index}].Name`;
+                row.querySelector('.guardian-mobile').name = `Guardians[${index}].Mobile`;
+                row.querySelector('.guardian-email').name = `Guardians[${index}].Email`;
+            });
+        };
+
+        document.querySelectorAll('.guardian-add').forEach((btn) => {
+            btn.addEventListener('click', () => addGuardianRow(btn.dataset.target));
+        });
+
+        // ─── Opret person ───────────────────────────────────────────────────────
+        const createPersonModal = document.getElementById('createPersonModal');
+        handleAjaxSubmit(createPersonModal?.querySelector('form'), createPersonModal, () => window.FvDataTable?.reload(peopleRoot));
+        createPersonModal?.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('createPersonGuardians').innerHTML = '';
+            createPersonModal.querySelectorAll('.people-group-checkboxes input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+        });
+
+        // ─── Rediger person ─────────────────────────────────────────────────────
+        const editPersonModal = document.getElementById('editPersonModal');
+        handleAjaxSubmit(editPersonModal?.querySelector('form'), editPersonModal, () => window.FvDataTable?.reload(peopleRoot));
+        editPersonModal?.addEventListener('show.bs.modal', async (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            const id = btn.dataset.id;
+
+            document.getElementById('editPersonId').value = id;
+            document.getElementById('editPersonGuardians').innerHTML = '';
+            editPersonModal.querySelectorAll('.people-group-checkboxes input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+
+            const res = await fetch(`@Url.Action("PersonDetails")?id=${id}`, { headers: { 'X-Requested-With': 'fetch' } });
+            if (!res.ok) return;
+            const person = await res.json();
+
+            document.getElementById('editPersonUid').value = person.uid || '';
+            document.getElementById('editPersonName').value = person.name || '';
+            document.getElementById('editPersonBirthDate').value = person.birthDate || '';
+            document.getElementById('editPersonMobile').value = person.mobile || '';
+            document.getElementById('editPersonEmail').value = person.email || '';
+
+            (person.groupIds || []).forEach((groupId) => {
+                const checkbox = editPersonModal.querySelector(`.people-group-checkboxes input[value="${groupId}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+
+            (person.guardians || []).forEach((guardian) => addGuardianRow('editPersonGuardians', guardian));
+        });
+
+        // ─── Slet person ────────────────────────────────────────────────────────
+        const deletePersonModal = document.getElementById('deletePersonModal');
+        handleAjaxSubmit(deletePersonModal?.querySelector('form'), deletePersonModal, () => window.FvDataTable?.reload(peopleRoot));
+        deletePersonModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('deletePersonId').value = btn.dataset.id;
+            document.getElementById('deletePersonName').textContent = btn.dataset.name;
+        });
+
+        // ─── Grupper: genindlæsning efter oprettelse/omdøbning/sletning ───────────
+        const refreshGroupsUi = async () => {
+            const listRes = await fetch('@Url.Action("GroupsManageList")', { headers: { 'X-Requested-With': 'fetch' } });
+            if (listRes.ok) {
+                document.getElementById('personGroupsManageList').innerHTML = await listRes.text();
+            }
+
+            const optionsRes = await fetch('@Url.Action("GroupOptionsJson")', { headers: { 'X-Requested-With': 'fetch' } });
+            if (!optionsRes.ok) return;
+            const groups = await optionsRes.json();
+
+            // Filter-dropdown
+            const filterSelect = document.getElementById('peopleFilterGroup');
+            if (filterSelect) {
+                const current = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">Alle</option>' +
+                    groups.map((g) => `<option value="${g.id}">${g.name}</option>`).join('');
+                filterSelect.value = groups.some((g) => String(g.id) === current) ? current : '';
+            }
+
+            // Checkbokse i opret/rediger-formularerne (bevar markering hvor gruppen stadig findes)
+            ['createPersonGroups', 'editPersonGroups'].forEach((containerId) => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                const checked = new Set(Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value));
+                container.innerHTML = groups.map((g) => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="GroupIds" value="${g.id}" id="${containerId}_${g.id}" ${checked.has(String(g.id)) ? 'checked' : ''} />
+                        <label class="form-check-label" for="${containerId}_${g.id}">${g.name}</label>
+                    </div>`).join('') || '<p class="text-muted mb-0">Ingen grupper oprettet endnu.</p>';
+            });
+
+            window.FvDataTable?.reload(peopleRoot);
+        };
+
+        // ─── Grupper: import af personer via tekstliste ────────────────────────
+        const groupsListView = document.getElementById('groupsListView');
+        const groupsImportView = document.getElementById('groupsImportView');
+        const importForm = document.getElementById('importPersonsToGroupForm');
+        const importGroupId = document.getElementById('importGroupId');
+        const importGroupName = document.getElementById('importGroupName');
+        const importRawNames = document.getElementById('importRawNames');
+        const importErrors = document.getElementById('importErrors');
+
+        const cleanImportLine = (line) => line.trim().replace(/^,+|,+$/g, '').trim();
+
+        const showImportView = (groupId, groupName) => {
+            importGroupId.value = groupId;
+            importGroupName.textContent = groupName;
+            importRawNames.value = '';
+            importErrors.classList.add('d-none');
+            importErrors.innerHTML = '';
+            groupsListView.classList.add('d-none');
+            groupsImportView.classList.remove('d-none');
+        };
+
+        const showGroupsListView = () => {
+            groupsImportView.classList.add('d-none');
+            groupsListView.classList.remove('d-none');
+        };
+
+        document.getElementById('personGroupsManageList')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-group-import]');
+            if (!btn) return;
+            showImportView(btn.dataset.id, btn.dataset.name);
+        });
+
+        document.getElementById('importCancelBtn')?.addEventListener('click', showGroupsListView);
+
+        importForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = importForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(importForm);
+            if (submitBtn) submitBtn.disabled = false;
+
+            if (!data.success) {
+                // Fejl håndteres i popuppen — indtastede navne bevares, så brugeren kan rette og prøve igen.
+                return;
+            }
+
+            const errors = data.errors || [];
+            if (errors.length > 0) {
+                const failedNames = new Set(errors.map((err) => err.name));
+                importRawNames.value = importRawNames.value
+                    .split('\n')
+                    .filter((line) => failedNames.has(cleanImportLine(line)))
+                    .join('\n');
+
+                importErrors.innerHTML = '';
+                errors.forEach((err) => {
+                    const line = document.createElement('div');
+                    line.textContent = `${err.name}: ${err.reason}`;
+                    importErrors.appendChild(line);
+                });
+                importErrors.classList.remove('d-none');
+
+                await refreshGroupsUi();
+                return;
+            }
+
+            await refreshGroupsUi();
+            showGroupsListView();
+        });
+
+        document.getElementById('manageGroupsModal')?.addEventListener('hidden.bs.modal', showGroupsListView);
+
+        const createGroupForm = document.getElementById('createPersonGroupForm');
+        createGroupForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = createGroupForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(createGroupForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                createGroupForm.reset();
+                await refreshGroupsUi();
+            }
+        });
+
+        const editPersonGroupModal = document.getElementById('editPersonGroupModal');
+        handleAjaxSubmit(editPersonGroupModal?.querySelector('form'), editPersonGroupModal, refreshGroupsUi);
+        editPersonGroupModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('editPersonGroupId').value = btn.dataset.id;
+            document.getElementById('editPersonGroupName').value = btn.dataset.name;
+        });
+
+        const deletePersonGroupModal = document.getElementById('deletePersonGroupModal');
+        handleAjaxSubmit(deletePersonGroupModal?.querySelector('form'), deletePersonGroupModal, refreshGroupsUi);
+        deletePersonGroupModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('deletePersonGroupId').value = btn.dataset.id;
+            document.getElementById('deletePersonGroupName').textContent = btn.dataset.name;
+            const memberCount = parseInt(btn.dataset.membercount || '0', 10);
+            document.getElementById('deletePersonGroupMemberWarning').textContent =
+                memberCount > 0 ? ` ${memberCount} person(er) er tilknyttet.` : '';
+        });
+    })();
+</script>
