@@ -110,6 +110,15 @@
             if (!e.target.closest('[data-table-page-size]')) return;
             loadTable(root, 1);
         });
+
+        // Gruppe-badges (Personer): klik fastholder det udvidede badge (nyttigt uden mus/hover).
+        root.addEventListener('click', (e) => {
+            const badge = e.target.closest('[data-group-badge]');
+            if (!badge) return;
+            const wasExpanded = badge.classList.contains('expanded');
+            root.querySelectorAll('[data-group-badge].expanded').forEach((el) => el.classList.remove('expanded'));
+            if (!wasExpanded) badge.classList.add('expanded');
+        });
     };
 
     const initAll = (container) => {
@@ -119,6 +128,15 @@
             initDataTable(root);
         });
     };
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-group-badge]')) return;
+        document.querySelectorAll('[data-group-badge].expanded').forEach((el) => el.classList.remove('expanded'));
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('[data-group-badge].expanded').forEach((el) => el.classList.remove('expanded'));
+    });
 
     window.FvDataTable = { initAll, reload };
     initAll();

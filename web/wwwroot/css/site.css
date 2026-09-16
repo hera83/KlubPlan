@@ -742,6 +742,45 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .badge-alarm { background: var(--clr-alarm-bg); color: var(--clr-alarm); padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 .badge-info  { background: var(--clr-info-bg);  color: var(--clr-info);  padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
+/* ── Gruppe-badges (Personer): viser første ord, udvides ved hover/klik uden at flytte layoutet ── */
+.group-badge {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+.group-badge-short { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+.group-badge-full.badge-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: 240px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: var(--shadow-card);
+  transition: opacity 0.1s ease;
+}
+.group-badge:hover .group-badge-full,
+.group-badge:focus-within .group-badge-full,
+.group-badge.expanded .group-badge-full {
+  opacity: 1;
+  visibility: visible;
+}
+.group-badge:hover .group-badge-short,
+.group-badge:focus-within .group-badge-short,
+.group-badge.expanded .group-badge-short {
+  visibility: hidden;
+}
+
 /* ── Table ── */
 .table {
   color: var(--clr-text);

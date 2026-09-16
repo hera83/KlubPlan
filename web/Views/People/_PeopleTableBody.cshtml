@@ -35,12 +35,30 @@
                             }
                             else
                             {
-                                @foreach (var membership in person.Memberships)
-                                {
-                                    <span class="badge-info me-1" title="@PersonTypes.GetUILabel(membership.Type)">
-                                        <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
-                                    </span>
-                                }
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var membership in person.Memberships)
+                                    {
+                                        var firstWord = membership.GroupName.Split(' ', 2)[0];
+                                        var hasMore = membership.GroupName.Length > firstWord.Length;
+                                        if (hasMore)
+                                        {
+                                            <span class="group-badge" data-group-badge tabindex="0" title="@PersonTypes.GetUILabel(membership.Type)">
+                                                <span class="badge-info group-badge-short">
+                                                    <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@firstWord…
+                                                </span>
+                                                <span class="badge-info group-badge-full">
+                                                    <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
+                                                </span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-info" title="@PersonTypes.GetUILabel(membership.Type)">
+                                                <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
+                                            </span>
+                                        }
+                                    }
+                                </div>
                             }
                         </td>
                         <td>
