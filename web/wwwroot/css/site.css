@@ -14,6 +14,14 @@
      blive usynligt (mørkt ikon på mørk baggrund). */
   color-scheme: dark;
 
+  /* Bootstrap-komponenter (.card m.fl.) sætter selv color/background via disse
+     variabler i stedet for at style'e efter vores egne. Uden denne omdirigering
+     falder de tilbage til Bootstraps lyse standardværdier uanset [data-theme] —
+     f.eks. blev checkbox-labels inde i et .card usynlige (næsten sort tekst) på
+     mørk baggrund, fordi .card sætter color:var(--bs-body-color). */
+  --bs-body-color:    var(--clr-text);
+  --bs-body-bg:       var(--clr-bg);
+
   /* Palette */
   --clr-bg:           #0d1117;
   --clr-surface:      #161b22;
