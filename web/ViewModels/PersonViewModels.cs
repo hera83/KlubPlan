@@ -7,13 +7,8 @@ namespace web.ViewModels
         public string? SearchText { get; set; }
         public int? GroupId { get; set; }
 
-        /// <summary>"under18" or "over18"; empty/null means no age filter.</summary>
-        public string? AgeGroup { get; set; }
-
-        public bool? HasGuardian { get; set; }
-
         public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 50;
+        public int PageSize { get; set; } = 10;
 
         public List<PersonListItemViewModel> People { get; set; } = new();
         public int TotalCount { get; set; }

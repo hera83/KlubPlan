@@ -45,22 +45,6 @@
                                     }
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Alder</label>
-                                <select class="form-select" name="AgeGroup">
-                                    <option value="">Alle</option>
-                                    <option value="under18" selected="@(Model.AgeGroup == "under18")">Under 18 år</option>
-                                    <option value="over18" selected="@(Model.AgeGroup == "over18")">18 år eller derover</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Værgeoplysninger</label>
-                                <select class="form-select" name="HasGuardian">
-                                    <option value="">Alle</option>
-                                    <option value="true" selected="@(Model.HasGuardian == true)">Har værge registreret</option>
-                                    <option value="false" selected="@(Model.HasGuardian == false)">Ingen værge registreret</option>
-                                </select>
-                            </div>
                             <div class="col-md-3 d-flex align-items-end gap-2">
                                 <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
                                     <i class="bi bi-floppy2"></i>

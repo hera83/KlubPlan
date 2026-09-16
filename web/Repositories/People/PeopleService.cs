@@ -21,7 +21,7 @@ namespace web.Repositories.People
         public async Task<PersonFilterViewModel> GetPeopleAsync(PersonFilterViewModel filter, CancellationToken ct = default)
         {
             filter.Page = filter.Page < 1 ? 1 : filter.Page;
-            filter.PageSize = filter.PageSize is < 10 or > 500 ? 50 : filter.PageSize;
+            filter.PageSize = filter.PageSize is < 10 or > 500 ? 10 : filter.PageSize;
 
             var query = _context.People
                 .Include(p => p.Memberships).ThenInclude(m => m.Group)
@@ -30,36 +30,18 @@ namespace web.Repositories.People
 
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
-                var search = filter.SearchText.Trim();
+                var search = filter.SearchText.Trim().ToLower();
                 query = query.Where(p =>
-                    p.Name.Contains(search) ||
-                    p.Uid.Contains(search) ||
-                    (p.Mobile != null && p.Mobile.Contains(search)) ||
-                    (p.Email != null && p.Email.Contains(search)));
+                    p.Name.ToLower().Contains(search) ||
+                    p.Uid.ToLower().Contains(search) ||
+                    (p.Mobile != null && p.Mobile.ToLower().Contains(search)) ||
+                    (p.Email != null && p.Email.ToLower().Contains(search)));
             }
 
             if (filter.GroupId.HasValue)
             {
                 var groupId = filter.GroupId.Value;
                 query = query.Where(p => p.Memberships.Any(m => m.GroupId == groupId));
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.AgeGroup))
-            {
-                var cutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-18);
-                query = filter.AgeGroup switch
-                {
-                    "under18" => query.Where(p => p.BirthDate != null && p.BirthDate > cutoff),
-                    "over18" => query.Where(p => p.BirthDate != null && p.BirthDate <= cutoff),
-                    _ => query
-                };
-            }
-
-            if (filter.HasGuardian.HasValue)
-            {
-                query = filter.HasGuardian.Value
-                    ? query.Where(p => p.Guardians.Any())
-                    : query.Where(p => !p.Guardians.Any());
             }
 
             filter.TotalCount = await query.CountAsync(ct);
@@ -231,7 +213,7 @@ namespace web.Repositories.People
         public async Task<List<PersonGroupViewModel>> GetGroupsAsync(CancellationToken ct = default)
         {
             return await _context.PersonGroups
-                .OrderBy(g => g.Name)
+                .OrderByDescending(g => g.CreatedAtUtc)
                 .Select(g => new PersonGroupViewModel
                 {
                     Id = g.Id,
