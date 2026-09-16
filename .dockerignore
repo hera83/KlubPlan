@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/App_dbs/
+**/App_files/
+**/appsettings.Development.json
+.env
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.docs/
+.claude/
+*.md

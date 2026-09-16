@@ -4,6 +4,7 @@
 
 ## Lokale secrets (indeholder rigtige API-keys/passwords, må aldrig committes)
 **/appsettings.Development.json
+.env
 .*/
 
 ## Build outputs
