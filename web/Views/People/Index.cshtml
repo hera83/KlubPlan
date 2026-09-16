@@ -349,14 +349,14 @@
 </div>
 
 <script>
-    const PERSON_TYPES = [
-        @foreach (var type in PersonTypes.AllTypes)
-        {
-            <text>{ value: '@type', label: '@PersonTypes.GetUILabel(type)' },</text>
-        }
-    ];
-
     (() => {
+        const PERSON_TYPES = [
+            @foreach (var type in PersonTypes.AllTypes)
+            {
+                <text>{ value: '@type', label: '@PersonTypes.GetUILabel(type)' },</text>
+            }
+        ];
+
         const peopleRoot = document.getElementById('peopleTableRoot');
         const guardianTemplate = document.getElementById('guardianRowTemplate');
 
