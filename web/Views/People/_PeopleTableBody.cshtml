@@ -1,3 +1,4 @@
+@using web.Constants
 @model web.ViewModels.PersonFilterViewModel
 
 <div class="table-responsive">
@@ -5,8 +6,6 @@
         <thead>
             <tr>
                 <th>Navn</th>
-                <th>UID</th>
-                <th>Fødselsdag</th>
                 <th>Mobil</th>
                 <th>Mail</th>
                 <th>Grupper</th>
@@ -18,7 +17,7 @@
             @if (Model.People.Count == 0)
             {
                 <tr>
-                    <td colspan="8" class="text-muted">Ingen personer fundet.</td>
+                    <td colspan="6" class="text-muted">Ingen personer fundet.</td>
                 </tr>
             }
             else
@@ -27,20 +26,20 @@
                 {
                     <tr>
                         <td>@person.Name</td>
-                        <td>@person.Uid</td>
-                        <td>@(person.BirthDate?.ToString("dd-MM-yyyy") ?? "–")</td>
                         <td>@(string.IsNullOrEmpty(person.Mobile) ? "–" : person.Mobile)</td>
                         <td>@(string.IsNullOrEmpty(person.Email) ? "–" : person.Email)</td>
                         <td>
-                            @if (person.GroupNames.Count == 0)
+                            @if (person.Memberships.Count == 0)
                             {
                                 <span class="text-muted">–</span>
                             }
                             else
                             {
-                                @foreach (var groupName in person.GroupNames)
+                                @foreach (var membership in person.Memberships)
                                 {
-                                    <span class="badge-info me-1">@groupName</span>
+                                    <span class="badge-info me-1" title="@PersonTypes.GetUILabel(membership.Type)">
+                                        <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
+                                    </span>
                                 }
                             }
                         </td>

@@ -70,6 +70,7 @@ namespace web.Controllers
                 Mobile = model.Mobile,
                 Email = model.Email,
                 GroupIds = model.GroupIds,
+                GroupTypes = model.GroupTypes,
                 Guardians = model.Guardians
             }, HttpContext.RequestAborted);
 
@@ -95,6 +96,7 @@ namespace web.Controllers
                 Mobile = model.Mobile,
                 Email = model.Email,
                 GroupIds = model.GroupIds,
+                GroupTypes = model.GroupTypes,
                 Guardians = model.Guardians
             }, HttpContext.RequestAborted);
 

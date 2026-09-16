@@ -280,6 +280,11 @@ namespace web.Data
             {
                 entity.HasKey(e => new { e.PersonId, e.GroupId });
 
+                entity.Property(e => e.Type)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
                 entity.HasOne(e => e.Person)
                     .WithMany(p => p.Memberships)
                     .HasForeignKey(e => e.PersonId)

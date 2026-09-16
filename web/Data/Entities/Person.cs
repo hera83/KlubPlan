@@ -3,7 +3,9 @@ namespace web.Data.Entities
     /// <summary>
     /// A person tracked by the club (member, participant, etc.), independent of ApplicationUser
     /// (a Person does not need a login). Can belong to multiple PersonGroups and have any number
-    /// of PersonGuardian contacts.
+    /// of PersonGuardian contacts. A person's role (Spiller/Træner/Ungtræner) is per group
+    /// membership — see PersonGroupMembership.Type — since the same person can be a player in one
+    /// group and a coach in another.
     /// </summary>
     public class Person
     {

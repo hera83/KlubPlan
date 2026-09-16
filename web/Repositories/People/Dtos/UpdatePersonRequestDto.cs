@@ -1,3 +1,4 @@
+using web.Constants;
 using web.ViewModels;
 
 namespace web.Repositories.People.Dtos
@@ -11,6 +12,7 @@ namespace web.Repositories.People.Dtos
         public string? Mobile { get; set; }
         public string? Email { get; set; }
         public List<int> GroupIds { get; set; } = new();
+        public Dictionary<int, PersonType> GroupTypes { get; set; } = new();
         public List<PersonGuardianViewModel> Guardians { get; set; } = new();
     }
 }

@@ -1,5 +1,6 @@
 @model web.ViewModels.PersonFilterViewModel
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using web.Constants
 
 <div>
     <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
@@ -40,6 +41,16 @@
                                 <div class="border rounded p-2 people-group-checkboxes" id="peopleFilterGroups" style="max-height:150px;overflow-y:auto;">
                                     @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "peopleFilterGroups" })
                                 </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" name="Type">
+                                    <option value="">Alle</option>
+                                    @foreach (var type in PersonTypes.AllTypes)
+                                    {
+                                        <option value="@type">@PersonTypes.GetUILabel(type)</option>
+                                    }
+                                </select>
                             </div>
                             <div class="col-md-3 d-flex align-items-end gap-2">
                                 <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
@@ -114,9 +125,9 @@
                             <input name="Email" type="email" class="form-control" maxlength="256" />
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label">Grupper</label>
-                            <div class="border rounded p-2 people-group-checkboxes" id="createPersonGroups" style="max-height:150px;overflow-y:auto;">
-                                @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "createPersonGroups" })
+                            <label class="form-label">Grupper og rolle</label>
+                            <div class="border rounded p-2 people-group-checkboxes" id="createPersonGroups" style="max-height:200px;overflow-y:auto;">
+                                @await Html.PartialAsync("_PersonGroupMembershipCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "createPersonGroups" })
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -177,9 +188,9 @@
                             <input name="Email" id="editPersonEmail" type="email" class="form-control" maxlength="256" />
                         </div>
                         <div class="col-md-12">
-                            <label class="form-label">Grupper</label>
-                            <div class="border rounded p-2 people-group-checkboxes" id="editPersonGroups" style="max-height:150px;overflow-y:auto;">
-                                @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "editPersonGroups" })
+                            <label class="form-label">Grupper og rolle</label>
+                            <div class="border rounded p-2 people-group-checkboxes" id="editPersonGroups" style="max-height:200px;overflow-y:auto;">
+                                @await Html.PartialAsync("_PersonGroupMembershipCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "editPersonGroups" })
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -338,9 +349,20 @@
 </div>
 
 <script>
+    const PERSON_TYPES = [
+        @foreach (var type in PersonTypes.AllTypes)
+        {
+            <text>{ value: '@type', label: '@PersonTypes.GetUILabel(type)' },</text>
+        }
+    ];
+
     (() => {
         const peopleRoot = document.getElementById('peopleTableRoot');
         const guardianTemplate = document.getElementById('guardianRowTemplate');
+
+        const personTypeOptions = (selected) => PERSON_TYPES
+            .map((t) => `<option value="${t.value}" ${selected === t.value ? 'selected' : ''}>${t.label}</option>`)
+            .join('');
 
         // ─── AJAX-formularer (opret/rediger/slet) ──────────────────────────────
         const handleAjaxSubmit = (form, modalEl, onSuccess) => {
@@ -410,6 +432,7 @@
         createPersonModal?.addEventListener('hidden.bs.modal', () => {
             document.getElementById('createPersonGuardians').innerHTML = '';
             createPersonModal.querySelectorAll('.people-group-checkboxes input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+            createPersonModal.querySelectorAll('.people-group-checkboxes select').forEach((sel) => { sel.selectedIndex = 0; });
         });
 
         // ─── Rediger person ─────────────────────────────────────────────────────
@@ -423,6 +446,7 @@
             document.getElementById('editPersonId').value = id;
             document.getElementById('editPersonGuardians').innerHTML = '';
             editPersonModal.querySelectorAll('.people-group-checkboxes input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+            editPersonModal.querySelectorAll('.people-group-checkboxes select').forEach((sel) => { sel.selectedIndex = 0; });
 
             const res = await fetch(`@Url.Action("PersonDetails")?id=${id}`, { headers: { 'X-Requested-With': 'fetch' } });
             if (!res.ok) return;
@@ -437,6 +461,8 @@
             (person.groupIds || []).forEach((groupId) => {
                 const checkbox = editPersonModal.querySelector(`.people-group-checkboxes input[value="${groupId}"]`);
                 if (checkbox) checkbox.checked = true;
+                const select = editPersonModal.querySelector(`.people-group-checkboxes select[name="GroupTypes[${groupId}]"]`);
+                if (select) select.value = (person.groupTypes || {})[groupId] || 'Player';
             });
 
             (person.guardians || []).forEach((guardian) => addGuardianRow('editPersonGuardians', guardian));
@@ -463,15 +489,36 @@
             if (!optionsRes.ok) return;
             const groups = await optionsRes.json();
 
-            // Checkbokse i filter og opret/rediger-formularerne (bevar markering hvor gruppen stadig findes)
-            ['peopleFilterGroups', 'createPersonGroups', 'editPersonGroups'].forEach((containerId) => {
+            // Filterpanelet: rene afkrydsningsfelter uden rolle-vælger (bevar markering hvor gruppen stadig findes).
+            const filterContainer = document.getElementById('peopleFilterGroups');
+            if (filterContainer) {
+                const checked = new Set(Array.from(filterContainer.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value));
+                filterContainer.innerHTML = groups.map((g) => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="GroupIds" value="${g.id}" id="peopleFilterGroups_${g.id}" ${checked.has(String(g.id)) ? 'checked' : ''} />
+                        <label class="form-check-label" for="peopleFilterGroups_${g.id}">${g.name}</label>
+                    </div>`).join('') || '<p class="text-muted mb-0">Ingen grupper oprettet endnu.</p>';
+            }
+
+            // Opret/rediger-formularerne: afkrydsningsfelt + rolle-vælger pr. gruppe (bevar markering og valgt rolle).
+            ['createPersonGroups', 'editPersonGroups'].forEach((containerId) => {
                 const container = document.getElementById(containerId);
                 if (!container) return;
                 const checked = new Set(Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value));
+                const types = {};
+                container.querySelectorAll('select').forEach((sel) => {
+                    const match = sel.name.match(/GroupTypes\[(\d+)\]/);
+                    if (match) types[match[1]] = sel.value;
+                });
                 container.innerHTML = groups.map((g) => `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="GroupIds" value="${g.id}" id="${containerId}_${g.id}" ${checked.has(String(g.id)) ? 'checked' : ''} />
-                        <label class="form-check-label" for="${containerId}_${g.id}">${g.name}</label>
+                    <div class="d-flex align-items-center gap-2 mb-1 person-group-membership-row">
+                        <div class="form-check flex-grow-1 mb-0">
+                            <input class="form-check-input" type="checkbox" name="GroupIds" value="${g.id}" id="${containerId}_${g.id}" ${checked.has(String(g.id)) ? 'checked' : ''} />
+                            <label class="form-check-label" for="${containerId}_${g.id}">${g.name}</label>
+                        </div>
+                        <select class="form-select form-select-sm w-auto" name="GroupTypes[${g.id}]" aria-label="Rolle i ${g.name}">
+                            ${personTypeOptions(types[g.id])}
+                        </select>
                     </div>`).join('') || '<p class="text-muted mb-0">Ingen grupper oprettet endnu.</p>';
             });
 

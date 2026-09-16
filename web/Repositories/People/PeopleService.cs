@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using web.Constants;
 using web.Data;
 using web.Data.Entities;
 using web.Repositories.People.Dtos;
@@ -45,6 +46,12 @@ namespace web.Repositories.People
                 query = query.Where(p => p.Memberships.Any(m => groupIds.Contains(m.GroupId)));
             }
 
+            if (filter.Type.HasValue)
+            {
+                var type = filter.Type.Value;
+                query = query.Where(p => p.Memberships.Any(m => m.Type == type));
+            }
+
             filter.TotalCount = await query.CountAsync(ct);
 
             filter.People = await query
@@ -59,7 +66,15 @@ namespace web.Repositories.People
                     BirthDate = p.BirthDate,
                     Mobile = p.Mobile,
                     Email = p.Email,
-                    GroupNames = p.Memberships.Select(m => m.Group.Name).OrderBy(n => n).ToList(),
+                    Memberships = p.Memberships
+                        .OrderBy(m => m.Group.Name)
+                        .Select(m => new PersonGroupMembershipItemViewModel
+                        {
+                            GroupId = m.GroupId,
+                            GroupName = m.Group.Name,
+                            Type = m.Type
+                        })
+                        .ToList(),
                     GuardianCount = p.Guardians.Count
                 })
                 .ToListAsync(ct);
@@ -74,17 +89,19 @@ namespace web.Repositories.People
 
         public async Task<PersonDetailViewModel?> GetPersonDetailAsync(int id, CancellationToken ct = default)
         {
-            return await _context.People
+            // Dictionary construction isn't translatable by EF Core, so memberships are projected
+            // as a flat list here and folded into PersonDetailViewModel.GroupTypes afterwards.
+            var raw = await _context.People
                 .Where(p => p.Id == id)
-                .Select(p => new PersonDetailViewModel
+                .Select(p => new
                 {
-                    Id = p.Id,
-                    Uid = p.Uid,
-                    Name = p.Name,
-                    BirthDate = p.BirthDate,
-                    Mobile = p.Mobile,
-                    Email = p.Email,
-                    GroupIds = p.Memberships.Select(m => m.GroupId).ToList(),
+                    p.Id,
+                    p.Uid,
+                    p.Name,
+                    p.BirthDate,
+                    p.Mobile,
+                    p.Email,
+                    Memberships = p.Memberships.Select(m => new { m.GroupId, m.Type }).ToList(),
                     Guardians = p.Guardians
                         .OrderBy(g => g.Order)
                         .Select(g => new PersonGuardianViewModel
@@ -97,6 +114,22 @@ namespace web.Repositories.People
                         .ToList()
                 })
                 .FirstOrDefaultAsync(ct);
+
+            if (raw is null)
+                return null;
+
+            return new PersonDetailViewModel
+            {
+                Id = raw.Id,
+                Uid = raw.Uid,
+                Name = raw.Name,
+                BirthDate = raw.BirthDate,
+                Mobile = raw.Mobile,
+                Email = raw.Email,
+                GroupIds = raw.Memberships.Select(m => m.GroupId).ToList(),
+                GroupTypes = raw.Memberships.ToDictionary(m => m.GroupId, m => m.Type),
+                Guardians = raw.Guardians
+            };
         }
 
         public async Task<CreatePersonResponseDto> CreatePersonAsync(CreatePersonRequestDto dto, CancellationToken ct = default)
@@ -122,7 +155,7 @@ namespace web.Repositories.People
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            ApplyGroups(person, dto.GroupIds);
+            ApplyGroups(person, dto.GroupIds, dto.GroupTypes);
             ApplyGuardians(person, dto.Guardians);
 
             _context.People.Add(person);
@@ -177,7 +210,7 @@ namespace web.Repositories.People
             // Replace group memberships and guardians wholesale — simple and correct for lists of this size.
             _context.PersonGroupMemberships.RemoveRange(person.Memberships);
             person.Memberships.Clear();
-            ApplyGroups(person, dto.GroupIds);
+            ApplyGroups(person, dto.GroupIds, dto.GroupTypes);
 
             _context.PersonGuardians.RemoveRange(person.Guardians);
             person.Guardians.Clear();
@@ -345,7 +378,7 @@ namespace web.Repositories.People
                     Name = name,
                     CreatedAtUtc = DateTime.UtcNow
                 };
-                person.Memberships.Add(new PersonGroupMembership { GroupId = groupId });
+                person.Memberships.Add(new PersonGroupMembership { GroupId = groupId, Type = PersonType.Player });
                 people.Add(person);
                 nextUidNumber++;
             }
@@ -400,11 +433,12 @@ namespace web.Repositories.People
             return await _context.People.AnyAsync(p => p.Uid == uid && (excludePersonId == null || p.Id != excludePersonId), ct);
         }
 
-        private static void ApplyGroups(Person person, List<int> groupIds)
+        private static void ApplyGroups(Person person, List<int> groupIds, Dictionary<int, PersonType> groupTypes)
         {
             foreach (var groupId in groupIds.Distinct())
             {
-                person.Memberships.Add(new PersonGroupMembership { GroupId = groupId });
+                var type = groupTypes.TryGetValue(groupId, out var t) ? t : PersonType.Player;
+                person.Memberships.Add(new PersonGroupMembership { GroupId = groupId, Type = type });
             }
         }
 

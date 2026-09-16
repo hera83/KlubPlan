@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using web.Constants;
 
 namespace web.ViewModels
 {
@@ -6,6 +7,9 @@ namespace web.ViewModels
     {
         public string? SearchText { get; set; }
         public List<int> GroupIds { get; set; } = new();
+
+        /// <summary>Matches people who have this role in at least one of their group memberships.</summary>
+        public PersonType? Type { get; set; }
 
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -31,8 +35,18 @@ namespace web.ViewModels
         public DateOnly? BirthDate { get; set; }
         public string? Mobile { get; set; }
         public string? Email { get; set; }
-        public List<string> GroupNames { get; set; } = new();
+
+        /// <summary>The person's groups, each with the role (Spiller/Træner/Ungtræner) they have in that specific group.</summary>
+        public List<PersonGroupMembershipItemViewModel> Memberships { get; set; } = new();
+
         public int GuardianCount { get; set; }
+    }
+
+    public class PersonGroupMembershipItemViewModel
+    {
+        public int GroupId { get; set; }
+        public string GroupName { get; set; } = string.Empty;
+        public PersonType Type { get; set; }
     }
 
     public class PersonGuardianViewModel
@@ -61,6 +75,10 @@ namespace web.ViewModels
         public string? Mobile { get; set; }
         public string? Email { get; set; }
         public List<int> GroupIds { get; set; } = new();
+
+        /// <summary>Role (Spiller/Træner/Ungtræner) per group, keyed by GroupId — mirrors GroupIds.</summary>
+        public Dictionary<int, PersonType> GroupTypes { get; set; } = new();
+
         public List<PersonGuardianViewModel> Guardians { get; set; } = new();
     }
 
@@ -84,6 +102,9 @@ namespace web.ViewModels
         public string? Email { get; set; }
 
         public List<int> GroupIds { get; set; } = new();
+
+        /// <summary>Role (Spiller/Træner/Ungtræner) per group, keyed by GroupId. Defaults to Spiller when a group has no entry.</summary>
+        public Dictionary<int, PersonType> GroupTypes { get; set; } = new();
 
         public List<PersonGuardianViewModel> Guardians { get; set; } = new();
     }
