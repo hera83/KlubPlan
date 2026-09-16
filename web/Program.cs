@@ -12,6 +12,8 @@ using web.Repositories.UserProfile;
 using web.Repositories.UserProfile.Interfaces;
 using web.Repositories.Forms;
 using web.Repositories.Forms.Interfaces;
+using web.Repositories.Meetings;
+using web.Repositories.Meetings.Interfaces;
 using web.Repositories.People;
 using web.Repositories.People.Interfaces;
 using web.BgSerives;
@@ -122,6 +124,7 @@ try
     builder.Services.AddScoped<IMailService, MailService>();
     builder.Services.AddScoped<IFormService, FormService>();
     builder.Services.AddScoped<IPeopleService, PeopleService>();
+    builder.Services.AddScoped<IMeetingsService, MeetingsService>();
 
     if (!string.IsNullOrWhiteSpace(builder.Configuration["Sms:ApiKey"]) && !string.IsNullOrWhiteSpace(smsBaseUrl))
     {

@@ -1,0 +1,383 @@
+@model web.ViewModels.MeetingDetailViewModel
+@using web.Constants
+
+<form id="meetingAntiForgeryForm" class="d-none">@Html.AntiForgeryToken()</form>
+
+<div>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <p class="mb-1"><a asp-action="Index"><i class="bi bi-arrow-left me-1"></i>Tilbage til møder</a></p>
+            <h1><i class="bi bi-calendar2-week me-2"></i>@Model.Title</h1>
+            <p class="d-flex flex-wrap align-items-center gap-3 mb-0">
+                <span class="@MeetingStatuses.GetBadgeClass(Model.Status)">@MeetingStatuses.GetUILabel(Model.Status)</span>
+                <span><i class="bi bi-clock me-1"></i>@Model.MeetingDateUtc.ToString("dddd d. MMMM yyyy 'kl.' HH:mm")</span>
+                @if (!string.IsNullOrEmpty(Model.Location))
+                {
+                    <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.PersonGroupName))
+                {
+                    <span><i class="bi bi-people me-1"></i>@Model.PersonGroupName</span>
+                }
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#meetingOffcanvas" data-id="@Model.Id" title="Rediger møde">
+                <i class="bi bi-pencil me-1"></i> Rediger
+            </button>
+            <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteMeetingModal" data-id="@Model.Id" data-title="@Model.Title" title="Slet møde">
+                <i class="bi bi-trash me-1"></i> Slet
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h2 class="h5 mb-0"><i class="bi bi-list-check me-2"></i>Dagsorden</h2>
+                    </div>
+                    <textarea id="agendaNotes" class="form-control" rows="5" placeholder="Punkter der skal drøftes på mødet...">@Model.AgendaNotes</textarea>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <h2 class="h5 mb-0"><i class="bi bi-journal-text me-2"></i>Referat / noter</h2>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="notesSavedIndicator" class="small text-muted"></span>
+                            <button type="button" id="recordBtn" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-mic-fill me-1"></i> Optag lyd
+                            </button>
+                            <button type="button" id="generateSummaryBtn" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-stars me-1"></i> Generér referat-udkast
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="minutesNotes" class="form-control" rows="10" placeholder="Referat/noter skrevet under eller efter mødet...">@Model.MinutesNotes</textarea>
+
+                    <div id="aiSummaryPanel" class="alert alert-info mt-3 d-none">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <strong><i class="bi bi-stars me-1"></i>AI-forslag til referat</strong>
+                            <button type="button" class="btn-close" id="aiSummaryClose" aria-label="Luk"></button>
+                        </div>
+                        <div id="aiSummaryText" class="mb-2" style="white-space: pre-wrap;"></div>
+                        <button type="button" id="aiSummaryInsert" class="btn btn-sm btn-primary">
+                            <i class="bi bi-floppy2 me-1"></i> Indsæt i referat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h2 class="h6 mb-2"><i class="bi bi-person-check me-2"></i>Fremmøde</h2>
+                    @if (Model.Attendees.Count == 0)
+                    {
+                        <p class="text-muted mb-0">Ingen administratorer inviteret. Rediger mødet for at tilføje deltagere.</p>
+                    }
+                    else
+                    {
+                        <div id="attendeeList">
+                            @foreach (var attendee in Model.Attendees)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input attendee-toggle" type="checkbox" data-user-id="@attendee.UserId"
+                                           id="attendee_@attendee.UserId" checked="@attendee.HasAttended" />
+                                    <label class="form-check-label" for="attendee_@attendee.UserId">@attendee.DisplayName</label>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h2 class="h6 mb-2"><i class="bi bi-check2-square me-2"></i>Beslutninger</h2>
+                    <div id="meetingDecisionsList">
+                        @await Html.PartialAsync("_MeetingDecisionsList", Model.Decisions)
+                    </div>
+                    <form id="addDecisionForm" asp-action="AddDecision" method="post" class="mt-3 pt-3 border-top">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MeetingId" value="@Model.Id" />
+                        <div class="mb-2">
+                            <input name="Description" class="form-control" placeholder="Ny beslutning/opgave..." required maxlength="1000" />
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <select name="ResponsibleUserId" class="form-select form-select-sm">
+                                    <option value="">Ansvarlig (valgfri)</option>
+                                    @foreach (var admin in ViewData["Admins"] as List<web.ViewModels.MeetingAdminOptionViewModel> ?? new())
+                                    {
+                                        <option value="@admin.Id">@admin.DisplayName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-5">
+                                <input name="DueDate" type="date" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2 w-100">
+                            <i class="bi bi-plus-lg me-1"></i> Tilføj beslutning
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h2 class="h6 mb-2"><i class="bi bi-paperclip me-2"></i>Filer og bilag</h2>
+                    <div id="meetingAttachmentsList">
+                        @await Html.PartialAsync("_MeetingAttachmentsList", Model.Attachments)
+                    </div>
+                    <form id="uploadAttachmentForm" asp-action="UploadAttachment" method="post" enctype="multipart/form-data" class="mt-3 pt-3 border-top d-flex gap-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="MeetingId" value="@Model.Id" />
+                        <input type="file" name="File" class="form-control form-control-sm" required />
+                        <button type="submit" class="btn btn-sm btn-secondary text-nowrap">
+                            <i class="bi bi-upload me-1"></i> Upload
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_MeetingEditOffcanvas")
+@await Html.PartialAsync("_MeetingDeleteModal")
+
+<script>
+    (() => {
+        const meetingId = @Model.Id;
+        const tokenInput = document.querySelector('#meetingAntiForgeryForm input[name="__RequestVerificationToken"]');
+        const token = tokenInput ? tokenInput.value : '';
+
+        const DECISIONS_PARTIAL_URL = '@Url.Action("DecisionsPartial")';
+        const ATTACHMENTS_PARTIAL_URL = '@Url.Action("AttachmentsPartial")';
+        const SET_ATTENDANCE_URL = '@Url.Action("SetAttendance")';
+        const SAVE_NOTES_URL = '@Url.Action("SaveNotes")';
+        const TOGGLE_DECISION_URL = '@Url.Action("ToggleDecision")';
+        const DELETE_DECISION_URL = '@Url.Action("DeleteDecision")';
+        const DELETE_ATTACHMENT_URL = '@Url.Action("DeleteAttachment")';
+        const TRANSCRIBE_URL = '@Url.Action("TranscribeAudio")';
+        const GENERATE_SUMMARY_URL = '@Url.Action("GenerateSummary")';
+
+        // ─── Hjælpere ───────────────────────────────────────────────────────────
+        const postForm = async (url, fields) => {
+            const body = new FormData();
+            Object.entries(fields).forEach(([key, value]) => body.append(key, value));
+            body.append('__RequestVerificationToken', token);
+            const res = await fetch(url, { method: 'POST', body, headers: { 'X-Requested-With': 'fetch' } });
+            return res.json();
+        };
+
+        const reloadDecisions = async () => {
+            const res = await fetch(`${DECISIONS_PARTIAL_URL}?meetingId=${meetingId}`, { headers: { 'X-Requested-With': 'fetch' } });
+            if (res.ok) document.getElementById('meetingDecisionsList').innerHTML = await res.text();
+        };
+
+        const reloadAttachments = async () => {
+            const res = await fetch(`${ATTACHMENTS_PARTIAL_URL}?meetingId=${meetingId}`, { headers: { 'X-Requested-With': 'fetch' } });
+            if (res.ok) document.getElementById('meetingAttachmentsList').innerHTML = await res.text();
+        };
+
+        // ─── Autosave: Dagsorden + Referat ─────────────────────────────────────
+        const agendaEl = document.getElementById('agendaNotes');
+        const minutesEl = document.getElementById('minutesNotes');
+        const savedIndicator = document.getElementById('notesSavedIndicator');
+        let saveTimer = null;
+
+        const saveNotesNow = async () => {
+            const data = await postForm(SAVE_NOTES_URL, {
+                MeetingId: meetingId,
+                AgendaNotes: agendaEl.value,
+                MinutesNotes: minutesEl.value
+            });
+            if (data.success) {
+                const now = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                savedIndicator.textContent = `Gemt kl. ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            }
+        };
+
+        const scheduleSave = () => {
+            savedIndicator.textContent = 'Gemmer...';
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveNotesNow, 800);
+        };
+
+        agendaEl?.addEventListener('input', scheduleSave);
+        minutesEl?.addEventListener('input', scheduleSave);
+
+        // ─── Fremmøde ───────────────────────────────────────────────────────────
+        document.getElementById('attendeeList')?.addEventListener('change', async (e) => {
+            const checkbox = e.target.closest('.attendee-toggle');
+            if (!checkbox) return;
+            const data = await postForm(SET_ATTENDANCE_URL, {
+                MeetingId: meetingId,
+                UserId: checkbox.dataset.userId,
+                HasAttended: checkbox.checked
+            });
+            if (!data.success) {
+                checkbox.checked = !checkbox.checked;
+                window.FvToast?.show('error', 'Kunne ikke opdatere fremmøde.');
+            }
+        });
+
+        // ─── Beslutninger ───────────────────────────────────────────────────────
+        const addDecisionForm = document.getElementById('addDecisionForm');
+        addDecisionForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = addDecisionForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(addDecisionForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                addDecisionForm.reset();
+                await reloadDecisions();
+            }
+        });
+
+        document.getElementById('meetingDecisionsList')?.addEventListener('change', async (e) => {
+            const checkbox = e.target.closest('.decision-complete-toggle');
+            if (!checkbox) return;
+            const data = await postForm(TOGGLE_DECISION_URL, { id: checkbox.dataset.id, isCompleted: checkbox.checked });
+            if (data.success) {
+                await reloadDecisions();
+            } else {
+                checkbox.checked = !checkbox.checked;
+            }
+        });
+
+        document.getElementById('meetingDecisionsList')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.decision-delete');
+            if (!btn) return;
+            const data = await postForm(DELETE_DECISION_URL, { id: btn.dataset.id });
+            window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+            if (data.success) await reloadDecisions();
+        });
+
+        // ─── Filer og bilag ─────────────────────────────────────────────────────
+        const uploadForm = document.getElementById('uploadAttachmentForm');
+        uploadForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = uploadForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(uploadForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                uploadForm.reset();
+                await reloadAttachments();
+            }
+        });
+
+        document.getElementById('meetingAttachmentsList')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.attachment-delete');
+            if (!btn) return;
+            const data = await postForm(DELETE_ATTACHMENT_URL, { id: btn.dataset.id });
+            window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+            if (data.success) await reloadAttachments();
+        });
+
+        // ─── Diktafon: optag og transskribér ────────────────────────────────────
+        const recordBtn = document.getElementById('recordBtn');
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        const setRecordingState = (recording, busy) => {
+            isRecording = recording;
+            recordBtn.disabled = !!busy;
+            if (busy) {
+                recordBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Transskriberer...';
+            } else if (recording) {
+                recordBtn.innerHTML = '<i class="bi bi-stop-fill me-1"></i> Stop optagelse';
+                recordBtn.classList.add('btn-danger');
+                recordBtn.classList.remove('btn-outline-secondary');
+            } else {
+                recordBtn.innerHTML = '<i class="bi bi-mic-fill me-1"></i> Optag lyd';
+                recordBtn.classList.remove('btn-danger');
+                recordBtn.classList.add('btn-outline-secondary');
+            }
+        };
+
+        recordBtn?.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.addEventListener('dataavailable', (e) => { if (e.data.size > 0) audioChunks.push(e.data); });
+                    mediaRecorder.addEventListener('stop', async () => {
+                        stream.getTracks().forEach((track) => track.stop());
+                        setRecordingState(false, true);
+
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const body = new FormData();
+                        body.append('MeetingId', meetingId);
+                        body.append('Audio', blob, 'optagelse.webm');
+                        body.append('__RequestVerificationToken', token);
+
+                        try {
+                            const res = await fetch(TRANSCRIBE_URL, { method: 'POST', body, headers: { 'X-Requested-With': 'fetch' } });
+                            const data = await res.json();
+                            if (data.success && data.text) {
+                                minutesEl.value = minutesEl.value ? `${minutesEl.value}\n\n${data.text}` : data.text;
+                                scheduleSave();
+                            } else {
+                                window.FvToast?.show(data.type || 'error', data.message || 'Kunne ikke transskribere optagelsen.');
+                            }
+                        } catch {
+                            window.FvToast?.show('error', 'Netværksfejl under transskribering.');
+                        } finally {
+                            await reloadAttachments();
+                            setRecordingState(false, false);
+                        }
+                    });
+                    mediaRecorder.start();
+                    setRecordingState(true, false);
+                } catch {
+                    window.FvToast?.show('error', 'Kunne ikke få adgang til mikrofonen.');
+                }
+            } else {
+                mediaRecorder?.stop();
+            }
+        });
+
+        // ─── AI-referat-udkast ──────────────────────────────────────────────────
+        const generateBtn = document.getElementById('generateSummaryBtn');
+        const aiPanel = document.getElementById('aiSummaryPanel');
+        const aiText = document.getElementById('aiSummaryText');
+
+        generateBtn?.addEventListener('click', async () => {
+            generateBtn.disabled = true;
+            const originalHtml = generateBtn.innerHTML;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Genererer...';
+
+            const data = await postForm(GENERATE_SUMMARY_URL, { meetingId });
+
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalHtml;
+
+            if (data.success && data.summary) {
+                aiText.textContent = data.summary;
+                aiPanel.classList.remove('d-none');
+            } else {
+                window.FvToast?.show(data.type || 'error', data.message || 'Kunne ikke generere referat.');
+            }
+        });
+
+        document.getElementById('aiSummaryClose')?.addEventListener('click', () => aiPanel.classList.add('d-none'));
+        document.getElementById('aiSummaryInsert')?.addEventListener('click', () => {
+            minutesEl.value = minutesEl.value ? `${minutesEl.value}\n\n${aiText.textContent}` : aiText.textContent;
+            aiPanel.classList.add('d-none');
+            scheduleSave();
+        });
+    })();
+</script>

@@ -17,5 +17,8 @@ namespace web.Constants
 
         /// <summary>Temporary files (can be cleaned up) — App_files/temp/</summary>
         public const string Temp = "temp";
+
+        /// <summary>Meeting attachments and recordings — App_files/meetings/</summary>
+        public const string Meetings = "meetings";
     }
 }

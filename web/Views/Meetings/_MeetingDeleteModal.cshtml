@@ -1,0 +1,59 @@
+<!-- Slet møde modal -->
+<div class="modal fade" id="deleteMeetingModal" tabindex="-1" aria-labelledby="deleteMeetingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteMeetingModalLabel"><i class="bi bi-trash me-2"></i>Slet møde</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette mødet <strong id="deleteMeetingTitle"></strong>? Dagsorden, referat,
+                beslutninger og bilag slettes samtidig. Denne handling kan ikke fortrydes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="DeleteMeeting" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteMeetingId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const meetingsRoot = document.getElementById('meetingsTableRoot');
+        const deleteMeetingModal = document.getElementById('deleteMeetingModal');
+        const indexUrl = '@Url.Action("Index", "Meetings")';
+
+        deleteMeetingModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('deleteMeetingId').value = btn.dataset.id;
+            document.getElementById('deleteMeetingTitle').textContent = btn.dataset.title;
+        });
+
+        deleteMeetingModal?.querySelector('form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(form);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(deleteMeetingModal)?.hide();
+                if (meetingsRoot) {
+                    window.FvDataTable?.reload(meetingsRoot);
+                } else {
+                    location.href = indexUrl;
+                }
+            }
+        });
+    })();
+</script>

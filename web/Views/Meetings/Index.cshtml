@@ -1,6 +1,79 @@
+@model web.ViewModels.MeetingFilterViewModel
+@using web.Constants
+
 <div>
-    <div class="page-header">
-        <h1><i class="bi bi-calendar2-week me-2"></i>Møder</h1>
-        <p>Indhold kommer snart.</p>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-calendar2-week me-2"></i>Møder</h1>
+            <p>Møder med dagsorden, referat, fremmøde og bilag</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="meetingsTableRoot" data-table-endpoint="@Url.Action("MeetingsTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <button class="btn btn-icon btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#meetingsFilterPanel" title="Filtre" aria-label="Filtre">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg titel eller sted..." data-table-search autocomplete="off" value="@Model.SearchText" />
+                        </div>
+                    </div>
+                    <div class="table-toolbar-end">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#meetingOffcanvas" title="Opret møde" aria-label="Opret møde">
+                            <i class="bi bi-plus-lg"></i> Opret møde
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse mb-3" id="meetingsFilterPanel">
+                    <div class="table-filter-panel" data-table-filter-panel>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="Status">
+                                    <option value="">Alle</option>
+                                    @foreach (var status in MeetingStatuses.AllStatuses)
+                                    {
+                                        <option value="@status">@MeetingStatuses.GetUILabel(status)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Gruppe</label>
+                                <select class="form-select" name="PersonGroupId">
+                                    <option value="">Alle</option>
+                                    @foreach (var group in Model.Groups)
+                                    {
+                                        <option value="@group.Id">@group.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end gap-2">
+                                <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
+                                    <i class="bi bi-floppy2"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-icon" data-table-filter-reset title="Nulstil filtre" aria-label="Nulstil filtre">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_MeetingsTableBody", Model)
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+@{
+    ViewData["Groups"] = Model.Groups;
+}
+@await Html.PartialAsync("_MeetingEditOffcanvas")
+@await Html.PartialAsync("_MeetingDeleteModal")

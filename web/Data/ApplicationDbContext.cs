@@ -38,6 +38,12 @@ namespace web.Data
         public DbSet<PersonGroupMembership> PersonGroupMemberships { get; set; } = null!;
         public DbSet<PersonGuardian> PersonGuardians { get; set; } = null!;
 
+        // Meetings: administrator meetings with agenda/minutes, attendance, decisions and attachments
+        public DbSet<Meeting> Meetings { get; set; } = null!;
+        public DbSet<MeetingAttendee> MeetingAttendees { get; set; } = null!;
+        public DbSet<MeetingDecision> MeetingDecisions { get; set; } = null!;
+        public DbSet<MeetingAttachment> MeetingAttachments { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -319,6 +325,98 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => e.PersonId);
+            });
+
+            // Configure Meeting
+            builder.Entity<Meeting>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.PersonGroup)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonGroupId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.MeetingDateUtc);
+            });
+
+            // Configure MeetingAttendee (join entity for the Meeting <-> ApplicationUser many-to-many)
+            builder.Entity<MeetingAttendee>(entity =>
+            {
+                entity.HasKey(e => new { e.MeetingId, e.ApplicationUserId });
+
+                entity.HasOne(e => e.Meeting)
+                    .WithMany(m => m.Attendees)
+                    .HasForeignKey(e => e.MeetingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ApplicationUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApplicationUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.ApplicationUserId);
+            });
+
+            // Configure MeetingDecision
+            builder.Entity<MeetingDecision>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Description)
+                    .IsRequired()
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Meeting)
+                    .WithMany(m => m.Decisions)
+                    .HasForeignKey(e => e.MeetingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ResponsibleUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ResponsibleUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.MeetingId);
+            });
+
+            // Configure MeetingAttachment
+            builder.Entity<MeetingAttachment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Meeting)
+                    .WithMany(m => m.Attachments)
+                    .HasForeignKey(e => e.MeetingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FileMetadata)
+                    .WithMany()
+                    .HasForeignKey(e => e.FileMetadataId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.MeetingId);
             });
         }
     }
