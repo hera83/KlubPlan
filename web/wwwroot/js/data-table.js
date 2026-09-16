@@ -15,7 +15,11 @@
         }
 
         root.querySelectorAll('[data-table-filter-panel] [name]').forEach((field) => {
-            if (field.value) params.set(field.name, field.value);
+            if (field.type === 'checkbox') {
+                if (field.checked) params.append(field.name, field.value);
+            } else if (field.value) {
+                params.set(field.name, field.value);
+            }
         });
 
         const pageSize = root.querySelector('[data-table-page-size]');
@@ -84,6 +88,8 @@
                 panel?.querySelectorAll('[name]').forEach((field) => {
                     if (field.tagName === 'SELECT') {
                         field.selectedIndex = 0;
+                    } else if (field.type === 'checkbox') {
+                        field.checked = false;
                     } else {
                         field.value = '';
                     }

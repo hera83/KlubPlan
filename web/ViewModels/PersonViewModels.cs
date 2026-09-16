@@ -5,7 +5,7 @@ namespace web.ViewModels
     public class PersonFilterViewModel
     {
         public string? SearchText { get; set; }
-        public int? GroupId { get; set; }
+        public List<int> GroupIds { get; set; } = new();
 
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -13,7 +13,7 @@ namespace web.ViewModels
         public List<PersonListItemViewModel> People { get; set; } = new();
         public int TotalCount { get; set; }
 
-        /// <summary>All groups, for the filter dropdown.</summary>
+        /// <summary>All groups, for the filter checkboxes.</summary>
         public List<PersonGroupOptionViewModel> Groups { get; set; } = new();
     }
 

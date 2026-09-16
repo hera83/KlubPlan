@@ -35,15 +35,11 @@
                 <div class="collapse mb-3" id="peopleFilterPanel">
                     <div class="table-filter-panel" data-table-filter-panel>
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label">Gruppe</label>
-                                <select class="form-select" name="GroupId" id="peopleFilterGroup">
-                                    <option value="">Alle</option>
-                                    @foreach (var group in Model.Groups)
-                                    {
-                                        <option value="@group.Id" selected="@(Model.GroupId == group.Id)">@group.Name</option>
-                                    }
-                                </select>
+                                <div class="border rounded p-2 people-group-checkboxes" id="peopleFilterGroups" style="max-height:150px;overflow-y:auto;">
+                                    @await Html.PartialAsync("_PersonGroupCheckboxes", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "peopleFilterGroups" })
+                                </div>
                             </div>
                             <div class="col-md-3 d-flex align-items-end gap-2">
                                 <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
@@ -467,17 +463,8 @@
             if (!optionsRes.ok) return;
             const groups = await optionsRes.json();
 
-            // Filter-dropdown
-            const filterSelect = document.getElementById('peopleFilterGroup');
-            if (filterSelect) {
-                const current = filterSelect.value;
-                filterSelect.innerHTML = '<option value="">Alle</option>' +
-                    groups.map((g) => `<option value="${g.id}">${g.name}</option>`).join('');
-                filterSelect.value = groups.some((g) => String(g.id) === current) ? current : '';
-            }
-
-            // Checkbokse i opret/rediger-formularerne (bevar markering hvor gruppen stadig findes)
-            ['createPersonGroups', 'editPersonGroups'].forEach((containerId) => {
+            // Checkbokse i filter og opret/rediger-formularerne (bevar markering hvor gruppen stadig findes)
+            ['peopleFilterGroups', 'createPersonGroups', 'editPersonGroups'].forEach((containerId) => {
                 const container = document.getElementById(containerId);
                 if (!container) return;
                 const checked = new Set(Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value));

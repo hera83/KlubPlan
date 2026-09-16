@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using web.Data;
 using web.Data.Entities;
@@ -38,10 +39,10 @@ namespace web.Repositories.People
                     (p.Email != null && p.Email.ToLower().Contains(search)));
             }
 
-            if (filter.GroupId.HasValue)
+            if (filter.GroupIds.Count > 0)
             {
-                var groupId = filter.GroupId.Value;
-                query = query.Where(p => p.Memberships.Any(m => m.GroupId == groupId));
+                var groupIds = filter.GroupIds;
+                query = query.Where(p => p.Memberships.Any(m => groupIds.Contains(m.GroupId)));
             }
 
             filter.TotalCount = await query.CountAsync(ct);
@@ -213,7 +214,7 @@ namespace web.Repositories.People
         public async Task<List<PersonGroupViewModel>> GetGroupsAsync(CancellationToken ct = default)
         {
             return await _context.PersonGroups
-                .OrderByDescending(g => g.CreatedAtUtc)
+                .OrderBy(g => g.Name)
                 .Select(g => new PersonGroupViewModel
                 {
                     Id = g.Id,
@@ -317,7 +318,7 @@ namespace web.Repositories.People
                     continue;
                 }
 
-                cleanedNames.Add(name);
+                cleanedNames.Add(ToTitleCaseName(name));
             }
 
             if (cleanedNames.Count == 0)
@@ -362,6 +363,19 @@ namespace web.Repositories.People
             }
 
             return new ImportPersonsToGroupResponseDto { Success = true, ImportedCount = people.Count, Errors = errors };
+        }
+
+        private static readonly CultureInfo DanishCulture = CultureInfo.GetCultureInfo("da-DK");
+
+        private static string ToTitleCaseName(string name)
+        {
+            var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < words.Length; i++)
+            {
+                words[i] = DanishCulture.TextInfo.ToTitleCase(words[i].ToLower(DanishCulture));
+            }
+
+            return string.Join(' ', words);
         }
 
         private async Task<string> GenerateUidAsync(CancellationToken ct)
