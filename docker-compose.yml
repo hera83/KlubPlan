@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      TZ: Europe/Copenhagen
     volumes:
       - ./App_dbs:/app/App_dbs
       - ./App_files:/app/App_files
