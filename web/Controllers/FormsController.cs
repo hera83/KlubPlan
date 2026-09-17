@@ -48,7 +48,7 @@ namespace web.Controllers
             {
                 Fields = new List<FormFieldBuilderViewModel>
                 {
-                    new() { FieldType = FormFieldType.ShortText, Order = 0 }
+                    new() { FieldType = FormFieldType.SectionHeading, Order = 0 }
                 }
             };
             return View("Builder", model);
