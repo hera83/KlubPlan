@@ -7,7 +7,6 @@ using web.Repositories.Meetings.Dtos;
 using web.Repositories.Meetings.Interfaces;
 using web.Services.AiGateway;
 using web.Services.AiGateway.Dtos.Ollama;
-using web.Services.AiGateway.Dtos.Speaches;
 using web.Services.AiGateway.Interfaces;
 using web.ViewModels;
 
@@ -83,7 +82,7 @@ namespace web.Controllers
                 Title = model.Title,
                 MeetingDateUtc = model.MeetingDate,
                 Location = model.Location,
-                PersonGroupId = model.PersonGroupId,
+                GroupIds = model.GroupIds,
                 AttendeeUserIds = model.AttendeeUserIds,
                 AgendaNotes = model.AgendaNotes
             }, HttpContext.RequestAborted);
@@ -107,7 +106,7 @@ namespace web.Controllers
                 Title = model.Title,
                 MeetingDateUtc = model.MeetingDate,
                 Location = model.Location,
-                PersonGroupId = model.PersonGroupId,
+                GroupIds = model.GroupIds,
                 AttendeeUserIds = model.AttendeeUserIds,
                 AgendaNotes = model.AgendaNotes,
                 Status = model.Status
@@ -255,45 +254,36 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> TranscribeAudio(TranscribeMeetingAudioViewModel model)
+        public async Task<IActionResult> SaveRecording(SaveMeetingRecordingViewModel model)
         {
             if (!ModelState.IsValid || model.Audio is null || model.Audio.Length == 0)
                 return this.ToastErrorJson("Ingen lydoptagelse modtaget.");
 
-            var config = await _aiGatewayConfigurationProvider.GetActiveConfigurationAsync(HttpContext.RequestAborted);
             var userId = _userManager.GetUserId(User);
+            await using var stream = model.Audio.OpenReadStream();
+            var attachment = await _meetingsService.AddAttachmentAsync(
+                model.MeetingId, stream, model.Audio.FileName ?? "optagelse.webm", model.Audio.ContentType, userId, isRecording: true, HttpContext.RequestAborted);
 
-            try
-            {
-                // Gem optagelsen som bilag først, så den er bevaret selv hvis transskriberingen fejler.
-                await using (var saveStream = model.Audio.OpenReadStream())
-                {
-                    await _meetingsService.AddAttachmentAsync(
-                        model.MeetingId, saveStream, model.Audio.FileName ?? "optagelse.webm", model.Audio.ContentType, userId, isRecording: true, HttpContext.RequestAborted);
-                }
+            return attachment is not null
+                ? this.ToastSuccessJson("Optagelse gemt.")
+                : this.ToastErrorJson("Mødet blev ikke fundet.");
+        }
 
-                await using var transcribeStream = model.Audio.OpenReadStream();
-                var result = await _aiGatewayService.SpeachesTranscribeAsync(new TranscribeRequestDto
-                {
-                    Model = config.DefaultSttModel,
-                    FileContent = transcribeStream,
-                    FileName = string.IsNullOrWhiteSpace(model.Audio.FileName) ? "optagelse.webm" : model.Audio.FileName,
-                    ContentType = model.Audio.ContentType,
-                    Language = "da"
-                }, HttpContext.RequestAborted);
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TranscribeAttachment(int attachmentId)
+        {
+            var (success, errorMessage) = await _meetingsService.RequestTranscriptionAsync(attachmentId, HttpContext.RequestAborted);
+            return success
+                ? this.ToastSuccessJson("Transskription startet i baggrunden.")
+                : this.ToastErrorJson(errorMessage ?? "Kunne ikke starte transskription.");
+        }
 
-                return Json(new { success = true, text = result.Text?.Trim() ?? string.Empty });
-            }
-            catch (AiGatewayException ex)
-            {
-                _logger.LogWarning(ex, "Kunne ikke transskribere mødeoptagelse via AiGateway ({StatusCode}): {Message}", ex.StatusCode, ex.Message);
-                return this.ToastErrorJson($"Kunne ikke transskribere optagelsen: {ex.Message}");
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                _logger.LogWarning(ex, "Kunne ikke kontakte AiGateway for tale-til-tekst (møder)");
-                return this.ToastErrorJson("Kunne ikke kontakte AiGateway.");
-            }
+        [HttpGet]
+        public async Task<IActionResult> TranscriptionStatusJson(int attachmentId)
+        {
+            var status = await _meetingsService.GetTranscriptionStatusAsync(attachmentId, HttpContext.RequestAborted);
+            return status is null ? NotFound() : Json(status);
         }
 
         [HttpPost]

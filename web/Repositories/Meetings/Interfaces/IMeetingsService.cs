@@ -36,5 +36,9 @@ namespace web.Repositories.Meetings.Interfaces
         Task<bool> DeleteAttachmentAsync(int attachmentId, CancellationToken ct = default);
 
         Task<(byte[] Data, string ContentType, string FileName)?> GetAttachmentFileAsync(int attachmentId, CancellationToken ct = default);
+
+        Task<(bool Success, string? ErrorMessage)> RequestTranscriptionAsync(int attachmentId, CancellationToken ct = default);
+
+        Task<TranscriptionStatusViewModel?> GetTranscriptionStatusAsync(int attachmentId, CancellationToken ct = default);
     }
 }

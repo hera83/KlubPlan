@@ -7,7 +7,7 @@ namespace web.ViewModels
     {
         public string? SearchText { get; set; }
         public MeetingStatus? Status { get; set; }
-        public int? PersonGroupId { get; set; }
+        public List<int> GroupIds { get; set; } = new();
 
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -15,8 +15,14 @@ namespace web.ViewModels
         public List<MeetingListItemViewModel> Meetings { get; set; } = new();
         public int TotalCount { get; set; }
 
-        /// <summary>All groups, for the filter dropdown.</summary>
+        /// <summary>All groups, for the filter checkboxes.</summary>
         public List<PersonGroupOptionViewModel> Groups { get; set; } = new();
+    }
+
+    public class MeetingGroupItemViewModel
+    {
+        public int GroupId { get; set; }
+        public string GroupName { get; set; } = string.Empty;
     }
 
     public class MeetingListItemViewModel
@@ -26,7 +32,7 @@ namespace web.ViewModels
         public DateTime MeetingDateUtc { get; set; }
         public string? Location { get; set; }
         public MeetingStatus Status { get; set; }
-        public string? PersonGroupName { get; set; }
+        public List<MeetingGroupItemViewModel> Groups { get; set; } = new();
         public int AttendeeCount { get; set; }
         public int AttendedCount { get; set; }
     }
@@ -62,6 +68,15 @@ namespace web.ViewModels
         public long FileSizeBytes { get; set; }
         public bool IsRecording { get; set; }
         public DateTime CreatedAtUtc { get; set; }
+        public TranscriptionStatus TranscriptionStatus { get; set; } = TranscriptionStatus.None;
+        public string? TranscriptionError { get; set; }
+    }
+
+    public class TranscriptionStatusViewModel
+    {
+        public int AttachmentId { get; set; }
+        public TranscriptionStatus Status { get; set; }
+        public string? Error { get; set; }
     }
 
     public class MeetingDetailViewModel
@@ -71,8 +86,7 @@ namespace web.ViewModels
         public DateTime MeetingDateUtc { get; set; }
         public string? Location { get; set; }
         public MeetingStatus Status { get; set; }
-        public int? PersonGroupId { get; set; }
-        public string? PersonGroupName { get; set; }
+        public List<MeetingGroupItemViewModel> Groups { get; set; } = new();
         public string? AgendaNotes { get; set; }
         public string? MinutesNotes { get; set; }
 
@@ -93,7 +107,7 @@ namespace web.ViewModels
         [StringLength(200)]
         public string? Location { get; set; }
 
-        public int? PersonGroupId { get; set; }
+        public List<int> GroupIds { get; set; } = new();
 
         public List<string> AttendeeUserIds { get; set; } = new();
 
@@ -161,7 +175,7 @@ namespace web.ViewModels
         public IFormFile? File { get; set; }
     }
 
-    public class TranscribeMeetingAudioViewModel
+    public class SaveMeetingRecordingViewModel
     {
         [Required]
         public int MeetingId { get; set; }

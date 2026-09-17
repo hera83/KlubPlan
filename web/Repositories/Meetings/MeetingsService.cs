@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using web.BgSerives;
 using web.Constants;
 using web.Data;
 using web.Data.Entities;
@@ -17,6 +18,7 @@ namespace web.Repositories.Meetings
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
+        private readonly ITranscriptionQueue _transcriptionQueue;
         private readonly ILogger<MeetingsService> _logger;
 
         public MeetingsService(
@@ -24,12 +26,14 @@ namespace web.Repositories.Meetings
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment env,
             IConfiguration config,
+            ITranscriptionQueue transcriptionQueue,
             ILogger<MeetingsService> logger)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
             _config = config;
+            _transcriptionQueue = transcriptionQueue;
             _logger = logger;
         }
 
@@ -39,7 +43,7 @@ namespace web.Repositories.Meetings
             filter.PageSize = filter.PageSize is < 10 or > 500 ? 10 : filter.PageSize;
 
             var query = _context.Meetings
-                .Include(m => m.PersonGroup)
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
                 .Include(m => m.Attendees)
                 .AsQueryable();
 
@@ -56,9 +60,9 @@ namespace web.Repositories.Meetings
                 query = query.Where(m => m.Status == filter.Status.Value);
             }
 
-            if (filter.PersonGroupId.HasValue)
+            if (filter.GroupIds.Count > 0)
             {
-                query = query.Where(m => m.PersonGroupId == filter.PersonGroupId.Value);
+                query = query.Where(m => m.Groups.Any(g => filter.GroupIds.Contains(g.PersonGroupId)));
             }
 
             filter.TotalCount = await query.CountAsync(ct);
@@ -74,7 +78,10 @@ namespace web.Repositories.Meetings
                     MeetingDateUtc = m.MeetingDateUtc,
                     Location = m.Location,
                     Status = m.Status,
-                    PersonGroupName = m.PersonGroup != null ? m.PersonGroup.Name : null,
+                    Groups = m.Groups
+                        .OrderBy(g => g.PersonGroup.Name)
+                        .Select(g => new MeetingGroupItemViewModel { GroupId = g.PersonGroupId, GroupName = g.PersonGroup.Name })
+                        .ToList(),
                     AttendeeCount = m.Attendees.Count,
                     AttendedCount = m.Attendees.Count(a => a.HasAttended)
                 })
@@ -91,7 +98,7 @@ namespace web.Repositories.Meetings
         public async Task<MeetingDetailViewModel?> GetMeetingDetailAsync(int id, CancellationToken ct = default)
         {
             var meeting = await _context.Meetings
-                .Include(m => m.PersonGroup)
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
                 .Include(m => m.Attendees).ThenInclude(a => a.ApplicationUser)
                 .Include(m => m.Decisions).ThenInclude(d => d.ResponsibleUser)
                 .Include(m => m.Attachments).ThenInclude(a => a.FileMetadata)
@@ -107,8 +114,10 @@ namespace web.Repositories.Meetings
                 MeetingDateUtc = meeting.MeetingDateUtc,
                 Location = meeting.Location,
                 Status = meeting.Status,
-                PersonGroupId = meeting.PersonGroupId,
-                PersonGroupName = meeting.PersonGroup?.Name,
+                Groups = meeting.Groups
+                    .OrderBy(g => g.PersonGroup.Name)
+                    .Select(g => new MeetingGroupItemViewModel { GroupId = g.PersonGroupId, GroupName = g.PersonGroup.Name })
+                    .ToList(),
                 AgendaNotes = meeting.AgendaNotes,
                 MinutesNotes = meeting.MinutesNotes,
                 Attendees = meeting.Attendees
@@ -141,7 +150,9 @@ namespace web.Repositories.Meetings
                         ContentType = a.FileMetadata.ContentType,
                         FileSizeBytes = a.FileMetadata.FileSizeBytes,
                         IsRecording = a.IsRecording,
-                        CreatedAtUtc = a.CreatedAtUtc
+                        CreatedAtUtc = a.CreatedAtUtc,
+                        TranscriptionStatus = a.TranscriptionStatus,
+                        TranscriptionError = a.TranscriptionError
                     })
                     .ToList()
             };
@@ -182,10 +193,14 @@ namespace web.Repositories.Meetings
                 Title = dto.Title.Trim(),
                 MeetingDateUtc = dto.MeetingDateUtc,
                 Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim(),
-                PersonGroupId = dto.PersonGroupId,
                 AgendaNotes = dto.AgendaNotes,
                 CreatedAtUtc = DateTime.UtcNow
             };
+
+            foreach (var groupId in dto.GroupIds.Distinct())
+            {
+                meeting.Groups.Add(new MeetingGroup { PersonGroupId = groupId });
+            }
 
             foreach (var userId in dto.AttendeeUserIds.Distinct())
             {
@@ -202,6 +217,7 @@ namespace web.Repositories.Meetings
         {
             var meeting = await _context.Meetings
                 .Include(m => m.Attendees)
+                .Include(m => m.Groups)
                 .FirstOrDefaultAsync(m => m.Id == dto.Id, ct);
 
             if (meeting is null)
@@ -210,10 +226,16 @@ namespace web.Repositories.Meetings
             meeting.Title = dto.Title.Trim();
             meeting.MeetingDateUtc = dto.MeetingDateUtc;
             meeting.Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim();
-            meeting.PersonGroupId = dto.PersonGroupId;
             meeting.AgendaNotes = dto.AgendaNotes;
             meeting.Status = dto.Status;
             meeting.UpdatedAtUtc = DateTime.UtcNow;
+
+            _context.MeetingGroups.RemoveRange(meeting.Groups);
+            meeting.Groups.Clear();
+            foreach (var groupId in dto.GroupIds.Distinct())
+            {
+                meeting.Groups.Add(new MeetingGroup { PersonGroupId = groupId });
+            }
 
             // Preserve HasAttended for attendees kept across the edit; drop and (re-)add the rest.
             var previousAttendance = meeting.Attendees.ToDictionary(a => a.ApplicationUserId, a => a.HasAttended);
@@ -448,6 +470,48 @@ namespace web.Repositories.Meetings
 
             var data = await File.ReadAllBytesAsync(fullPath, ct);
             return (data, attachment.FileMetadata.ContentType, attachment.FileMetadata.OriginalFileName);
+        }
+
+        public async Task<(bool Success, string? ErrorMessage)> RequestTranscriptionAsync(int attachmentId, CancellationToken ct = default)
+        {
+            var attachment = await _context.MeetingAttachments
+                .Include(a => a.FileMetadata)
+                .FirstOrDefaultAsync(a => a.Id == attachmentId, ct);
+
+            if (attachment is null)
+                return (false, "Filen blev ikke fundet.");
+
+            if (!attachment.FileMetadata.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+                return (false, "Kun lydfiler kan transskriberes.");
+
+            if (TranscriptionStatuses.IsInProgress(attachment.TranscriptionStatus))
+                return (false, "Transskription er allerede i gang for denne fil.");
+
+            attachment.TranscriptionStatus = TranscriptionStatus.Queued;
+            attachment.TranscriptionError = null;
+            attachment.TranscriptionStartedAtUtc = null;
+            attachment.TranscriptionCompletedAtUtc = null;
+            await _context.SaveChangesAsync(ct);
+
+            _transcriptionQueue.Enqueue(attachmentId);
+            return (true, null);
+        }
+
+        public async Task<TranscriptionStatusViewModel?> GetTranscriptionStatusAsync(int attachmentId, CancellationToken ct = default)
+        {
+            var attachment = await _context.MeetingAttachments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == attachmentId, ct);
+
+            if (attachment is null)
+                return null;
+
+            return new TranscriptionStatusViewModel
+            {
+                AttachmentId = attachment.Id,
+                Status = attachment.TranscriptionStatus,
+                Error = attachment.TranscriptionError
+            };
         }
 
         private void DeletePhysicalFile(string storedRelativePath)

@@ -1,4 +1,5 @@
 @model web.ViewModels.MeetingFilterViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using web.Constants
 
 <div>
@@ -23,7 +24,7 @@
                         </div>
                     </div>
                     <div class="table-toolbar-end">
-                        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#meetingOffcanvas" title="Opret møde" aria-label="Opret møde">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#meetingEditModal" title="Opret møde" aria-label="Opret møde">
                             <i class="bi bi-plus-lg"></i> Opret møde
                         </button>
                     </div>
@@ -32,6 +33,12 @@
                 <div class="collapse mb-3" id="meetingsFilterPanel">
                     <div class="table-filter-panel" data-table-filter-panel>
                         <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Gruppe</label>
+                                <div class="border rounded p-2 people-group-checkboxes" id="meetingsFilterGroups" style="max-height:150px;overflow-y:auto;">
+                                    @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.Groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "meetingsFilterGroups" })
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <label class="form-label">Status</label>
                                 <select class="form-select" name="Status">
@@ -39,16 +46,6 @@
                                     @foreach (var status in MeetingStatuses.AllStatuses)
                                     {
                                         <option value="@status">@MeetingStatuses.GetUILabel(status)</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Gruppe</label>
-                                <select class="form-select" name="PersonGroupId">
-                                    <option value="">Alle</option>
-                                    @foreach (var group in Model.Groups)
-                                    {
-                                        <option value="@group.Id">@group.Name</option>
                                     }
                                 </select>
                             </div>
@@ -75,5 +72,5 @@
 @{
     ViewData["Groups"] = Model.Groups;
 }
-@await Html.PartialAsync("_MeetingEditOffcanvas")
+@await Html.PartialAsync("_MeetingEditModal")
 @await Html.PartialAsync("_MeetingDeleteModal")

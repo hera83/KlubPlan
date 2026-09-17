@@ -15,14 +15,37 @@
                 {
                     <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>
                 }
-                @if (!string.IsNullOrEmpty(Model.PersonGroupName))
+                @if (Model.Groups.Count > 0)
                 {
-                    <span><i class="bi bi-people me-1"></i>@Model.PersonGroupName</span>
+                    <span class="groups-inline">
+                        <i class="bi bi-people me-1"></i>
+                        @for (var i = 0; i < Model.Groups.Count; i++)
+                        {
+                            var group = Model.Groups[i];
+                            var firstWord = group.GroupName.Split(' ', 2)[0];
+                            var hasMore = group.GroupName.Length > firstWord.Length;
+                            if (hasMore)
+                            {
+                                <span class="group-badge" data-group-badge tabindex="0">
+                                    <span class="group-badge-short">@firstWord…</span>
+                                    <span class="badge-info group-badge-full">@group.GroupName</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span>@group.GroupName</span>
+                            }
+                            if (i < Model.Groups.Count - 1)
+                            {
+                                <text>, </text>
+                            }
+                        }
+                    </span>
                 }
             </p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#meetingOffcanvas" data-id="@Model.Id" title="Rediger møde">
+            <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#meetingEditModal" data-id="@Model.Id" title="Rediger møde">
                 <i class="bi bi-pencil me-1"></i> Rediger
             </button>
             <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteMeetingModal" data-id="@Model.Id" data-title="@Model.Title" title="Slet møde">
@@ -149,7 +172,7 @@
     </div>
 </div>
 
-@await Html.PartialAsync("_MeetingEditOffcanvas")
+@await Html.PartialAsync("_MeetingEditModal")
 @await Html.PartialAsync("_MeetingDeleteModal")
 
 <script>
@@ -165,7 +188,9 @@
         const TOGGLE_DECISION_URL = '@Url.Action("ToggleDecision")';
         const DELETE_DECISION_URL = '@Url.Action("DeleteDecision")';
         const DELETE_ATTACHMENT_URL = '@Url.Action("DeleteAttachment")';
-        const TRANSCRIBE_URL = '@Url.Action("TranscribeAudio")';
+        const SAVE_RECORDING_URL = '@Url.Action("SaveRecording")';
+        const TRANSCRIBE_ATTACHMENT_URL = '@Url.Action("TranscribeAttachment")';
+        const MEETING_DETAILS_JSON_URL = '@Url.Action("MeetingDetailsJson")';
         const GENERATE_SUMMARY_URL = '@Url.Action("GenerateSummary")';
 
         // ─── Hjælpere ───────────────────────────────────────────────────────────
@@ -285,6 +310,71 @@
             if (data.success) await reloadAttachments();
         });
 
+        // ─── Transskription af lydfiler (kører i baggrunden på serveren) ───────
+        const ACTIVE_TRANSCRIPTION_STATUSES = ['Queued', 'Processing'];
+        let transcriptionPollTimer = null;
+
+        const hasActiveTranscriptions = () =>
+            Array.from(document.querySelectorAll('#meetingAttachmentsList [data-transcription-status]'))
+                .some((el) => ACTIVE_TRANSCRIPTION_STATUSES.includes(el.dataset.transcriptionStatus));
+
+        const stopTranscriptionPolling = () => {
+            if (transcriptionPollTimer) {
+                clearInterval(transcriptionPollTimer);
+                transcriptionPollTimer = null;
+            }
+        };
+
+        const pollTranscriptions = async () => {
+            const completedBefore = new Set(
+                Array.from(document.querySelectorAll('#meetingAttachmentsList [data-transcription-status="Completed"]'))
+                    .map((el) => el.dataset.attachmentId)
+            );
+
+            await reloadAttachments();
+
+            const completedNow = Array.from(document.querySelectorAll('#meetingAttachmentsList [data-transcription-status="Completed"]'))
+                .map((el) => el.dataset.attachmentId);
+            const newlyCompleted = completedNow.some((id) => !completedBefore.has(id));
+
+            if (newlyCompleted) {
+                const res = await fetch(`${MEETING_DETAILS_JSON_URL}?id=${meetingId}`, { headers: { 'X-Requested-With': 'fetch' } });
+                if (res.ok) {
+                    const detail = await res.json();
+                    minutesEl.value = detail.minutesNotes || '';
+                }
+                window.FvToast?.show('success', 'Transskription tilføjet til referatet.');
+            }
+
+            if (!hasActiveTranscriptions()) {
+                stopTranscriptionPolling();
+            }
+        };
+
+        const ensureTranscriptionPolling = () => {
+            if (transcriptionPollTimer) return;
+            transcriptionPollTimer = setInterval(pollTranscriptions, 5000);
+        };
+
+        document.getElementById('meetingAttachmentsList')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.attachment-transcribe');
+            if (!btn || btn.disabled) return;
+            btn.disabled = true;
+            const data = await postForm(TRANSCRIBE_ATTACHMENT_URL, { attachmentId: btn.dataset.id });
+            window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+            if (data.success) {
+                await reloadAttachments();
+                ensureTranscriptionPolling();
+            } else {
+                btn.disabled = false;
+            }
+        });
+
+        // En transskription kan allerede være i gang, fx hvis siden blev lukket og genåbnet.
+        if (hasActiveTranscriptions()) {
+            ensureTranscriptionPolling();
+        }
+
         // ─── Diktafon: optag og transskribér ────────────────────────────────────
         const recordBtn = document.getElementById('recordBtn');
         let mediaRecorder = null;
@@ -295,7 +385,7 @@
             isRecording = recording;
             recordBtn.disabled = !!busy;
             if (busy) {
-                recordBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Transskriberer...';
+                recordBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Gemmer optagelse...';
             } else if (recording) {
                 recordBtn.innerHTML = '<i class="bi bi-stop-fill me-1"></i> Stop optagelse';
                 recordBtn.classList.add('btn-danger');
@@ -307,34 +397,47 @@
             }
         };
 
+        // Højeste lydkvalitet MediaRecorder kan levere: ingen browser-processering af signalet
+        // (det giver Whisper/Speaches et renere signal end støjreduktion/AGC gør), højest mulige
+        // samplerate, og den bedst understøttede codec med en høj bitrate.
+        const RECORDING_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+
         recordBtn?.addEventListener('click', async () => {
             if (!isRecording) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            channelCount: 1,
+                            sampleRate: 48000,
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        }
+                    });
                     audioChunks = [];
-                    mediaRecorder = new MediaRecorder(stream);
+                    const mimeType = RECORDING_MIME_CANDIDATES.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+                    mediaRecorder = new MediaRecorder(stream, mimeType
+                        ? { mimeType, audioBitsPerSecond: 192000 }
+                        : { audioBitsPerSecond: 192000 });
                     mediaRecorder.addEventListener('dataavailable', (e) => { if (e.data.size > 0) audioChunks.push(e.data); });
                     mediaRecorder.addEventListener('stop', async () => {
                         stream.getTracks().forEach((track) => track.stop());
                         setRecordingState(false, true);
 
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const usedMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
+                        const extension = usedMimeType.includes('ogg') ? 'ogg' : 'webm';
+                        const blob = new Blob(audioChunks, { type: usedMimeType });
                         const body = new FormData();
                         body.append('MeetingId', meetingId);
-                        body.append('Audio', blob, 'optagelse.webm');
+                        body.append('Audio', blob, `optagelse.${extension}`);
                         body.append('__RequestVerificationToken', token);
 
                         try {
-                            const res = await fetch(TRANSCRIBE_URL, { method: 'POST', body, headers: { 'X-Requested-With': 'fetch' } });
+                            const res = await fetch(SAVE_RECORDING_URL, { method: 'POST', body, headers: { 'X-Requested-With': 'fetch' } });
                             const data = await res.json();
-                            if (data.success && data.text) {
-                                minutesEl.value = minutesEl.value ? `${minutesEl.value}\n\n${data.text}` : data.text;
-                                scheduleSave();
-                            } else {
-                                window.FvToast?.show(data.type || 'error', data.message || 'Kunne ikke transskribere optagelsen.');
-                            }
+                            window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
                         } catch {
-                            window.FvToast?.show('error', 'Netværksfejl under transskribering.');
+                            window.FvToast?.show('error', 'Netværksfejl under upload af optagelsen.');
                         } finally {
                             await reloadAttachments();
                             setRecordingState(false, false);

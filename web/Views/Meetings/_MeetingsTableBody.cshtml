@@ -29,7 +29,33 @@
                         <td><a asp-action="Details" asp-route-id="@meeting.Id">@meeting.Title</a></td>
                         <td>@meeting.MeetingDateUtc.ToString("d. MMM yyyy HH:mm")</td>
                         <td>@(string.IsNullOrEmpty(meeting.Location) ? "–" : meeting.Location)</td>
-                        <td>@(string.IsNullOrEmpty(meeting.PersonGroupName) ? "–" : meeting.PersonGroupName)</td>
+                        <td>
+                            @if (meeting.Groups.Count == 0)
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    @foreach (var group in meeting.Groups)
+                                    {
+                                        var firstWord = group.GroupName.Split(' ', 2)[0];
+                                        var hasMore = group.GroupName.Length > firstWord.Length;
+                                        if (hasMore)
+                                        {
+                                            <span class="group-badge" data-group-badge tabindex="0">
+                                                <span class="badge-info group-badge-short">@firstWord…</span>
+                                                <span class="badge-info group-badge-full">@group.GroupName</span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-info">@group.GroupName</span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
                         <td><span class="@MeetingStatuses.GetBadgeClass(meeting.Status)">@MeetingStatuses.GetUILabel(meeting.Status)</span></td>
                         <td>
                             @if (meeting.AttendeeCount == 0)
@@ -46,7 +72,7 @@
                                 <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@meeting.Id" title="Åbn møde" aria-label="Åbn møde">
                                     <i class="bi bi-box-arrow-up-right"></i>
                                 </a>
-                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="offcanvas" data-bs-target="#meetingOffcanvas"
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#meetingEditModal"
                                         data-id="@meeting.Id" title="Rediger" aria-label="Rediger">
                                     <i class="bi bi-pencil"></i>
                                 </button>

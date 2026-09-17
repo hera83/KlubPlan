@@ -1,3 +1,4 @@
+@using web.Constants
 @model List<web.ViewModels.MeetingAttachmentViewModel>
 
 @if (Model.Count == 0)
@@ -9,18 +10,50 @@ else
     <ul class="list-group">
         @foreach (var file in Model)
         {
-            <li class="list-group-item d-flex align-items-center gap-2">
+            var isAudio = file.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase);
+            var transcriptionInProgress = TranscriptionStatuses.IsInProgress(file.TranscriptionStatus);
+            <li class="list-group-item d-flex align-items-center gap-2" data-attachment-id="@file.Id" data-transcription-status="@file.TranscriptionStatus">
                 <i class="bi @(file.IsRecording ? "bi-mic-fill" : "bi-file-earmark") fs-5"></i>
-                <div class="flex-grow-1">
+                <div class="flex-grow-1 attachment-info">
                     <div>@file.OriginalFileName</div>
                     <div class="small text-muted">
                         @(Math.Round(file.FileSizeBytes / 1024.0, 1)) KB
-                        @if (file.IsRecording)
+                        @if (file.TranscriptionStatus != TranscriptionStatus.None)
                         {
-                            <span class="badge-info ms-1">Optagelse</span>
+                            var badgeClass = TranscriptionStatuses.GetBadgeClass(file.TranscriptionStatus);
+                            <span class="transcription-status ms-1" data-group-badge tabindex="0" title="@file.TranscriptionError">
+                                <span class="@badgeClass transcription-badge-short">
+                                    @if (transcriptionInProgress)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else if (file.TranscriptionStatus == TranscriptionStatus.Completed)
+                                    {
+                                        <i class="bi bi-check-lg"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    }
+                                </span>
+                                <span class="@badgeClass transcription-badge-full">
+                                    @if (transcriptionInProgress)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    @TranscriptionStatuses.GetUILabel(file.TranscriptionStatus)
+                                </span>
+                            </span>
                         }
                     </div>
                 </div>
+                @if (isAudio)
+                {
+                    <button type="button" class="btn btn-sm btn-secondary btn-icon attachment-transcribe" data-id="@file.Id"
+                            disabled="@transcriptionInProgress" title="Transskriber" aria-label="Transskriber">
+                        <i class="bi bi-soundwave"></i>
+                    </button>
+                }
                 <a class="btn btn-sm btn-secondary btn-icon" asp-action="DownloadAttachment" asp-route-id="@file.Id" title="Download" aria-label="Download">
                     <i class="bi bi-download"></i>
                 </a>

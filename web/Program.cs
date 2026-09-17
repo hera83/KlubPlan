@@ -125,6 +125,8 @@ try
     builder.Services.AddScoped<IFormService, FormService>();
     builder.Services.AddScoped<IPeopleService, PeopleService>();
     builder.Services.AddScoped<IMeetingsService, MeetingsService>();
+    builder.Services.AddSingleton<ITranscriptionQueue, TranscriptionQueue>();
+    builder.Services.AddHostedService<TranscriptionWorker>();
 
     if (!string.IsNullOrWhiteSpace(builder.Configuration["Sms:ApiKey"]) && !string.IsNullOrWhiteSpace(smsBaseUrl))
     {

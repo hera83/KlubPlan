@@ -1,0 +1,155 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using web.Constants
+@{
+    var groups = ViewData["Groups"] as List<web.ViewModels.PersonGroupOptionViewModel> ?? new();
+    var admins = ViewData["Admins"] as List<web.ViewModels.MeetingAdminOptionViewModel> ?? new();
+}
+
+<!-- Opret/rediger møde -->
+<div class="modal fade" id="meetingEditModal" tabindex="-1" aria-labelledby="meetingEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form id="meetingForm" asp-action="CreateMeeting" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="meetingId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="meetingEditModalLabel"><i class="bi bi-calendar2-plus me-2"></i>Opret møde</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Titel</label>
+                            <input name="Title" id="meetingTitle" class="form-control" required maxlength="200" />
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label">Dato og tid</label>
+                            <input name="MeetingDate" id="meetingDate" type="datetime-local" class="form-control" required />
+                        </div>
+                        <div class="col-md-5 d-none" id="meetingStatusWrap">
+                            <label class="form-label">Status</label>
+                            <select name="Status" id="meetingStatus" class="form-select">
+                                @foreach (var status in MeetingStatuses.AllStatuses)
+                                {
+                                    <option value="@status">@MeetingStatuses.GetUILabel(status)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Sted</label>
+                            <input name="Location" id="meetingLocation" class="form-control" maxlength="200" placeholder="Fysisk sted eller link til onlinemøde" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Grupper mødet vedrører <span class="text-muted">(valgfri)</span></label>
+                            <div class="border rounded p-2 people-group-checkboxes" id="meetingGroups" style="max-height:150px;overflow-y:auto;">
+                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", groups, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "meetingGroups" })
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Administratorer der deltager</label>
+                            <div class="border rounded p-2" id="meetingAttendees" style="max-height:180px;overflow-y:auto;">
+                                @await Html.PartialAsync("_MeetingAdminCheckboxes", admins, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "meetingAttendees" })
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Dagsorden</label>
+                            <textarea name="AgendaNotes" id="meetingAgenda" class="form-control" rows="5" placeholder="Punkter der skal drøftes på mødet..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy2 me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const meetingsRoot = document.getElementById('meetingsTableRoot');
+        const modalEl = document.getElementById('meetingEditModal');
+        const form = document.getElementById('meetingForm');
+        const titleEl = document.getElementById('meetingEditModalLabel');
+        const statusWrap = document.getElementById('meetingStatusWrap');
+
+        const CREATE_URL = '@Url.Action("CreateMeeting", "Meetings")';
+        const EDIT_URL = '@Url.Action("EditMeeting", "Meetings")';
+        const DETAILS_URL = '@Url.Action("MeetingDetailsJson", "Meetings")';
+
+        const toLocalDateTimeValue = (isoString) => {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        };
+
+        const resetForm = () => {
+            form.reset();
+            document.getElementById('meetingId').value = '';
+            modalEl.querySelectorAll('#meetingAttendees input[type="checkbox"], #meetingGroups input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
+        };
+
+        modalEl?.addEventListener('show.bs.modal', async (event) => {
+            const btn = event.relatedTarget;
+            const id = btn?.dataset?.id;
+
+            if (!id) {
+                // Opret-knappen
+                resetForm();
+                form.action = CREATE_URL;
+                titleEl.innerHTML = '<i class="bi bi-calendar2-plus me-2"></i>Opret møde';
+                statusWrap.classList.add('d-none');
+                return;
+            }
+
+            // Rediger
+            resetForm();
+            form.action = EDIT_URL;
+            titleEl.innerHTML = '<i class="bi bi-pencil me-2"></i>Rediger møde';
+            statusWrap.classList.remove('d-none');
+
+            const res = await fetch(`${DETAILS_URL}?id=${id}`, { headers: { 'X-Requested-With': 'fetch' } });
+            if (!res.ok) return;
+            const meeting = await res.json();
+
+            document.getElementById('meetingId').value = meeting.id;
+            document.getElementById('meetingTitle').value = meeting.title || '';
+            document.getElementById('meetingDate').value = toLocalDateTimeValue(meeting.meetingDateUtc);
+            document.getElementById('meetingLocation').value = meeting.location || '';
+            document.getElementById('meetingStatus').value = meeting.status || 'Planned';
+            document.getElementById('meetingAgenda').value = meeting.agendaNotes || '';
+
+            (meeting.groups || []).forEach((group) => {
+                const checkbox = document.getElementById(`meetingGroups_${group.groupId}`);
+                if (checkbox) checkbox.checked = true;
+            });
+
+            (meeting.attendees || []).forEach((attendee) => {
+                const checkbox = document.getElementById(`meetingAttendees_${attendee.userId}`);
+                if (checkbox) checkbox.checked = true;
+            });
+        });
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(form);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                if (meetingsRoot) {
+                    window.FvDataTable?.reload(meetingsRoot);
+                } else {
+                    location.reload();
+                }
+            }
+        });
+    })();
+</script>

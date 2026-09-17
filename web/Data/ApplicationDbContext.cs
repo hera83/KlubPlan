@@ -40,6 +40,7 @@ namespace web.Data
 
         // Meetings: administrator meetings with agenda/minutes, attendance, decisions and attachments
         public DbSet<Meeting> Meetings { get; set; } = null!;
+        public DbSet<MeetingGroup> MeetingGroups { get; set; } = null!;
         public DbSet<MeetingAttendee> MeetingAttendees { get; set; } = null!;
         public DbSet<MeetingDecision> MeetingDecisions { get; set; } = null!;
         public DbSet<MeetingAttachment> MeetingAttachments { get; set; } = null!;
@@ -347,12 +348,25 @@ namespace web.Data
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
 
+                entity.HasIndex(e => e.MeetingDateUtc);
+            });
+
+            // Configure MeetingGroup (join entity for the Meeting <-> PersonGroup many-to-many)
+            builder.Entity<MeetingGroup>(entity =>
+            {
+                entity.HasKey(e => new { e.MeetingId, e.PersonGroupId });
+
+                entity.HasOne(e => e.Meeting)
+                    .WithMany(m => m.Groups)
+                    .HasForeignKey(e => e.MeetingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasOne(e => e.PersonGroup)
                     .WithMany()
                     .HasForeignKey(e => e.PersonGroupId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(e => e.MeetingDateUtc);
+                entity.HasIndex(e => e.PersonGroupId);
             });
 
             // Configure MeetingAttendee (join entity for the Meeting <-> ApplicationUser many-to-many)
@@ -405,6 +419,11 @@ namespace web.Data
 
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
+
+                entity.Property(e => e.TranscriptionStatus)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
 
                 entity.HasOne(e => e.Meeting)
                     .WithMany(m => m.Attachments)

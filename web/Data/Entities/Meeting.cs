@@ -5,8 +5,8 @@ namespace web.Data.Entities
     /// <summary>
     /// A meeting held by the club's administrators. Notes are split into an agenda (written
     /// before the meeting) and minutes (written during/after), since mixing the two is the
-    /// classic failure mode of meeting tools. Optionally tagged with the PersonGroup the
-    /// meeting concerns (e.g. a specific team), independent of who attended.
+    /// classic failure mode of meeting tools. Optionally tagged with the PersonGroups the
+    /// meeting concerns (e.g. specific teams), independent of who attended.
     /// </summary>
     public class Meeting
     {
@@ -26,14 +26,11 @@ namespace web.Data.Entities
         /// <summary>Referat — notes written during/after the meeting.</summary>
         public string? MinutesNotes { get; set; }
 
-        /// <summary>Optional: the PersonGroup (team/committee) this meeting concerns.</summary>
-        public int? PersonGroupId { get; set; }
-
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAtUtc { get; set; }
 
-        public virtual PersonGroup? PersonGroup { get; set; }
+        public virtual ICollection<MeetingGroup> Groups { get; set; } = new List<MeetingGroup>();
 
         public virtual ICollection<MeetingAttendee> Attendees { get; set; } = new List<MeetingAttendee>();
 

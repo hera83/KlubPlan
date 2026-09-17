@@ -1,3 +1,5 @@
+using web.Constants;
+
 namespace web.Data.Entities
 {
     /// <summary>
@@ -16,6 +18,15 @@ namespace web.Data.Entities
         public bool IsRecording { get; set; }
 
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>State of the background transcription job for this attachment, if any was started.</summary>
+        public TranscriptionStatus TranscriptionStatus { get; set; } = TranscriptionStatus.None;
+
+        public DateTime? TranscriptionStartedAtUtc { get; set; }
+
+        public DateTime? TranscriptionCompletedAtUtc { get; set; }
+
+        public string? TranscriptionError { get; set; }
 
         public virtual Meeting Meeting { get; set; } = null!;
 

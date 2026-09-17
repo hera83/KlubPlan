@@ -762,7 +762,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
   display: inline-block;
   cursor: pointer;
 }
-.group-badge-short { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+.group-badge-short { white-space: nowrap; }
 .group-badge-full.badge-info {
   position: absolute;
   top: 0;
@@ -793,6 +793,77 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .group-badge:focus-within .group-badge-short,
 .group-badge.expanded .group-badge-short {
   visibility: hidden;
+}
+
+/* ── Gruppe-badges, diskret variant (mødets info-header): samme forkort/udvid-mekanik som i
+   tabellerne, men den korte tekst er ikke et badge — bare almindelig tekst i samme størrelse som
+   resten af linjen, uden ramme. Kun den udvidede popup (fulde navn) bruger badge-info-stilen. ── */
+.groups-inline .group-badge {
+  outline: none;
+}
+.groups-inline .group-badge-short {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: bottom;
+}
+.groups-inline .group-badge:focus-visible .group-badge-short {
+  text-decoration: underline;
+}
+
+/* ── Transskriptionsstatus (Filer og bilag): vises med ikon+tekst når rækken har plads til det;
+   når pladsen bliver trang skifter den til kun ikon og udvides ved hover/klik ligesom
+   gruppe-badges. Reagerer på selve rækkens bredde (container query), ikke vinduets bredde. ── */
+.attachment-info {
+  container-type: inline-size;
+}
+.transcription-status .transcription-badge-short {
+  display: none;
+}
+.transcription-status .transcription-badge-full {
+  display: inline-flex;
+  align-items: center;
+}
+@container (max-width: 280px) {
+  .transcription-status {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .transcription-status .transcription-badge-short {
+    display: inline-flex;
+    align-items: center;
+  }
+  .transcription-status .transcription-badge-full {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: max-content;
+    max-width: 220px;
+    white-space: normal;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: 6px;
+    box-shadow: var(--shadow-card);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.1s ease;
+  }
+  .transcription-status:hover .transcription-badge-full,
+  .transcription-status:focus-within .transcription-badge-full,
+  .transcription-status.expanded .transcription-badge-full {
+    opacity: 1;
+    visibility: visible;
+  }
+  .transcription-status:hover .transcription-badge-short,
+  .transcription-status:focus-within .transcription-badge-short,
+  .transcription-status.expanded .transcription-badge-short {
+    visibility: hidden;
+  }
 }
 
 /* ── Table ── */
