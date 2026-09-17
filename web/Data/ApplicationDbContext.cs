@@ -349,6 +349,17 @@ namespace web.Data
                     .IsRequired();
 
                 entity.HasIndex(e => e.MeetingDateUtc);
+
+                entity.Property(e => e.VersionNumber)
+                    .IsRequired()
+                    .HasDefaultValue(1);
+
+                entity.HasOne<Meeting>()
+                    .WithMany()
+                    .HasForeignKey(e => e.RootMeetingId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.RootMeetingId);
             });
 
             // Configure MeetingGroup (join entity for the Meeting <-> PersonGroup many-to-many)

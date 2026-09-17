@@ -42,7 +42,7 @@ namespace web.Repositories.Meetings
             filter.Page = filter.Page < 1 ? 1 : filter.Page;
             filter.PageSize = filter.PageSize is < 10 or > 500 ? 10 : filter.PageSize;
 
-            var query = _context.Meetings
+            var meetingsQuery = _context.Meetings
                 .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
                 .Include(m => m.Attendees)
                 .AsQueryable();
@@ -50,42 +50,107 @@ namespace web.Repositories.Meetings
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
                 var search = filter.SearchText.Trim().ToLower();
-                query = query.Where(m =>
+                meetingsQuery = meetingsQuery.Where(m =>
                     m.Title.ToLower().Contains(search) ||
                     (m.Location != null && m.Location.ToLower().Contains(search)));
             }
 
             if (filter.Status.HasValue)
             {
-                query = query.Where(m => m.Status == filter.Status.Value);
+                meetingsQuery = meetingsQuery.Where(m => m.Status == filter.Status.Value);
             }
 
             if (filter.GroupIds.Count > 0)
             {
-                query = query.Where(m => m.Groups.Any(g => filter.GroupIds.Contains(g.PersonGroupId)));
+                meetingsQuery = meetingsQuery.Where(m => m.Groups.Any(g => filter.GroupIds.Contains(g.PersonGroupId)));
             }
+
+            // Only the latest version of each meeting series is shown in the table.
+            var latestPerSeries = _context.Meetings
+                .GroupBy(m => m.RootMeetingId ?? m.Id)
+                .Select(g => new { RootId = g.Key, MaxVersion = g.Max(m => m.VersionNumber), Count = g.Count() });
+
+            var query =
+                from m in meetingsQuery
+                join lv in latestPerSeries
+                    on new { RootId = m.RootMeetingId ?? m.Id, Version = m.VersionNumber }
+                    equals new { RootId = lv.RootId, Version = lv.MaxVersion }
+                select new { Meeting = m, lv.Count };
 
             filter.TotalCount = await query.CountAsync(ct);
 
-            filter.Meetings = await query
-                .OrderByDescending(m => m.MeetingDateUtc)
+            var page = await query
+                .OrderByDescending(x => x.Meeting.MeetingDateUtc)
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
-                .Select(m => new MeetingListItemViewModel
+                .Select(x => new
                 {
-                    Id = m.Id,
-                    Title = m.Title,
-                    MeetingDateUtc = m.MeetingDateUtc,
-                    Location = m.Location,
-                    Status = m.Status,
-                    Groups = m.Groups
+                    x.Meeting.Id,
+                    x.Meeting.Title,
+                    x.Meeting.MeetingDateUtc,
+                    x.Meeting.Location,
+                    x.Meeting.Status,
+                    x.Meeting.VersionNumber,
+                    x.Meeting.RootMeetingId,
+                    VersionCount = x.Count,
+                    Groups = x.Meeting.Groups
                         .OrderBy(g => g.PersonGroup.Name)
                         .Select(g => new MeetingGroupItemViewModel { GroupId = g.PersonGroupId, GroupName = g.PersonGroup.Name })
                         .ToList(),
-                    AttendeeCount = m.Attendees.Count,
-                    AttendedCount = m.Attendees.Count(a => a.HasAttended)
+                    AttendeeCount = x.Meeting.Attendees.Count,
+                    AttendedCount = x.Meeting.Attendees.Count(a => a.HasAttended)
                 })
                 .ToListAsync(ct);
+
+            filter.Meetings = page.Select(p => new MeetingListItemViewModel
+            {
+                Id = p.Id,
+                Title = p.Title,
+                MeetingDateUtc = p.MeetingDateUtc,
+                Location = p.Location,
+                Status = p.Status,
+                Groups = p.Groups,
+                AttendeeCount = p.AttendeeCount,
+                AttendedCount = p.AttendedCount,
+                VersionNumber = p.VersionNumber,
+                VersionCount = p.VersionCount
+            }).ToList();
+
+            var seriesNeedingVersions = page
+                .Where(p => p.VersionCount > 1)
+                .Select(p => p.RootMeetingId ?? p.Id)
+                .Distinct()
+                .ToList();
+
+            if (seriesNeedingVersions.Count > 0)
+            {
+                var allVersions = await _context.Meetings
+                    .Where(m => seriesNeedingVersions.Contains(m.RootMeetingId ?? m.Id))
+                    .OrderByDescending(m => m.VersionNumber)
+                    .Select(m => new { m.Id, RootId = m.RootMeetingId ?? m.Id, m.VersionNumber, m.MeetingDateUtc, m.Status })
+                    .ToListAsync(ct);
+
+                var rootByMeetingId = page.ToDictionary(p => p.Id, p => p.RootMeetingId ?? p.Id);
+
+                foreach (var item in filter.Meetings)
+                {
+                    if (item.VersionCount <= 1)
+                        continue;
+
+                    var rootId = rootByMeetingId[item.Id];
+                    item.Versions = allVersions
+                        .Where(v => v.RootId == rootId)
+                        .Select(v => new MeetingVersionOptionViewModel
+                        {
+                            Id = v.Id,
+                            VersionNumber = v.VersionNumber,
+                            MeetingDateUtc = v.MeetingDateUtc,
+                            Status = v.Status,
+                            IsCurrent = v.Id == item.Id
+                        })
+                        .ToList();
+                }
+            }
 
             filter.Groups = await _context.PersonGroups
                 .OrderBy(g => g.Name)
@@ -107,9 +172,26 @@ namespace web.Repositories.Meetings
             if (meeting is null)
                 return null;
 
+            var effectiveRootId = meeting.RootMeetingId ?? meeting.Id;
+            var seriesVersions = await _context.Meetings
+                .Where(m => (m.RootMeetingId ?? m.Id) == effectiveRootId)
+                .OrderByDescending(m => m.VersionNumber)
+                .Select(m => new { m.Id, m.VersionNumber })
+                .ToListAsync(ct);
+
+            var latestInSeries = seriesVersions[0];
+            var isLatestVersion = latestInSeries.Id == meeting.Id;
+            var currentIndex = seriesVersions.FindIndex(v => v.Id == meeting.Id);
+
             return new MeetingDetailViewModel
             {
                 Id = meeting.Id,
+                VersionNumber = meeting.VersionNumber,
+                VersionCount = seriesVersions.Count,
+                IsLatestVersion = isLatestVersion,
+                CurrentVersionId = isLatestVersion ? null : latestInSeries.Id,
+                PreviousVersionId = currentIndex + 1 < seriesVersions.Count ? seriesVersions[currentIndex + 1].Id : null,
+                NextVersionId = currentIndex > 0 ? seriesVersions[currentIndex - 1].Id : null,
                 Title = meeting.Title,
                 MeetingDateUtc = meeting.MeetingDateUtc,
                 Location = meeting.Location,
@@ -223,6 +305,14 @@ namespace web.Repositories.Meetings
             if (meeting is null)
                 return new UpdateMeetingResponseDto { Success = false, ErrorMessage = "Mødet blev ikke fundet." };
 
+            var effectiveRootId = meeting.RootMeetingId ?? meeting.Id;
+            var latestVersionNumber = await _context.Meetings
+                .Where(m => (m.RootMeetingId ?? m.Id) == effectiveRootId)
+                .MaxAsync(m => m.VersionNumber, ct);
+
+            if (meeting.VersionNumber != latestVersionNumber)
+                return new UpdateMeetingResponseDto { Success = false, ErrorMessage = "Der findes en nyere version af dette møde — kun den aktuelle version kan redigeres." };
+
             meeting.Title = dto.Title.Trim();
             meeting.MeetingDateUtc = dto.MeetingDateUtc;
             meeting.Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim();
@@ -255,6 +345,55 @@ namespace web.Repositories.Meetings
             return new UpdateMeetingResponseDto { Success = true };
         }
 
+        public async Task<CreateMeetingResponseDto> CreateNewVersionAsync(int sourceMeetingId, DateTime meetingDateUtc, CancellationToken ct = default)
+        {
+            var source = await _context.Meetings
+                .Include(m => m.Attendees)
+                .Include(m => m.Groups)
+                .FirstOrDefaultAsync(m => m.Id == sourceMeetingId, ct);
+
+            if (source is null)
+                return new CreateMeetingResponseDto { Success = false, ErrorMessage = "Mødet blev ikke fundet." };
+
+            if (source.Status == MeetingStatus.Planned)
+                return new CreateMeetingResponseDto { Success = false, ErrorMessage = "Der kan kun oprettes en ny version, når mødet er afholdt eller aflyst." };
+
+            var effectiveRootId = source.RootMeetingId ?? source.Id;
+            var latestVersionNumber = await _context.Meetings
+                .Where(m => (m.RootMeetingId ?? m.Id) == effectiveRootId)
+                .MaxAsync(m => m.VersionNumber, ct);
+
+            if (source.VersionNumber != latestVersionNumber)
+                return new CreateMeetingResponseDto { Success = false, ErrorMessage = "Der findes allerede en nyere version af dette møde." };
+
+            var newVersion = new Meeting
+            {
+                Title = source.Title,
+                MeetingDateUtc = meetingDateUtc,
+                Location = source.Location,
+                Status = MeetingStatus.Planned,
+                AgendaNotes = source.AgendaNotes,
+                RootMeetingId = effectiveRootId,
+                VersionNumber = latestVersionNumber + 1,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            foreach (var attendee in source.Attendees)
+            {
+                newVersion.Attendees.Add(new MeetingAttendee { ApplicationUserId = attendee.ApplicationUserId, HasAttended = false });
+            }
+
+            foreach (var group in source.Groups)
+            {
+                newVersion.Groups.Add(new MeetingGroup { PersonGroupId = group.PersonGroupId });
+            }
+
+            _context.Meetings.Add(newVersion);
+            await _context.SaveChangesAsync(ct);
+
+            return new CreateMeetingResponseDto { Success = true, MeetingId = newVersion.Id };
+        }
+
         public async Task<bool> DeleteMeetingAsync(int id, CancellationToken ct = default)
         {
             var meeting = await _context.Meetings
@@ -263,6 +402,26 @@ namespace web.Repositories.Meetings
 
             if (meeting is null)
                 return false;
+
+            // If we're deleting the root of a version series, promote the oldest remaining
+            // sibling to be the new root before removing this one, so the series stays linked.
+            if (meeting.RootMeetingId is null)
+            {
+                var siblings = await _context.Meetings
+                    .Where(m => m.RootMeetingId == meeting.Id)
+                    .OrderBy(m => m.VersionNumber)
+                    .ToListAsync(ct);
+
+                if (siblings.Count > 0)
+                {
+                    var newRoot = siblings[0];
+                    newRoot.RootMeetingId = null;
+                    foreach (var sibling in siblings.Skip(1))
+                    {
+                        sibling.RootMeetingId = newRoot.Id;
+                    }
+                }
+            }
 
             foreach (var attachment in meeting.Attachments)
             {
@@ -276,6 +435,9 @@ namespace web.Repositories.Meetings
 
         public async Task<bool> SetAttendanceAsync(int meetingId, string userId, bool hasAttended, CancellationToken ct = default)
         {
+            if (!await IsLatestVersionAsync(meetingId, ct))
+                return false;
+
             var attendee = await _context.MeetingAttendees
                 .FirstOrDefaultAsync(a => a.MeetingId == meetingId && a.ApplicationUserId == userId, ct);
 
@@ -289,6 +451,9 @@ namespace web.Repositories.Meetings
 
         public async Task<bool> SaveNotesAsync(int meetingId, string? agendaNotes, string? minutesNotes, CancellationToken ct = default)
         {
+            if (!await IsLatestVersionAsync(meetingId, ct))
+                return false;
+
             var meeting = await _context.Meetings.FirstOrDefaultAsync(m => m.Id == meetingId, ct);
             if (meeting is null)
                 return false;
@@ -302,8 +467,7 @@ namespace web.Repositories.Meetings
 
         public async Task<MeetingDecisionViewModel?> AddDecisionAsync(int meetingId, string description, string? responsibleUserId, DateOnly? dueDate, CancellationToken ct = default)
         {
-            var meetingExists = await _context.Meetings.AnyAsync(m => m.Id == meetingId, ct);
-            if (!meetingExists)
+            if (!await IsLatestVersionAsync(meetingId, ct))
                 return null;
 
             var decision = new MeetingDecision
@@ -342,6 +506,9 @@ namespace web.Repositories.Meetings
             if (decision is null)
                 return false;
 
+            if (!await IsLatestVersionAsync(decision.MeetingId, ct))
+                return false;
+
             decision.Description = description.Trim();
             decision.ResponsibleUserId = string.IsNullOrWhiteSpace(responsibleUserId) ? null : responsibleUserId;
             decision.DueDate = dueDate;
@@ -356,6 +523,9 @@ namespace web.Repositories.Meetings
             if (decision is null)
                 return false;
 
+            if (!await IsLatestVersionAsync(decision.MeetingId, ct))
+                return false;
+
             decision.IsCompleted = isCompleted;
             await _context.SaveChangesAsync(ct);
             return true;
@@ -367,6 +537,9 @@ namespace web.Repositories.Meetings
             if (decision is null)
                 return false;
 
+            if (!await IsLatestVersionAsync(decision.MeetingId, ct))
+                return false;
+
             _context.MeetingDecisions.Remove(decision);
             await _context.SaveChangesAsync(ct);
             return true;
@@ -374,8 +547,7 @@ namespace web.Repositories.Meetings
 
         public async Task<MeetingAttachmentViewModel?> AddAttachmentAsync(int meetingId, Stream fileStream, string originalFileName, string contentType, string? uploaderId, bool isRecording, CancellationToken ct = default)
         {
-            var meetingExists = await _context.Meetings.AnyAsync(m => m.Id == meetingId, ct);
-            if (!meetingExists)
+            if (!await IsLatestVersionAsync(meetingId, ct))
                 return null;
 
             var filesPath = _config["AppSettings:FilesPath"] ?? "App_files";
@@ -442,6 +614,9 @@ namespace web.Repositories.Meetings
             if (attachment is null)
                 return false;
 
+            if (!await IsLatestVersionAsync(attachment.MeetingId, ct))
+                return false;
+
             DeletePhysicalFile(attachment.FileMetadata.StoredPath);
 
             var metadata = attachment.FileMetadata;
@@ -481,6 +656,9 @@ namespace web.Repositories.Meetings
             if (attachment is null)
                 return (false, "Filen blev ikke fundet.");
 
+            if (!await IsLatestVersionAsync(attachment.MeetingId, ct))
+                return (false, "Der findes en nyere version af dette møde — denne version er skrivebeskyttet.");
+
             if (!attachment.FileMetadata.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
                 return (false, "Kun lydfiler kan transskriberes.");
 
@@ -519,6 +697,29 @@ namespace web.Repositories.Meetings
             var fullPath = Path.Combine(_env.ContentRootPath, storedRelativePath);
             if (File.Exists(fullPath))
                 File.Delete(fullPath);
+        }
+
+        /// <summary>
+        /// Older versions of a meeting are read-only once a newer version exists — this guards
+        /// every write path (notes, attendance, decisions, attachments) against editing them,
+        /// mirroring the check already applied in UpdateMeetingAsync.
+        /// </summary>
+        private async Task<bool> IsLatestVersionAsync(int meetingId, CancellationToken ct)
+        {
+            var meeting = await _context.Meetings
+                .AsNoTracking()
+                .Select(m => new { m.Id, m.RootMeetingId, m.VersionNumber })
+                .FirstOrDefaultAsync(m => m.Id == meetingId, ct);
+
+            if (meeting is null)
+                return false;
+
+            var effectiveRootId = meeting.RootMeetingId ?? meeting.Id;
+            var latestVersionNumber = await _context.Meetings
+                .Where(m => (m.RootMeetingId ?? m.Id) == effectiveRootId)
+                .MaxAsync(m => m.VersionNumber, ct);
+
+            return meeting.VersionNumber == latestVersionNumber;
         }
     }
 }

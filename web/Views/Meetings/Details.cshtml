@@ -1,4 +1,5 @@
 @model web.ViewModels.MeetingDetailViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using web.Constants
 
 <form id="meetingAntiForgeryForm" class="d-none">@Html.AntiForgeryToken()</form>
@@ -10,6 +11,28 @@
             <h1><i class="bi bi-calendar2-week me-2"></i>@Model.Title</h1>
             <p class="d-flex flex-wrap align-items-center gap-3 mb-0">
                 <span class="@MeetingStatuses.GetBadgeClass(Model.Status)">@MeetingStatuses.GetUILabel(Model.Status)</span>
+                @if (Model.VersionCount > 1)
+                {
+                    <span class="d-inline-flex align-items-center gap-1">
+                        @if (Model.PreviousVersionId.HasValue)
+                        {
+                            <a class="btn btn-sm btn-icon btn-link text-muted" asp-action="Details" asp-route-id="@Model.PreviousVersionId" title="Forrige version" aria-label="Forrige version">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        }
+                        <span><i class="bi bi-layers me-1"></i>Version @Model.VersionNumber af @Model.VersionCount</span>
+                        @if (Model.NextVersionId.HasValue)
+                        {
+                            <a class="btn btn-sm btn-icon btn-link text-muted" asp-action="Details" asp-route-id="@Model.NextVersionId" title="Næste version" aria-label="Næste version">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        }
+                    </span>
+                }
+                else
+                {
+                    <span><i class="bi bi-layers me-1"></i>Version @Model.VersionNumber</span>
+                }
                 <span><i class="bi bi-clock me-1"></i>@Model.MeetingDateUtc.ToString("dddd d. MMMM yyyy 'kl.' HH:mm")</span>
                 @if (!string.IsNullOrEmpty(Model.Location))
                 {
@@ -45,14 +68,25 @@
             </p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#meetingEditModal" data-id="@Model.Id" title="Rediger møde">
-                <i class="bi bi-pencil me-1"></i> Rediger
-            </button>
+            @if (Model.IsLatestVersion)
+            {
+                <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#meetingEditModal" data-id="@Model.Id" title="Rediger møde">
+                    <i class="bi bi-pencil me-1"></i> Rediger
+                </button>
+            }
             <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteMeetingModal" data-id="@Model.Id" data-title="@Model.Title" title="Slet møde">
                 <i class="bi bi-trash me-1"></i> Slet
             </button>
         </div>
     </div>
+
+    @if (!Model.IsLatestVersion && Model.CurrentVersionId.HasValue)
+    {
+        <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span><i class="bi bi-info-circle me-1"></i>Dette er en tidligere version af mødet. Kun den aktuelle version kan redigeres.</span>
+            <a class="btn btn-sm btn-primary" asp-action="Details" asp-route-id="@Model.CurrentVersionId">Gå til nuværende version</a>
+        </div>
+    }
 
     <div class="row g-3">
         <div class="col-lg-8">
@@ -61,7 +95,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <h2 class="h5 mb-0"><i class="bi bi-list-check me-2"></i>Dagsorden</h2>
                     </div>
-                    <textarea id="agendaNotes" class="form-control" rows="5" placeholder="Punkter der skal drøftes på mødet...">@Model.AgendaNotes</textarea>
+                    <textarea id="agendaNotes" class="form-control" rows="5" placeholder="Punkter der skal drøftes på mødet..." readonly="@(!Model.IsLatestVersion)">@Model.AgendaNotes</textarea>
                 </div>
             </div>
 
@@ -71,15 +105,18 @@
                         <h2 class="h5 mb-0"><i class="bi bi-journal-text me-2"></i>Referat / noter</h2>
                         <div class="d-flex align-items-center gap-2">
                             <span id="notesSavedIndicator" class="small text-muted"></span>
-                            <button type="button" id="recordBtn" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-mic-fill me-1"></i> Optag lyd
-                            </button>
-                            <button type="button" id="generateSummaryBtn" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-stars me-1"></i> Generér referat-udkast
-                            </button>
+                            @if (Model.IsLatestVersion)
+                            {
+                                <button type="button" id="recordBtn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-mic-fill me-1"></i> Optag lyd
+                                </button>
+                                <button type="button" id="generateSummaryBtn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-stars me-1"></i> Generér referat-udkast
+                                </button>
+                            }
                         </div>
                     </div>
-                    <textarea id="minutesNotes" class="form-control" rows="10" placeholder="Referat/noter skrevet under eller efter mødet...">@Model.MinutesNotes</textarea>
+                    <textarea id="minutesNotes" class="form-control" rows="10" placeholder="Referat/noter skrevet under eller efter mødet..." readonly="@(!Model.IsLatestVersion)">@Model.MinutesNotes</textarea>
 
                     <div id="aiSummaryPanel" class="alert alert-info mt-3 d-none">
                         <div class="d-flex align-items-center justify-content-between mb-2">
@@ -110,7 +147,7 @@
                             {
                                 <div class="form-check">
                                     <input class="form-check-input attendee-toggle" type="checkbox" data-user-id="@attendee.UserId"
-                                           id="attendee_@attendee.UserId" checked="@attendee.HasAttended" />
+                                           id="attendee_@attendee.UserId" checked="@attendee.HasAttended" disabled="@(!Model.IsLatestVersion)" />
                                     <label class="form-check-label" for="attendee_@attendee.UserId">@attendee.DisplayName</label>
                                 </div>
                             }
@@ -123,32 +160,35 @@
                 <div class="card-body">
                     <h2 class="h6 mb-2"><i class="bi bi-check2-square me-2"></i>Beslutninger</h2>
                     <div id="meetingDecisionsList">
-                        @await Html.PartialAsync("_MeetingDecisionsList", Model.Decisions)
+                        @await Html.PartialAsync("_MeetingDecisionsList", Model.Decisions, new ViewDataDictionary(ViewData) { ["IsReadOnly"] = !Model.IsLatestVersion })
                     </div>
-                    <form id="addDecisionForm" asp-action="AddDecision" method="post" class="mt-3 pt-3 border-top">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="MeetingId" value="@Model.Id" />
-                        <div class="mb-2">
-                            <input name="Description" class="form-control" placeholder="Ny beslutning/opgave..." required maxlength="1000" />
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-7">
-                                <select name="ResponsibleUserId" class="form-select form-select-sm">
-                                    <option value="">Ansvarlig (valgfri)</option>
-                                    @foreach (var admin in ViewData["Admins"] as List<web.ViewModels.MeetingAdminOptionViewModel> ?? new())
-                                    {
-                                        <option value="@admin.Id">@admin.DisplayName</option>
-                                    }
-                                </select>
+                    @if (Model.IsLatestVersion)
+                    {
+                        <form id="addDecisionForm" asp-action="AddDecision" method="post" class="mt-3 pt-3 border-top">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="MeetingId" value="@Model.Id" />
+                            <div class="mb-2">
+                                <input name="Description" class="form-control" placeholder="Ny beslutning/opgave..." required maxlength="1000" />
                             </div>
-                            <div class="col-5">
-                                <input name="DueDate" type="date" class="form-control form-control-sm" />
+                            <div class="row g-2">
+                                <div class="col-7">
+                                    <select name="ResponsibleUserId" class="form-select form-select-sm">
+                                        <option value="">Ansvarlig (valgfri)</option>
+                                        @foreach (var admin in ViewData["Admins"] as List<web.ViewModels.MeetingAdminOptionViewModel> ?? new())
+                                        {
+                                            <option value="@admin.Id">@admin.DisplayName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-5">
+                                    <input name="DueDate" type="date" class="form-control form-control-sm" />
+                                </div>
                             </div>
-                        </div>
-                        <button type="submit" class="btn btn-sm btn-primary mt-2 w-100">
-                            <i class="bi bi-plus-lg me-1"></i> Tilføj beslutning
-                        </button>
-                    </form>
+                            <button type="submit" class="btn btn-sm btn-primary mt-2 w-100">
+                                <i class="bi bi-plus-lg me-1"></i> Tilføj beslutning
+                            </button>
+                        </form>
+                    }
                 </div>
             </div>
 
@@ -156,16 +196,19 @@
                 <div class="card-body">
                     <h2 class="h6 mb-2"><i class="bi bi-paperclip me-2"></i>Filer og bilag</h2>
                     <div id="meetingAttachmentsList">
-                        @await Html.PartialAsync("_MeetingAttachmentsList", Model.Attachments)
+                        @await Html.PartialAsync("_MeetingAttachmentsList", Model.Attachments, new ViewDataDictionary(ViewData) { ["IsReadOnly"] = !Model.IsLatestVersion })
                     </div>
-                    <form id="uploadAttachmentForm" asp-action="UploadAttachment" method="post" enctype="multipart/form-data" class="mt-3 pt-3 border-top d-flex gap-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="MeetingId" value="@Model.Id" />
-                        <input type="file" name="File" class="form-control form-control-sm" required />
-                        <button type="submit" class="btn btn-sm btn-secondary text-nowrap">
-                            <i class="bi bi-upload me-1"></i> Upload
-                        </button>
-                    </form>
+                    @if (Model.IsLatestVersion)
+                    {
+                        <form id="uploadAttachmentForm" asp-action="UploadAttachment" method="post" enctype="multipart/form-data" class="mt-3 pt-3 border-top d-flex gap-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="MeetingId" value="@Model.Id" />
+                            <input type="file" name="File" class="form-control form-control-sm" required />
+                            <button type="submit" class="btn btn-sm btn-secondary text-nowrap">
+                                <i class="bi bi-upload me-1"></i> Upload
+                            </button>
+                        </form>
+                    }
                 </div>
             </div>
         </div>

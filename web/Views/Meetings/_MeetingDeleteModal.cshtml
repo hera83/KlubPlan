@@ -7,6 +7,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3 d-none" id="deleteMeetingVersionWrap">
+                    <label class="form-label" for="deleteMeetingVersionSelect">Version der skal slettes</label>
+                    <select class="form-select" id="deleteMeetingVersionSelect"></select>
+                </div>
                 Er du sikker på, at du vil slette mødet <strong id="deleteMeetingTitle"></strong>? Dagsorden, referat,
                 beslutninger og bilag slettes samtidig. Denne handling kan ikke fortrydes.
             </div>
@@ -35,8 +39,34 @@
         deleteMeetingModal?.addEventListener('show.bs.modal', (event) => {
             const btn = event.relatedTarget;
             if (!btn) return;
-            document.getElementById('deleteMeetingId').value = btn.dataset.id;
+
+            const idInput = document.getElementById('deleteMeetingId');
+            const versionWrap = document.getElementById('deleteMeetingVersionWrap');
+            const versionSelect = document.getElementById('deleteMeetingVersionSelect');
+
             document.getElementById('deleteMeetingTitle').textContent = btn.dataset.title;
+
+            let versions = [];
+            try { versions = btn.dataset.versions ? JSON.parse(btn.dataset.versions) : []; } catch { versions = []; }
+
+            if (versions.length > 1) {
+                versionSelect.innerHTML = '';
+                versions.forEach((v) => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id;
+                    opt.textContent = v.label;
+                    if (v.isCurrent) opt.selected = true;
+                    versionSelect.appendChild(opt);
+                });
+                versionWrap.classList.remove('d-none');
+                idInput.value = versionSelect.value;
+                versionSelect.onchange = () => { idInput.value = versionSelect.value; };
+            } else {
+                versionWrap.classList.add('d-none');
+                versionSelect.innerHTML = '';
+                versionSelect.onchange = null;
+                idInput.value = btn.dataset.id;
+            }
         });
 
         deleteMeetingModal?.querySelector('form')?.addEventListener('submit', async (e) => {

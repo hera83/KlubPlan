@@ -120,6 +120,19 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateNewVersion(int id, DateTime meetingDate)
+        {
+            if (meetingDate == default)
+                return this.ToastErrorJson("Angiv dato og tid for den nye version.");
+
+            var result = await _meetingsService.CreateNewVersionAsync(id, meetingDate, HttpContext.RequestAborted);
+            return result.Success
+                ? Json(new { success = true, message = "Ny version oprettet.", type = "success", meetingId = result.MeetingId })
+                : this.ToastErrorJson(result.ErrorMessage ?? "Kunne ikke oprette ny version.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteMeeting(int id)
         {
             var deleted = await _meetingsService.DeleteMeetingAsync(id, HttpContext.RequestAborted);
@@ -158,6 +171,7 @@ namespace web.Controllers
                 return NotFound();
 
             ViewData["Admins"] = await _meetingsService.GetAdminOptionsAsync(HttpContext.RequestAborted);
+            ViewData["IsReadOnly"] = !detail.IsLatestVersion;
             return PartialView("_MeetingDecisionsList", detail.Decisions);
         }
 
@@ -212,6 +226,7 @@ namespace web.Controllers
             if (detail is null)
                 return NotFound();
 
+            ViewData["IsReadOnly"] = !detail.IsLatestVersion;
             return PartialView("_MeetingAttachmentsList", detail.Attachments);
         }
 

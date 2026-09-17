@@ -20,6 +20,15 @@ namespace web.Data.Entities
 
         public MeetingStatus Status { get; set; } = MeetingStatus.Planned;
 
+        /// <summary>
+        /// Points to the root Meeting of this version chain. Null means this Meeting IS the root
+        /// (i.e. version 1). All meetings sharing the same RootMeetingId (or, for the root
+        /// itself, the same Id) belong to one version series.
+        /// </summary>
+        public int? RootMeetingId { get; set; }
+
+        public int VersionNumber { get; set; } = 1;
+
         /// <summary>Dagsorden — points to discuss, written before the meeting.</summary>
         public string? AgendaNotes { get; set; }
 

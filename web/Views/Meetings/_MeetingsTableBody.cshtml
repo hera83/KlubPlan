@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using web.Constants
 @model web.ViewModels.MeetingFilterViewModel
 
@@ -6,6 +7,7 @@
         <thead>
             <tr>
                 <th>Titel</th>
+                <th>Version</th>
                 <th>Dato</th>
                 <th>Sted</th>
                 <th>Gruppe</th>
@@ -18,7 +20,7 @@
             @if (Model.Meetings.Count == 0)
             {
                 <tr>
-                    <td colspan="7" class="text-muted">Ingen møder fundet.</td>
+                    <td colspan="8" class="text-muted">Ingen møder fundet.</td>
                 </tr>
             }
             else
@@ -27,6 +29,7 @@
                 {
                     <tr>
                         <td><a asp-action="Details" asp-route-id="@meeting.Id">@meeting.Title</a></td>
+                        <td>v@(meeting.VersionNumber)@(meeting.VersionCount > 1 ? $" / {meeting.VersionCount}" : "")</td>
                         <td>@meeting.MeetingDateUtc.ToString("d. MMM yyyy HH:mm")</td>
                         <td>@(string.IsNullOrEmpty(meeting.Location) ? "–" : meeting.Location)</td>
                         <td>
@@ -69,6 +72,13 @@
                         </td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
+                                @if (meeting.Status == MeetingStatus.Held || meeting.Status == MeetingStatus.Cancelled)
+                                {
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#meetingNewVersionModal"
+                                            data-id="@meeting.Id" title="Ny version" aria-label="Ny version">
+                                        <i class="bi bi-file-earmark-plus"></i>
+                                    </button>
+                                }
                                 <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@meeting.Id" title="Åbn møde" aria-label="Åbn møde">
                                     <i class="bi bi-box-arrow-up-right"></i>
                                 </a>
@@ -76,8 +86,18 @@
                                         data-id="@meeting.Id" title="Rediger" aria-label="Rediger">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+                                @{
+                                    var versionsJson = meeting.VersionCount > 1
+                                        ? JsonSerializer.Serialize(meeting.Versions.Select(v => new
+                                            {
+                                                id = v.Id,
+                                                label = $"Version {v.VersionNumber} — {v.MeetingDateUtc:d. MMM yyyy} ({MeetingStatuses.GetUILabel(v.Status)})" + (v.IsCurrent ? " · nuværende" : ""),
+                                                isCurrent = v.IsCurrent
+                                            }))
+                                        : null;
+                                }
                                 <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteMeetingModal"
-                                        data-id="@meeting.Id" data-title="@meeting.Title" title="Slet" aria-label="Slet">
+                                        data-id="@meeting.Id" data-title="@meeting.Title" data-versions="@versionsJson" title="Slet" aria-label="Slet">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>

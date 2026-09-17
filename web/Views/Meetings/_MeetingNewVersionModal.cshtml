@@ -1,0 +1,57 @@
+<!-- Ny version af møde -->
+<div class="modal fade" id="meetingNewVersionModal" tabindex="-1" aria-labelledby="meetingNewVersionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="meetingNewVersionForm" asp-action="CreateNewVersion" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="newVersionSourceId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="meetingNewVersionModalLabel"><i class="bi bi-file-earmark-plus me-2"></i>Ny version af møde</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Titel, sted, dagsorden, deltagere og grupper kopieres fra den nuværende version. Vælg dato og tid for den nye version.</p>
+                    <label class="form-label">Dato og tid</label>
+                    <input name="meetingDate" id="newVersionDate" type="datetime-local" class="form-control" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Opret
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modalEl = document.getElementById('meetingNewVersionModal');
+        const form = document.getElementById('meetingNewVersionForm');
+        const DETAILS_URL = '@Url.Action("Details", "Meetings")';
+
+        modalEl?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            document.getElementById('newVersionSourceId').value = btn?.dataset?.id || '';
+
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            document.getElementById('newVersionDate').value =
+                `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        });
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(form);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                window.location.href = `${DETAILS_URL}/${data.meetingId}`;
+            }
+        });
+    })();
+</script>

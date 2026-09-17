@@ -17,6 +17,8 @@ namespace web.Repositories.Meetings.Interfaces
 
         Task<UpdateMeetingResponseDto> UpdateMeetingAsync(UpdateMeetingRequestDto dto, CancellationToken ct = default);
 
+        Task<CreateMeetingResponseDto> CreateNewVersionAsync(int sourceMeetingId, DateTime meetingDateUtc, CancellationToken ct = default);
+
         Task<bool> DeleteMeetingAsync(int id, CancellationToken ct = default);
 
         Task<bool> SetAttendanceAsync(int meetingId, string userId, bool hasAttended, CancellationToken ct = default);

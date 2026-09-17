@@ -35,6 +35,20 @@ namespace web.ViewModels
         public List<MeetingGroupItemViewModel> Groups { get; set; } = new();
         public int AttendeeCount { get; set; }
         public int AttendedCount { get; set; }
+        public int VersionNumber { get; set; }
+        public int VersionCount { get; set; }
+
+        /// <summary>All versions in this meeting's series, for the delete dropdown. Only populated when VersionCount > 1.</summary>
+        public List<MeetingVersionOptionViewModel> Versions { get; set; } = new();
+    }
+
+    public class MeetingVersionOptionViewModel
+    {
+        public int Id { get; set; }
+        public int VersionNumber { get; set; }
+        public DateTime MeetingDateUtc { get; set; }
+        public MeetingStatus Status { get; set; }
+        public bool IsCurrent { get; set; }
     }
 
     public class MeetingAdminOptionViewModel
@@ -93,6 +107,19 @@ namespace web.ViewModels
         public List<MeetingAttendeeViewModel> Attendees { get; set; } = new();
         public List<MeetingDecisionViewModel> Decisions { get; set; } = new();
         public List<MeetingAttachmentViewModel> Attachments { get; set; } = new();
+
+        public int VersionNumber { get; set; }
+        public int VersionCount { get; set; }
+        public bool IsLatestVersion { get; set; } = true;
+
+        /// <summary>Id of the latest version in this meeting's series, set only when IsLatestVersion is false.</summary>
+        public int? CurrentVersionId { get; set; }
+
+        /// <summary>Id of the next older version (one VersionNumber lower), for the version-nav arrow. Null when viewing version 1.</summary>
+        public int? PreviousVersionId { get; set; }
+
+        /// <summary>Id of the next newer version (one VersionNumber higher), for the version-nav arrow. Null when viewing the latest version.</summary>
+        public int? NextVersionId { get; set; }
     }
 
     public class CreateMeetingViewModel

@@ -1,4 +1,7 @@
 @model List<web.ViewModels.MeetingDecisionViewModel>
+@{
+    var isReadOnly = ViewData["IsReadOnly"] as bool? ?? false;
+}
 
 @if (Model.Count == 0)
 {
@@ -11,7 +14,7 @@ else
         {
             <li class="list-group-item d-flex align-items-start gap-2">
                 <div class="form-check mt-1">
-                    <input class="form-check-input decision-complete-toggle" type="checkbox" data-id="@decision.Id" @(decision.IsCompleted ? "checked" : "") aria-label="Fuldført" />
+                    <input class="form-check-input decision-complete-toggle" type="checkbox" data-id="@decision.Id" @(decision.IsCompleted ? "checked" : "") disabled="@isReadOnly" aria-label="Fuldført" />
                 </div>
                 <div class="flex-grow-1">
                     <div class="@(decision.IsCompleted ? "text-decoration-line-through text-muted" : "")">@decision.Description</div>
@@ -26,9 +29,12 @@ else
                         }
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-secondary btn-icon decision-delete" data-id="@decision.Id" title="Slet beslutning" aria-label="Slet beslutning">
-                    <i class="bi bi-trash"></i>
-                </button>
+                @if (!isReadOnly)
+                {
+                    <button type="button" class="btn btn-sm btn-secondary btn-icon decision-delete" data-id="@decision.Id" title="Slet beslutning" aria-label="Slet beslutning">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                }
             </li>
         }
     </ul>
