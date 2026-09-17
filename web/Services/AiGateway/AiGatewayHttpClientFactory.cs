@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace web.Services.AiGateway;
 
 public class AiGatewayHttpClientFactory
@@ -11,6 +13,13 @@ public class AiGatewayHttpClientFactory
 
     public HttpClient Create(string baseUrl, string? apiKey, int requestTimeoutSeconds)
     {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            throw new AiGatewayException(HttpStatusCode.InternalServerError,
+                "AiGateway:BaseUrl er ikke konfigureret. Sæt miljøvariablen AiGateway__BaseUrl (eller " +
+                "AiGateway:BaseUrl i appsettings.Production.json) til AiGatewayens URL.");
+        }
+
         var client = _httpClientFactory.CreateClient("AiGateway");
         client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/", UriKind.Absolute);
         client.Timeout = TimeSpan.FromSeconds(requestTimeoutSeconds > 0 ? requestTimeoutSeconds : 300);
