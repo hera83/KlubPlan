@@ -45,6 +45,15 @@ namespace web.Data
         public DbSet<MeetingDecision> MeetingDecisions { get; set; } = null!;
         public DbSet<MeetingAttachment> MeetingAttachments { get; set; } = null!;
 
+        // Arrangementer (Tilmeldinger): arrangement with its own signup-form fields, shifts with
+        // per-shift requirements, registration window and access list (Person/PersonGroup)
+        public DbSet<Arrangement> Arrangements { get; set; } = null!;
+        public DbSet<ArrangementFormField> ArrangementFormFields { get; set; } = null!;
+        public DbSet<ArrangementShift> ArrangementShifts { get; set; } = null!;
+        public DbSet<ArrangementShiftRequirement> ArrangementShiftRequirements { get; set; } = null!;
+        public DbSet<ArrangementAllowedPerson> ArrangementAllowedPersons { get; set; } = null!;
+        public DbSet<ArrangementAllowedGroup> ArrangementAllowedGroups { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -457,6 +466,128 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => e.MeetingId);
+            });
+
+            // Configure Arrangement
+            builder.Entity<Arrangement>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.AccessMode)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.CreatedAtUtc);
+            });
+
+            // Configure ArrangementFormField
+            builder.Entity<ArrangementFormField>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Label)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.HelpText)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.FieldType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasConversion<string>();
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany(a => a.FormFields)
+                    .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ArrangementId, e.Order });
+            });
+
+            // Configure ArrangementShift
+            builder.Entity<ArrangementShift>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(200);
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany(a => a.Shifts)
+                    .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ArrangementId, e.Order });
+                entity.HasIndex(e => e.StartUtc);
+            });
+
+            // Configure ArrangementShiftRequirement
+            builder.Entity<ArrangementShiftRequirement>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Text)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.HasOne(e => e.Shift)
+                    .WithMany(s => s.Requirements)
+                    .HasForeignKey(e => e.ArrangementShiftId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ArrangementShiftId, e.Order });
+            });
+
+            // Configure ArrangementAllowedPerson (join entity for Arrangement <-> Person many-to-many)
+            builder.Entity<ArrangementAllowedPerson>(entity =>
+            {
+                entity.HasKey(e => new { e.ArrangementId, e.PersonId });
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany(a => a.AllowedPersons)
+                    .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Person)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PersonId);
+            });
+
+            // Configure ArrangementAllowedGroup (join entity for Arrangement <-> PersonGroup many-to-many)
+            builder.Entity<ArrangementAllowedGroup>(entity =>
+            {
+                entity.HasKey(e => new { e.ArrangementId, e.PersonGroupId });
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany(a => a.AllowedGroups)
+                    .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PersonGroup)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PersonGroupId);
             });
         }
     }

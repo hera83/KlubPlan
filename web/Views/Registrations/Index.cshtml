@@ -1,0 +1,39 @@
+@model web.ViewModels.ArrangementFilterViewModel
+@{
+    ViewData["Title"] = "Tilmeldinger";
+}
+
+<div>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-clipboard-check me-2"></i>Tilmeldinger</h1>
+            <p>Opret og administrer tilmeldinger til aktiviteter og arrangementer</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="arrangementsTableRoot" data-table-endpoint="@Url.Action("ArrangementsTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg i arrangementer..." data-table-search autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="table-toolbar-end">
+                        <a class="btn btn-primary" asp-action="Create" title="Opret arrangement" aria-label="Opret arrangement">
+                            <i class="bi bi-plus-lg me-1"></i> Opret
+                        </a>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_ArrangementsTableBody", Model)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ArrangementDeleteModal")

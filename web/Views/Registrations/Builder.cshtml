@@ -1,0 +1,203 @@
+@model web.ViewModels.ArrangementBuilderViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using web.Constants
+@{
+    ViewData["Title"] = Model.Id > 0 ? "Rediger arrangement" : "Opret arrangement";
+
+    var seed = new
+    {
+        FormFields = Model.FormFields
+            .OrderBy(f => f.Order)
+            .Select(f => new
+            {
+                f.Id,
+                f.Label,
+                f.HelpText,
+                FieldType = f.FieldType.ToString(),
+                f.IsRequired,
+                f.Order,
+                f.OptionsJson
+            }),
+        Shifts = Model.Shifts
+            .OrderBy(s => s.Order)
+            .Select(s => new
+            {
+                s.Id,
+                s.Title,
+                Start = s.Start == default ? "" : s.Start.ToString("yyyy-MM-ddTHH:mm"),
+                End = s.End == default ? "" : s.End.ToString("yyyy-MM-ddTHH:mm"),
+                s.Location,
+                s.NeededCount,
+                Requirements = s.Requirements
+                    .OrderBy(r => r.Order)
+                    .Select(r => new { r.Id, r.Text })
+            })
+    };
+}
+
+<div class="form-builder-page">
+    <form asp-action="Save" method="post" id="arrangementBuilderForm" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div id="arrangementFormFieldsHidden"></div>
+        <div id="arrangementShiftsHidden"></div>
+
+        <div class="form-builder-topbar">
+            <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til tilmeldinger</a>
+
+            <div class="form-builder-topbar-spacer"></div>
+
+            <button type="submit" class="btn btn-primary" id="saveArrangementBtn">
+                <i class="bi bi-floppy2 me-1"></i> Gem
+            </button>
+        </div>
+
+        <div id="builderAlert" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="form-builder-canvas">
+            <div class="form-builder-titlecard">
+                <input type="text" class="form-builder-title-input" asp-for="Title" placeholder="Unavngivent arrangement" autocomplete="off" maxlength="200" />
+                <textarea class="form-builder-desc-input" asp-for="Description" placeholder="Beskrivelse (valgfri)" rows="1" maxlength="2000"></textarea>
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+
+            <ul class="nav nav-tabs" id="arrangementTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tf-tab" data-bs-toggle="tab" data-bs-target="#tf-pane" type="button" role="tab" aria-controls="tf-pane" aria-selected="true">Tilmeldingsformular</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="shifts-tab" data-bs-toggle="tab" data-bs-target="#shifts-pane" type="button" role="tab" aria-controls="shifts-pane" aria-selected="false">Vagter</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab" aria-controls="details-pane" aria-selected="false">Detaljer</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-pane" type="button" role="tab" aria-controls="access-pane" aria-selected="false">Adgang</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="arrangementTabsContent">
+                <!-- a) Tilmeldingsformular -->
+                <div class="tab-pane fade show active" id="tf-pane" role="tabpanel" aria-labelledby="tf-tab">
+                    <p class="text-muted small mb-3">Spørgsmål den, der tilmelder sig, skal svare på.</p>
+                    <div id="arrangementFieldCards" class="form-field-cards"></div>
+                    <div class="form-builder-add-wrap mt-3">
+                        <button type="button" class="btn btn-outline-secondary form-builder-add-btn" id="addArrangementFieldBtn">
+                            <i class="bi bi-plus-lg me-1"></i> Tilføj spørgsmål
+                        </button>
+                        <div class="form-builder-type-picker d-none" id="arrangementTypePicker"></div>
+                    </div>
+                </div>
+
+                <!-- b) + c) Vagter, med krav pr. vagt -->
+                <div class="tab-pane fade" id="shifts-pane" role="tabpanel" aria-labelledby="shifts-tab">
+                    <p class="text-muted small mb-3">Opret de vagter, der skal bemandes, hvor mange pladser der er, og evt. krav for at tilmelde sig den enkelte vagt.</p>
+                    <div id="arrangementShiftCards" class="form-field-cards"></div>
+                    <div class="form-builder-add-wrap mt-3">
+                        <button type="button" class="btn btn-outline-secondary form-builder-add-btn" id="addArrangementShiftBtn">
+                            <i class="bi bi-plus-lg me-1"></i> Tilføj vagt
+                        </button>
+                    </div>
+                </div>
+
+                <!-- d) Detaljer -->
+                <div class="tab-pane fade" id="details-pane" role="tabpanel" aria-labelledby="details-tab">
+                    <p class="text-muted small mb-3">Hvornår tilmeldingen åbner og lukker. Lad et felt stå tomt, hvis det ikke skal begrænses.</p>
+                    <div class="row g-3" style="max-width: 40rem;">
+                        <div class="col-md-6">
+                            <label class="form-label">Tilmelding åbner</label>
+                            <input type="datetime-local" class="form-control" name="RegistrationOpensAt"
+                                   value="@(Model.RegistrationOpensAt?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tilmelding lukker</label>
+                            <input type="datetime-local" class="form-control" name="RegistrationClosesAt"
+                                   value="@(Model.RegistrationClosesAt?.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- e) Adgang -->
+                <div class="tab-pane fade" id="access-pane" role="tabpanel" aria-labelledby="access-tab">
+                    <p class="text-muted small mb-3">Hvem må tilmelde sig arrangementet.</p>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="AccessMode" id="accessOpen" value="@ArrangementAccessMode.Open" checked="@(Model.AccessMode == ArrangementAccessMode.Open)" />
+                            <label class="form-check-label" for="accessOpen">Åben for alle</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="AccessMode" id="accessRestricted" value="@ArrangementAccessMode.Restricted" checked="@(Model.AccessMode == ArrangementAccessMode.Restricted)" />
+                            <label class="form-check-label" for="accessRestricted">Begrænset til udvalgte personer/grupper</label>
+                        </div>
+                    </div>
+
+                    <div id="arrangementAccessRestrictedPanel" class="row g-3 @(Model.AccessMode == ArrangementAccessMode.Restricted ? "" : "d-none")">
+                        <div class="col-md-6">
+                            <label class="form-label">Grupper</label>
+                            <div class="border rounded p-2" style="max-height:220px;overflow-y:auto;">
+                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementGroups", ["Name"] = "AllowedGroupIds" })
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Personer</label>
+                            <input type="search" class="form-control form-control-sm mb-2" id="arrangementPersonFilter" placeholder="Søg efter navn..." autocomplete="off" />
+                            <div class="border rounded p-2" id="arrangementPersonsWrap" style="max-height:220px;overflow-y:auto;">
+                                @await Html.PartialAsync("_ArrangementPersonCheckboxes", Model.PersonOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementPersons" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script id="arrangementBuilderSeed" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(seed))</script>
+<script src="~/js/arrangement-form-builder.js" asp-append-version="true"></script>
+<script src="~/js/arrangement-shifts-builder.js" asp-append-version="true"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        var seed = JSON.parse(document.getElementById('arrangementBuilderSeed').textContent);
+        var formEl = document.getElementById('arrangementBuilderForm');
+        var alertEl = document.getElementById('builderAlert');
+
+        window.FvArrangementFormBuilder?.init({
+            formEl: formEl,
+            cardsContainer: document.getElementById('arrangementFieldCards'),
+            hiddenContainer: document.getElementById('arrangementFormFieldsHidden'),
+            addFieldBtn: document.getElementById('addArrangementFieldBtn'),
+            typePicker: document.getElementById('arrangementTypePicker'),
+            alertEl: alertEl,
+            seed: seed
+        });
+
+        window.FvArrangementShiftsBuilder?.init({
+            formEl: formEl,
+            cardsContainer: document.getElementById('arrangementShiftCards'),
+            hiddenContainer: document.getElementById('arrangementShiftsHidden'),
+            addShiftBtn: document.getElementById('addArrangementShiftBtn'),
+            alertEl: alertEl,
+            seed: seed
+        });
+
+        // Adgang: vis/skjul person-/gruppelisterne alt efter om adgangen er begrænset.
+        var restrictedPanel = document.getElementById('arrangementAccessRestrictedPanel');
+        document.querySelectorAll('input[name="AccessMode"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                restrictedPanel.classList.toggle('d-none', document.getElementById('accessRestricted').checked === false);
+            });
+        });
+
+        // Adgang: live-filtrer personlisten på navn, uden serverkald.
+        var personFilter = document.getElementById('arrangementPersonFilter');
+        var personsWrap = document.getElementById('arrangementPersonsWrap');
+        personFilter?.addEventListener('input', () => {
+            var term = personFilter.value.trim().toLowerCase();
+            personsWrap.querySelectorAll('.form-check').forEach((row) => {
+                var label = row.querySelector('label')?.textContent.toLowerCase() || '';
+                row.classList.toggle('d-none', term.length > 0 && !label.includes(term));
+            });
+        });
+    });
+</script>

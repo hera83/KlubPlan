@@ -1,0 +1,55 @@
+<!-- Slet arrangement modal -->
+<div class="modal fade" id="deleteArrangementModal" tabindex="-1" aria-labelledby="deleteArrangementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteArrangementModalLabel"><i class="bi bi-trash me-2"></i>Slet arrangement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette arrangementet <strong id="deleteArrangementName"></strong>? Alle vagter,
+                krav og opsætning slettes samtidig. Denne handling kan ikke fortrydes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="Delete" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteArrangementId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const arrangementsRoot = document.getElementById('arrangementsTableRoot');
+        const deleteArrangementModal = document.getElementById('deleteArrangementModal');
+
+        deleteArrangementModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+
+            document.getElementById('deleteArrangementName').textContent = btn.dataset.title;
+            document.getElementById('deleteArrangementId').value = btn.dataset.id;
+        });
+
+        const deleteForm = deleteArrangementModal?.querySelector('form');
+        deleteForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = deleteForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(deleteForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(deleteArrangementModal)?.hide();
+                window.FvDataTable?.reload(arrangementsRoot);
+            }
+        });
+    })();
+</script>

@@ -1,0 +1,247 @@
+@model web.ViewModels.ArrangementBuilderViewModel
+@using System.Globalization
+@using web.Constants
+@{
+    ViewData["Title"] = "Forhåndsvisning – " + Model.Title;
+    var da = CultureInfo.GetCultureInfo("da-DK");
+
+    // Vagter uden ledige pladser vises ikke — i dag har ingen vagter tilmeldte endnu (den
+    // offentlige tilmeldingsflow findes ikke endnu), så NeededCount er reelt antal ledige
+    // pladser. Når rigtige tilmeldinger findes, skal "ledige pladser" beregnes som
+    // NeededCount minus antal tilmeldte, men filtreringen (skjul ved 0 ledige) er allerede på plads her.
+    var visibleShifts = Model.Shifts.Where(s => s.NeededCount > 0).OrderBy(s => s.Start).ToList();
+    var dayGroups = visibleShifts.GroupBy(s => s.Start.Date).OrderBy(g => g.Key).ToList();
+}
+
+@functions {
+    List<string> ParseOptions(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new(); }
+        catch { return new List<string>(); }
+    }
+}
+
+<div class="form-fill-page">
+    <p class="mb-3"><a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til tilmeldinger</a></p>
+
+    <div class="alert alert-info d-flex align-items-center gap-2">
+        <i class="bi bi-eye"></i>
+        <span>Dette er en forhåndsvisning af, hvordan tilmeldingen kommer til at se ud for dem, der tilmelder sig. Du kan prøve at vælge vagter, men intet bliver gemt eller indsendt herfra.</span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1>@Model.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p class="text-muted">@Model.Description</p>
+            }
+
+            @if (Model.FormFields.Count == 0 && Model.Shifts.Count == 0)
+            {
+                <p class="text-muted mb-0">Der er endnu ikke tilføjet hverken en tilmeldingsformular eller vagter.</p>
+            }
+
+            @if (Model.FormFields.Count > 0)
+            {
+                <div class="mt-3">
+                    @foreach (var field in Model.FormFields.OrderBy(f => f.Order))
+                    {
+                        if (field.FieldType == FormFieldType.SectionHeading)
+                        {
+                            <div class="form-fill-section">
+                                @if (!string.IsNullOrWhiteSpace(field.Label))
+                                {
+                                    <h5>@field.Label</h5>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                {
+                                    <p class="text-muted small form-fill-section-text">@field.HelpText</p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            var options = ParseOptions(field.OptionsJson);
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    @field.Label
+                                    @if (field.IsRequired)
+                                    {
+                                        <span class="form-fill-required">*</span>
+                                    }
+                                </label>
+                                @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                {
+                                    <div class="form-text mb-1">@field.HelpText</div>
+                                }
+
+                                @switch (field.FieldType)
+                                {
+                                    case FormFieldType.LongText:
+                                        <textarea class="form-control" rows="3" disabled placeholder="Respondentens svar"></textarea>
+                                        break;
+                                    case FormFieldType.Number:
+                                        <input type="number" class="form-control" disabled placeholder="0" />
+                                        break;
+                                    case FormFieldType.Email:
+                                        <input type="email" class="form-control" disabled placeholder="navn@eksempel.dk" />
+                                        break;
+                                    case FormFieldType.Phone:
+                                        <input type="tel" class="form-control" disabled placeholder="12 34 56 78" />
+                                        break;
+                                    case FormFieldType.Date:
+                                        <input type="date" class="form-control" disabled />
+                                        break;
+                                    case FormFieldType.Dropdown:
+                                        <select class="form-select" disabled>
+                                            <option>Vælg...</option>
+                                            @foreach (var option in options)
+                                            {
+                                                <option>@option</option>
+                                            }
+                                        </select>
+                                        break;
+                                    case FormFieldType.MultipleChoice:
+                                        <div>
+                                            @foreach (var option in options)
+                                            {
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" disabled />
+                                                    <label class="form-check-label">@option</label>
+                                                </div>
+                                            }
+                                        </div>
+                                        break;
+                                    case FormFieldType.Checkboxes:
+                                        <div>
+                                            @foreach (var option in options)
+                                            {
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" disabled />
+                                                    <label class="form-check-label">@option</label>
+                                                </div>
+                                            }
+                                        </div>
+                                        break;
+                                    default:
+                                        <input type="text" class="form-control" disabled placeholder="Respondentens svar" />
+                                        break;
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
+            @if (visibleShifts.Count > 0)
+            {
+                <h5 class="mt-4">Vælg de vagter, du vil tilmelde dig</h5>
+                <p class="text-muted small">Du behøver ikke tilmelde dig alle vagter — vælg kun dem, du ønsker.</p>
+
+                <div class="arrangement-day-groups">
+                    @foreach (var dayGroup in dayGroups)
+                    {
+                        var shiftsInDay = dayGroup.ToList();
+                        var multiple = shiftsInDay.Count > 1;
+                        var dayId = "arrangementDay_" + dayGroup.Key.ToString("yyyyMMdd");
+                        var dayLabel = dayGroup.Key.ToString("dddd 'den' d. MMMM yyyy", da);
+
+                        <div class="arrangement-day-group">
+                            @if (multiple)
+                            {
+                                <button type="button" class="arrangement-day-header" data-bs-toggle="collapse" data-bs-target="#@dayId" aria-expanded="false" aria-controls="@dayId">
+                                    <i class="bi bi-chevron-right arrangement-day-chevron"></i>
+                                    <span class="arrangement-day-title">@dayLabel</span>
+                                    <span class="badge-info">@shiftsInDay.Count vagter</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="arrangement-day-header arrangement-day-header-static">
+                                    <span class="arrangement-day-title">@dayLabel</span>
+                                </div>
+                            }
+
+                            <div class="@(multiple ? "collapse" : "")" id="@(multiple ? dayId : null)">
+                                <div class="arrangement-day-body">
+                                    @foreach (var shift in shiftsInDay)
+                                    {
+                                        <div class="arrangement-shift-preview">
+                                            <label class="arrangement-shift-preview-row" for="shiftSelect_@shift.Id">
+                                                <input class="form-check-input" type="checkbox" id="shiftSelect_@shift.Id" />
+                                                <span class="arrangement-shift-preview-info">
+                                                    <span class="fw-semibold d-block">@shift.Title</span>
+                                                    <span class="text-muted small">
+                                                        @shift.Start.ToString("HH:mm") – @shift.End.ToString("HH:mm")
+                                                        @if (!string.IsNullOrWhiteSpace(shift.Location))
+                                                        {
+                                                            <text> · @shift.Location</text>
+                                                        }
+                                                    </span>
+                                                </span>
+                                                <span class="badge-info">@shift.NeededCount ledig@(shift.NeededCount == 1 ? "" : "e") plads@(shift.NeededCount == 1 ? "" : "er")</span>
+                                            </label>
+
+                                            @if (shift.Requirements.Count > 0)
+                                            {
+                                                <div class="arrangement-shift-preview-requirements">
+                                                    <p class="text-muted small mb-1">Krav for at tilmelde dig denne vagt:</p>
+                                                    @foreach (var req in shift.Requirements.OrderBy(r => r.Order))
+                                                    {
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" disabled />
+                                                            <label class="form-check-label">@req.Text</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (Model.Shifts.Count > 0)
+            {
+                <h5 class="mt-4">Vagter</h5>
+                <p class="text-muted mb-0">Alle vagter er fyldt op — der er ingen ledige pladser tilbage.</p>
+            }
+
+            <button type="button" class="btn btn-primary mt-4" id="previewSubmitBtn" disabled>
+                <i class="bi bi-send me-1"></i> Tilmeld dig med valgte vagter
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        var submitBtn = document.getElementById('previewSubmitBtn');
+        var shiftCheckboxes = document.querySelectorAll('.arrangement-shift-preview-row input[type="checkbox"]');
+
+        var updateSubmitState = () => {
+            var anyChecked = Array.from(shiftCheckboxes).some((cb) => cb.checked);
+            if (submitBtn) submitBtn.disabled = !anyChecked;
+        };
+
+        shiftCheckboxes.forEach((cb) => {
+            cb.addEventListener('change', () => {
+                var block = cb.closest('.arrangement-shift-preview');
+                var reqInputs = block?.querySelectorAll('.arrangement-shift-preview-requirements input[type="checkbox"]') || [];
+                reqInputs.forEach((reqCb) => {
+                    reqCb.disabled = !cb.checked;
+                    if (!cb.checked) reqCb.checked = false;
+                });
+                updateSubmitState();
+            });
+        });
+
+        submitBtn?.addEventListener('click', () => {
+            window.FvToast?.show('info', 'Dette er kun en forhåndsvisning — indsendelse er ikke tilgængelig endnu.');
+        });
+    });
+</script>

@@ -1615,6 +1615,103 @@ input[type="file"]::-webkit-file-upload-button:hover {
 /* ── Svar ── */
 .form-responses-table-wrap { max-width: 100%; }
 
+/* ════════════════════════════════════════
+   TILMELDINGER — arrangement-opsætning (vagter) og forhåndsvisning
+   ════════════════════════════════════════ */
+
+.arrangement-shift-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.arrangement-shift-card.active {
+  cursor: default;
+  border-left-color: var(--clr-brand);
+}
+
+/* ── Forhåndsvisning: vagter grupperet pr. dag ── */
+.arrangement-day-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.arrangement-day-group {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.arrangement-day-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  background: var(--clr-surface-2);
+  border: none;
+  padding: 0.75rem 1rem;
+  color: var(--clr-text);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.arrangement-day-header-static {
+  cursor: default;
+}
+
+.arrangement-day-chevron {
+  color: var(--clr-text-muted);
+  transition: transform 0.15s;
+}
+.arrangement-day-header[aria-expanded="true"] .arrangement-day-chevron {
+  transform: rotate(90deg);
+}
+
+.arrangement-day-title {
+  flex: 1 1 auto;
+  text-transform: capitalize;
+}
+
+.arrangement-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.arrangement-shift-preview {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+}
+
+.arrangement-shift-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  margin: 0;
+}
+.arrangement-shift-preview-row .form-check-input { flex: 0 0 auto; margin: 0; }
+
+.arrangement-shift-preview-info { flex: 1 1 auto; }
+
+.arrangement-shift-preview:has(.arrangement-shift-preview-row input:checked) {
+  border-color: var(--clr-brand);
+}
+
+.arrangement-shift-preview-requirements {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--clr-border);
+  padding-left: 2.1rem;
+}
+
 .chat-bubble ul,
 .chat-bubble ol { margin: 0 0 .5rem; padding-left: 1.25rem; }
 
