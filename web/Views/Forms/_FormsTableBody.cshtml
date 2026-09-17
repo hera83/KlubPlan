@@ -1,10 +1,12 @@
 @model web.ViewModels.FormFilterViewModel
+@using System.Text.Json
 
 <div class="table-responsive">
     <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>Titel</th>
+                <th>Version</th>
                 <th>Felter</th>
                 <th>Svar</th>
                 <th>Status</th>
@@ -16,7 +18,7 @@
             @if (Model.Forms.Count == 0)
             {
                 <tr>
-                    <td colspan="6" class="text-muted">Ingen formularer fundet.</td>
+                    <td colspan="7" class="text-muted">Ingen formularer fundet.</td>
                 </tr>
             }
             else
@@ -31,6 +33,7 @@
                                 <div class="text-muted small">@form.Description</div>
                             }
                         </td>
+                        <td>v@(form.VersionNumber)@(form.VersionCount > 1 ? $" / {form.VersionCount}" : "")</td>
                         <td>@form.FieldCount</td>
                         <td>@form.ResponseCount</td>
                         <td>
@@ -42,14 +45,27 @@
                             {
                                 <span class="badge-warn">Lukket</span>
                             }
-                            @if (form.HasCurrentUserSubmitted)
-                            {
-                                <span class="badge-info ms-1">Besvaret</span>
-                            }
                         </td>
                         <td>@form.CreatedAtUtc.ToLocalTime().ToString("g")</td>
                         <td class="text-end">
+                            @{
+                                var versionsJson = form.VersionCount > 1
+                                    ? JsonSerializer.Serialize(form.Versions.Select(v => new
+                                        {
+                                            id = v.Id,
+                                            label = $"Version {v.VersionNumber} — {v.CreatedAtUtc.ToLocalTime():d. MMM yyyy}" + (v.IsAcceptingResponses ? " (åben)" : " (lukket)") + (v.IsCurrent ? " · nuværende" : ""),
+                                            isCurrent = v.IsCurrent
+                                        }))
+                                    : null;
+                            }
                             <div class="d-inline-flex gap-1">
+                                @if (Model.IsAdmin && !form.IsAcceptingResponses)
+                                {
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#formNewVersionModal"
+                                            data-id="@form.Id" title="Ny version" aria-label="Ny version">
+                                        <i class="bi bi-file-earmark-plus"></i>
+                                    </button>
+                                }
                                 @if (form.IsAcceptingResponses)
                                 {
                                     <a class="btn btn-sm btn-secondary btn-icon" asp-action="Fill" asp-route-id="@form.Id" title="Udfyld" aria-label="Udfyld">
@@ -70,8 +86,8 @@
                                     <a class="btn btn-sm btn-secondary btn-icon" asp-action="Edit" asp-route-id="@form.Id" title="Rediger" aria-label="Rediger">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <button class="btn btn-sm btn-outline-danger btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteFormModal"
-                                            data-id="@form.Id" data-title="@form.Title" title="Slet" aria-label="Slet">
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteFormModal"
+                                            data-id="@form.Id" data-title="@form.Title" data-versions="@versionsJson" title="Slet" aria-label="Slet">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 }

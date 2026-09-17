@@ -36,58 +36,12 @@
     </div>
 </div>
 
-<!-- Slet formular modal -->
-<div class="modal fade" id="deleteFormModal" tabindex="-1" aria-labelledby="deleteFormModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteFormModalLabel"><i class="bi bi-trash me-2"></i>Slet formular</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
-            </div>
-            <div class="modal-body">
-                Er du sikker på, at du vil slette formularen <strong id="deleteFormName"></strong>? Alle indkomne svar
-                slettes samtidig. Denne handling kan ikke fortrydes.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i> Annuller
-                </button>
-                <form asp-action="Delete" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" id="deleteFormId" />
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i> Slet
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@await Html.PartialAsync("_FormDeleteModal")
+@await Html.PartialAsync("_FormNewVersionModal")
 
 <script>
     (() => {
         const formsRoot = document.getElementById('formsTableRoot');
-
-        const deleteFormModal = document.getElementById('deleteFormModal');
-        deleteFormModal?.addEventListener('show.bs.modal', (event) => {
-            const btn = event.relatedTarget;
-            if (!btn) return;
-            document.getElementById('deleteFormId').value = btn.dataset.id;
-            document.getElementById('deleteFormName').textContent = btn.dataset.title;
-        });
-
-        const deleteForm = deleteFormModal?.querySelector('form');
-        deleteForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = deleteForm.querySelector('button[type="submit"]');
-            if (submitBtn) submitBtn.disabled = true;
-            const data = await window.FvForm.submit(deleteForm);
-            if (submitBtn) submitBtn.disabled = false;
-            if (data.success) {
-                bootstrap.Modal.getInstance(deleteFormModal)?.hide();
-                window.FvDataTable?.reload(formsRoot);
-            }
-        });
 
         formsRoot?.addEventListener('click', async (e) => {
             const toggleBtn = e.target.closest('[data-toggle-accepting]');

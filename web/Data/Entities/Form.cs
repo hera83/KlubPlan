@@ -20,6 +20,15 @@ namespace web.Data.Entities
         public bool IsAcceptingResponses { get; set; } = true;
 
         /// <summary>
+        /// Points to the root Form of this version chain. Null means this Form IS the root
+        /// (i.e. version 1). All forms sharing the same RootFormId (or, for the root itself, the
+        /// same Id) belong to one version series.
+        /// </summary>
+        public int? RootFormId { get; set; }
+
+        public int VersionNumber { get; set; } = 1;
+
+        /// <summary>
         /// User who created the form. Nullable so the form survives the user being deleted.
         /// </summary>
         public string? CreatedByUserId { get; set; }

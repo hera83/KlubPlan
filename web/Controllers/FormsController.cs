@@ -119,6 +119,17 @@ namespace web.Controllers
                 : this.ToastErrorJson("Formularen blev ikke fundet.");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "AdminOrDeveloper")]
+        public async Task<IActionResult> CreateNewVersion(int id, CancellationToken ct)
+        {
+            var result = await _formService.CreateNewVersionAsync(id, _userManager.GetUserId(User), ct);
+            return result.Success
+                ? Json(new { success = true, message = "Ny version oprettet.", type = "success", formId = result.FormId })
+                : this.ToastErrorJson(result.ErrorMessage ?? "Kunne ikke oprette ny version.");
+        }
+
         public async Task<IActionResult> Fill(int id, CancellationToken ct)
         {
             var model = await _formService.GetFormForFillAsync(id, ct);

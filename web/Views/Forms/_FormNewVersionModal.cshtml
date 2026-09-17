@@ -1,0 +1,51 @@
+<!-- Ny version af formular -->
+<div class="modal fade" id="formNewVersionModal" tabindex="-1" aria-labelledby="formNewVersionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="formNewVersionForm" asp-action="CreateNewVersion" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="newFormVersionSourceId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="formNewVersionModalLabel"><i class="bi bi-file-earmark-plus me-2"></i>Ny version af formular</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-0">Titel, beskrivelse og alle spørgsmål kopieres 1:1 til en ny version. Der oprettes en ny, tom pulje af svar, så tidligere besvarelser ikke blandes med den nye runde.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Opret
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modalEl = document.getElementById('formNewVersionModal');
+        const form = document.getElementById('formNewVersionForm');
+        const formsRoot = document.getElementById('formsTableRoot');
+
+        modalEl?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            document.getElementById('newFormVersionSourceId').value = btn?.dataset?.id || '';
+        });
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(form);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                window.FvDataTable?.reload(formsRoot);
+            }
+        });
+    })();
+</script>

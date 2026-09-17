@@ -26,34 +26,99 @@ namespace web.Repositories.Forms
             filter.PageSize = filter.PageSize is < 5 or > 200 ? 10 : filter.PageSize;
             filter.IsAdmin = isAdmin;
 
-            var query = _context.Forms.AsNoTracking().AsQueryable();
+            var formsQuery = _context.Forms.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
                 var term = filter.SearchText.Trim();
-                query = query.Where(f => f.Title.Contains(term));
+                formsQuery = formsQuery.Where(f => f.Title.Contains(term));
             }
 
-            var projected = query
-                .OrderByDescending(f => f.CreatedAtUtc)
-                .Select(f => new FormListItemViewModel
-                {
-                    Id = f.Id,
-                    Title = f.Title,
-                    Description = f.Description,
-                    IsAcceptingResponses = f.IsAcceptingResponses,
-                    CreatedAtUtc = f.CreatedAtUtc,
-                    UpdatedAtUtc = f.UpdatedAtUtc,
-                    FieldCount = f.Fields.Count,
-                    ResponseCount = f.Submissions.Count,
-                    HasCurrentUserSubmitted = f.Submissions.Any(s => s.SubmittedByUserId == userId)
-                });
+            // Only the latest version of each form series is shown in the table.
+            var latestPerSeries = _context.Forms
+                .GroupBy(f => f.RootFormId ?? f.Id)
+                .Select(g => new { RootId = g.Key, MaxVersion = g.Max(f => f.VersionNumber), Count = g.Count() });
+
+            var query =
+                from f in formsQuery
+                join lv in latestPerSeries
+                    on new { RootId = f.RootFormId ?? f.Id, Version = f.VersionNumber }
+                    equals new { RootId = lv.RootId, Version = lv.MaxVersion }
+                select new { Form = f, lv.Count };
 
             filter.TotalCount = await query.CountAsync(ct);
-            filter.Forms = await projected
+
+            var page = await query
+                .OrderByDescending(x => x.Form.CreatedAtUtc)
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
+                .Select(x => new
+                {
+                    x.Form.Id,
+                    x.Form.Title,
+                    x.Form.Description,
+                    x.Form.IsAcceptingResponses,
+                    x.Form.CreatedAtUtc,
+                    x.Form.UpdatedAtUtc,
+                    x.Form.VersionNumber,
+                    x.Form.RootFormId,
+                    VersionCount = x.Count,
+                    FieldCount = x.Form.Fields.Count,
+                    ResponseCount = x.Form.Submissions.Count,
+                    HasCurrentUserSubmitted = x.Form.Submissions.Any(s => s.SubmittedByUserId == userId)
+                })
                 .ToListAsync(ct);
+
+            filter.Forms = page.Select(p => new FormListItemViewModel
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description,
+                IsAcceptingResponses = p.IsAcceptingResponses,
+                CreatedAtUtc = p.CreatedAtUtc,
+                UpdatedAtUtc = p.UpdatedAtUtc,
+                FieldCount = p.FieldCount,
+                ResponseCount = p.ResponseCount,
+                HasCurrentUserSubmitted = p.HasCurrentUserSubmitted,
+                VersionNumber = p.VersionNumber,
+                VersionCount = p.VersionCount
+            }).ToList();
+
+            var seriesNeedingVersions = page
+                .Where(p => p.VersionCount > 1)
+                .Select(p => p.RootFormId ?? p.Id)
+                .Distinct()
+                .ToList();
+
+            if (seriesNeedingVersions.Count > 0)
+            {
+                var allVersions = await _context.Forms
+                    .Where(f => seriesNeedingVersions.Contains(f.RootFormId ?? f.Id))
+                    .OrderByDescending(f => f.VersionNumber)
+                    .Select(f => new { f.Id, RootId = f.RootFormId ?? f.Id, f.VersionNumber, f.CreatedAtUtc, f.IsAcceptingResponses })
+                    .ToListAsync(ct);
+
+                var rootByFormId = page.ToDictionary(p => p.Id, p => p.RootFormId ?? p.Id);
+
+                foreach (var item in filter.Forms)
+                {
+                    if (item.VersionCount <= 1)
+                        continue;
+
+                    var rootId = rootByFormId[item.Id];
+                    item.Versions = allVersions
+                        .Where(v => v.RootId == rootId)
+                        .Select(v => new FormVersionOptionViewModel
+                        {
+                            Id = v.Id,
+                            VersionNumber = v.VersionNumber,
+                            CreatedAtUtc = v.CreatedAtUtc,
+                            IsAcceptingResponses = v.IsAcceptingResponses,
+                            IsCurrent = v.Id == item.Id
+                        })
+                        .ToList();
+                }
+            }
 
             return filter;
         }
@@ -66,6 +131,8 @@ namespace web.Repositories.Forms
                 .FirstOrDefaultAsync(f => f.Id == id, ct);
 
             if (form is null) return null;
+
+            var versionNav = await GetVersionNavAsync(form.Id, form.RootFormId, form.VersionNumber, ct);
 
             return new FormBuilderViewModel
             {
@@ -85,7 +152,13 @@ namespace web.Repositories.Forms
                         Order = fl.Order,
                         OptionsJson = fl.OptionsJson
                     })
-                    .ToList()
+                    .ToList(),
+                VersionNumber = versionNav.VersionNumber,
+                VersionCount = versionNav.VersionCount,
+                IsLatestVersion = versionNav.IsLatestVersion,
+                CurrentVersionId = versionNav.CurrentVersionId,
+                PreviousVersionId = versionNav.PreviousVersionId,
+                NextVersionId = versionNav.NextVersionId
             };
         }
 
@@ -103,6 +176,9 @@ namespace web.Repositories.Forms
 
                 if (existing is null)
                     return new SaveFormResponseDto { Success = false, ErrorMessage = "Formularen blev ikke fundet." };
+
+                if (!await IsLatestVersionAsync(existing.Id, ct))
+                    return new SaveFormResponseDto { Success = false, ErrorMessage = "Der findes en nyere version af denne formular — kun den aktuelle version kan redigeres." };
 
                 form = existing;
                 form.UpdatedAtUtc = DateTime.UtcNow;
@@ -179,10 +255,81 @@ namespace web.Repositories.Forms
             return new SaveFormResponseDto { Success = true, FormId = form.Id };
         }
 
+        public async Task<SaveFormResponseDto> CreateNewVersionAsync(int sourceFormId, string? userId, CancellationToken ct = default)
+        {
+            var source = await _context.Forms
+                .Include(f => f.Fields)
+                .FirstOrDefaultAsync(f => f.Id == sourceFormId, ct);
+
+            if (source is null)
+                return new SaveFormResponseDto { Success = false, ErrorMessage = "Formularen blev ikke fundet." };
+
+            if (source.IsAcceptingResponses)
+                return new SaveFormResponseDto { Success = false, ErrorMessage = "Der kan kun oprettes en ny version, når formularen er lukket for svar." };
+
+            var effectiveRootId = source.RootFormId ?? source.Id;
+            var latestVersionNumber = await _context.Forms
+                .Where(f => (f.RootFormId ?? f.Id) == effectiveRootId)
+                .MaxAsync(f => f.VersionNumber, ct);
+
+            if (source.VersionNumber != latestVersionNumber)
+                return new SaveFormResponseDto { Success = false, ErrorMessage = "Der findes allerede en nyere version af denne formular." };
+
+            var newVersion = new Form
+            {
+                Title = source.Title,
+                Description = source.Description,
+                IsAcceptingResponses = true,
+                RootFormId = effectiveRootId,
+                VersionNumber = latestVersionNumber + 1,
+                CreatedByUserId = userId,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            foreach (var field in source.Fields.OrderBy(f => f.Order))
+            {
+                newVersion.Fields.Add(new FormField
+                {
+                    Label = field.Label,
+                    HelpText = field.HelpText,
+                    FieldType = field.FieldType,
+                    IsRequired = field.IsRequired,
+                    Order = field.Order,
+                    OptionsJson = field.OptionsJson
+                });
+            }
+
+            _context.Forms.Add(newVersion);
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Form {SourceFormId} versioned into new form {NewFormId} (v{VersionNumber})", sourceFormId, newVersion.Id, newVersion.VersionNumber);
+            return new SaveFormResponseDto { Success = true, FormId = newVersion.Id };
+        }
+
         public async Task<bool> DeleteFormAsync(int id, CancellationToken ct = default)
         {
             var form = await _context.Forms.FirstOrDefaultAsync(f => f.Id == id, ct);
             if (form is null) return false;
+
+            // If we're deleting the root of a version series, promote the oldest remaining
+            // sibling to be the new root before removing this one, so the series stays linked.
+            if (form.RootFormId is null)
+            {
+                var siblings = await _context.Forms
+                    .Where(f => f.RootFormId == form.Id)
+                    .OrderBy(f => f.VersionNumber)
+                    .ToListAsync(ct);
+
+                if (siblings.Count > 0)
+                {
+                    var newRoot = siblings[0];
+                    newRoot.RootFormId = null;
+                    foreach (var sibling in siblings.Skip(1))
+                    {
+                        sibling.RootFormId = newRoot.Id;
+                    }
+                }
+            }
 
             _context.Forms.Remove(form);
             await _context.SaveChangesAsync(ct);
@@ -199,12 +346,14 @@ namespace web.Repositories.Forms
 
             if (form is null) return null;
 
+            var isLatestVersion = await IsLatestVersionAsync(form.Id, ct);
+
             return new FormFillViewModel
             {
                 FormId = form.Id,
                 Title = form.Title,
                 Description = form.Description,
-                IsAcceptingResponses = form.IsAcceptingResponses,
+                IsAcceptingResponses = form.IsAcceptingResponses && isLatestVersion,
                 Fields = form.Fields
                     .OrderBy(f => f.Order)
                     .Select(f => new FormFieldFillViewModel
@@ -229,7 +378,7 @@ namespace web.Repositories.Forms
             if (form is null)
                 return new SubmitFormResponseDto { Success = false, ErrorMessage = "Formularen blev ikke fundet." };
 
-            if (!form.IsAcceptingResponses)
+            if (!form.IsAcceptingResponses || !await IsLatestVersionAsync(form.Id, ct))
                 return new SubmitFormResponseDto { Success = false, ErrorMessage = "Formularen tager ikke længere imod svar." };
 
             var answersByField = dto.Answers.ToDictionary(a => a.FormFieldId);
@@ -309,6 +458,8 @@ namespace web.Repositories.Forms
 
             if (form is null) return null;
 
+            var versionNav = await GetVersionNavAsync(form.Id, form.RootFormId, form.VersionNumber, ct);
+
             return new FormResponsesViewModel
             {
                 FormId = form.Id,
@@ -317,7 +468,13 @@ namespace web.Repositories.Forms
                     .Where(f => FormFieldTypes.IsAnswerable(f.FieldType))
                     .OrderBy(f => f.Order)
                     .Select(f => new FormResponseColumnViewModel { FormFieldId = f.Id, Label = f.Label })
-                    .ToList()
+                    .ToList(),
+                VersionNumber = versionNav.VersionNumber,
+                VersionCount = versionNav.VersionCount,
+                IsLatestVersion = versionNav.IsLatestVersion,
+                CurrentVersionId = versionNav.CurrentVersionId,
+                PreviousVersionId = versionNav.PreviousVersionId,
+                NextVersionId = versionNav.NextVersionId
             };
         }
 
@@ -347,6 +504,46 @@ namespace web.Repositories.Forms
                 SubmittedAtUtc = s.SubmittedAtUtc,
                 Answers = s.Answers.ToDictionary(a => a.FormFieldId, a => a.ValueText ?? string.Empty)
             }).ToList();
+        }
+
+        private async Task<bool> IsLatestVersionAsync(int formId, CancellationToken ct)
+        {
+            var form = await _context.Forms.AsNoTracking()
+                .Select(f => new { f.Id, f.RootFormId, f.VersionNumber })
+                .FirstOrDefaultAsync(f => f.Id == formId, ct);
+
+            if (form is null) return false;
+
+            var effectiveRootId = form.RootFormId ?? form.Id;
+            var latestVersionNumber = await _context.Forms
+                .Where(f => (f.RootFormId ?? f.Id) == effectiveRootId)
+                .MaxAsync(f => f.VersionNumber, ct);
+
+            return form.VersionNumber == latestVersionNumber;
+        }
+
+        private record VersionNav(int VersionNumber, int VersionCount, bool IsLatestVersion, int? CurrentVersionId, int? PreviousVersionId, int? NextVersionId);
+
+        private async Task<VersionNav> GetVersionNavAsync(int formId, int? rootFormId, int versionNumber, CancellationToken ct)
+        {
+            var effectiveRootId = rootFormId ?? formId;
+            var seriesVersions = await _context.Forms
+                .Where(f => (f.RootFormId ?? f.Id) == effectiveRootId)
+                .OrderByDescending(f => f.VersionNumber)
+                .Select(f => new { f.Id, f.VersionNumber })
+                .ToListAsync(ct);
+
+            var latestInSeries = seriesVersions[0];
+            var isLatestVersion = latestInSeries.Id == formId;
+            var currentIndex = seriesVersions.FindIndex(v => v.Id == formId);
+
+            return new VersionNav(
+                VersionNumber: versionNumber,
+                VersionCount: seriesVersions.Count,
+                IsLatestVersion: isLatestVersion,
+                CurrentVersionId: isLatestVersion ? null : latestInSeries.Id,
+                PreviousVersionId: currentIndex + 1 < seriesVersions.Count ? seriesVersions[currentIndex + 1].Id : null,
+                NextVersionId: currentIndex > 0 ? seriesVersions[currentIndex - 1].Id : null);
         }
 
         private static List<string> ParseOptions(string? optionsJson)

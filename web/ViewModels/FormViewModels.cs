@@ -16,6 +16,20 @@ namespace web.ViewModels
         public bool HasCurrentUserSubmitted { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? UpdatedAtUtc { get; set; }
+        public int VersionNumber { get; set; }
+        public int VersionCount { get; set; }
+
+        /// <summary>All versions in this form's series, for the delete dropdown. Only populated when VersionCount > 1.</summary>
+        public List<FormVersionOptionViewModel> Versions { get; set; } = new();
+    }
+
+    public class FormVersionOptionViewModel
+    {
+        public int Id { get; set; }
+        public int VersionNumber { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+        public bool IsAcceptingResponses { get; set; }
+        public bool IsCurrent { get; set; }
     }
 
     public class FormFilterViewModel
@@ -68,6 +82,19 @@ namespace web.ViewModels
         public bool IsAcceptingResponses { get; set; } = true;
 
         public List<FormFieldBuilderViewModel> Fields { get; set; } = new();
+
+        public int VersionNumber { get; set; }
+        public int VersionCount { get; set; }
+        public bool IsLatestVersion { get; set; } = true;
+
+        /// <summary>Id of the latest version in this form's series, set only when IsLatestVersion is false.</summary>
+        public int? CurrentVersionId { get; set; }
+
+        /// <summary>Id of the next older version (one VersionNumber lower), for the version-nav arrow. Null when viewing version 1.</summary>
+        public int? PreviousVersionId { get; set; }
+
+        /// <summary>Id of the next newer version (one VersionNumber higher), for the version-nav arrow. Null when viewing the latest version.</summary>
+        public int? NextVersionId { get; set; }
     }
 
     // ── Udfyldelse (Fill/Submit) ───────────────────────────────────────────
@@ -129,5 +156,12 @@ namespace web.ViewModels
         public int PageSize { get; set; } = 10;
         public int TotalCount { get; set; }
         public List<FormResponseRowViewModel> Rows { get; set; } = new();
+
+        public int VersionNumber { get; set; }
+        public int VersionCount { get; set; }
+        public bool IsLatestVersion { get; set; } = true;
+        public int? CurrentVersionId { get; set; }
+        public int? PreviousVersionId { get; set; }
+        public int? NextVersionId { get; set; }
     }
 }

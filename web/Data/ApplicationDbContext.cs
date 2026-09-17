@@ -172,7 +172,17 @@ namespace web.Data
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
 
+                entity.Property(e => e.VersionNumber)
+                    .IsRequired()
+                    .HasDefaultValue(1);
+
+                entity.HasOne<Form>()
+                    .WithMany()
+                    .HasForeignKey(e => e.RootFormId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => e.RootFormId);
             });
 
             // Configure FormField

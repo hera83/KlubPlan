@@ -13,6 +13,8 @@ namespace web.Repositories.Forms.Interfaces
 
         Task<bool> DeleteFormAsync(int id, CancellationToken ct = default);
 
+        Task<SaveFormResponseDto> CreateNewVersionAsync(int sourceFormId, string? userId, CancellationToken ct = default);
+
         Task<FormFillViewModel?> GetFormForFillAsync(int id, CancellationToken ct = default);
 
         Task<SubmitFormResponseDto> SubmitFormAsync(SubmitFormRequestDto dto, CancellationToken ct = default);

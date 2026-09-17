@@ -25,6 +25,7 @@
     const state = { fields: [] };
     let activeClientId = null;
     let els = null;
+    let readOnly = false;
 
     const newField = (type, seedField) => ({
         clientId: 'c' + (nextClientId++),
@@ -61,7 +62,7 @@
         const card = document.createElement('div');
         card.className = 'form-field-card' + (isActive ? ' active' : '') + (isSection ? ' is-section' : '');
         card.dataset.clientId = field.clientId;
-        card.draggable = true;
+        card.draggable = !readOnly;
 
         const header = document.createElement('div');
         header.className = 'form-field-card-header';
@@ -73,10 +74,13 @@
             <span class="form-field-summary">${escapeHtml(field.label) || `<span class="text-muted">${summaryFallback(field)}</span>`}</span>
             <span class="form-field-type-badge">${meta.label}</span>
             <span class="form-field-card-actions">
+                ${readOnly ? '' : `
                 <button type="button" class="btn btn-sm btn-secondary btn-icon" data-action="duplicate" title="Dupliker" aria-label="Dupliker"><i class="bi bi-copy"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-danger btn-icon" data-action="delete" title="Slet spørgsmål" aria-label="Slet spørgsmål"><i class="bi bi-trash"></i></button>
+                `}
             </span>
         `;
+        if (readOnly) header.querySelector('.form-field-drag-handle').classList.add('d-none');
         header.addEventListener('mousedown', (e) => {
             if (e.target.closest('.form-field-drag-handle')) card.dataset.dragArmed = 'true';
         });
@@ -142,6 +146,7 @@
         labelInput.className = 'form-control';
         labelInput.value = field.label;
         labelInput.placeholder = isSection ? 'Overskrift (valgfri)' : 'Skriv dit spørgsmål her';
+        labelInput.disabled = readOnly;
         labelInput.addEventListener('input', () => {
             field.label = labelInput.value;
             const summary = body.parentElement.querySelector('.form-field-summary');
@@ -162,6 +167,7 @@
         }
         helpInput.className = 'form-control';
         helpInput.value = field.helpText;
+        helpInput.disabled = readOnly;
         helpInput.addEventListener('input', () => { field.helpText = helpInput.value; });
         helpRow.appendChild(helpInput);
         body.appendChild(helpRow);
@@ -176,6 +182,7 @@
         typeSelect.innerHTML = FIELD_TYPES
             .map((t) => `<option value="${t.type}" ${t.type === field.fieldType ? 'selected' : ''}>${t.label}</option>`)
             .join('');
+        typeSelect.disabled = readOnly;
         typeSelect.addEventListener('change', () => {
             field.fieldType = typeSelect.value;
             if (OPTION_TYPES.has(field.fieldType) && field.options.length === 0) {
@@ -196,7 +203,7 @@
             const requiredRow = document.createElement('div');
             requiredRow.className = 'form-check form-switch mt-2';
             requiredRow.innerHTML = `
-                <input class="form-check-input" type="checkbox" id="req_${field.clientId}" ${field.isRequired ? 'checked' : ''}>
+                <input class="form-check-input" type="checkbox" id="req_${field.clientId}" ${field.isRequired ? 'checked' : ''} ${readOnly ? 'disabled' : ''}>
                 <label class="form-check-label" for="req_${field.clientId}">Påkrævet</label>
             `;
             requiredRow.querySelector('input').addEventListener('change', (e) => { field.isRequired = e.target.checked; });
@@ -239,17 +246,19 @@
         field.options.forEach((opt, idx) => list.appendChild(renderOptionRow(field, idx)));
         wrap.appendChild(list);
 
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'btn btn-sm btn-link form-field-add-option';
-        addBtn.innerHTML = `<i class="bi bi-plus-lg me-1"></i> Tilføj mulighed`;
-        addBtn.addEventListener('click', () => {
-            field.options.push('');
-            renderAll();
-            const inputs = els.cardsContainer.querySelectorAll(`[data-client-id="${field.clientId}"] .form-field-option-input`);
-            inputs[inputs.length - 1]?.focus();
-        });
-        wrap.appendChild(addBtn);
+        if (!readOnly) {
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'btn btn-sm btn-link form-field-add-option';
+            addBtn.innerHTML = `<i class="bi bi-plus-lg me-1"></i> Tilføj mulighed`;
+            addBtn.addEventListener('click', () => {
+                field.options.push('');
+                renderAll();
+                const inputs = els.cardsContainer.querySelectorAll(`[data-client-id="${field.clientId}"] .form-field-option-input`);
+                inputs[inputs.length - 1]?.focus();
+            });
+            wrap.appendChild(addBtn);
+        }
 
         return wrap;
     }
@@ -268,20 +277,23 @@
         input.className = 'form-control form-field-option-input';
         input.value = field.options[idx];
         input.placeholder = `Mulighed ${idx + 1}`;
+        input.disabled = readOnly;
         input.addEventListener('input', () => { field.options[idx] = input.value; });
         row.appendChild(input);
 
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-sm btn-link form-field-remove-option';
-        removeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
-        removeBtn.title = 'Fjern mulighed';
-        removeBtn.setAttribute('aria-label', 'Fjern mulighed');
-        removeBtn.addEventListener('click', () => {
-            field.options.splice(idx, 1);
-            renderAll();
-        });
-        row.appendChild(removeBtn);
+        if (!readOnly) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-link form-field-remove-option';
+            removeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+            removeBtn.title = 'Fjern mulighed';
+            removeBtn.setAttribute('aria-label', 'Fjern mulighed');
+            removeBtn.addEventListener('click', () => {
+                field.options.splice(idx, 1);
+                renderAll();
+            });
+            row.appendChild(removeBtn);
+        }
 
         return row;
     }
@@ -393,11 +405,14 @@
 
     function init(options) {
         els = options;
+        readOnly = !!options.readOnly;
         state.fields = (options.seed.Fields || []).map((f) => newField(f.FieldType, f));
         if (state.fields.length === 1) activeClientId = state.fields[0].clientId;
 
-        initTypePicker();
+        if (!readOnly && els.addFieldBtn && els.typePicker) initTypePicker();
         renderAll();
+
+        if (readOnly) return;
 
         els.formEl.addEventListener('submit', (e) => {
             const errors = validate();
