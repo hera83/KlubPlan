@@ -100,8 +100,8 @@
 }
 
 [data-theme="light"] body { background: var(--clr-bg); color: var(--clr-text); }
-[data-theme="light"] a { color: #0969da; }
-[data-theme="light"] a:hover { color: #0550ae; }
+[data-theme="light"] a:not(.btn) { color: #0969da; }
+[data-theme="light"] a:not(.btn):hover { color: #0550ae; }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); }
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.28); }
 [data-theme="light"] .side-menu { background: #ffffff; border-right-color: rgba(0,0,0,.10); }
@@ -567,6 +567,13 @@ a:hover { color: #58a6ff; text-decoration: underline; }
 .page-header p {
   margin: 0;
   color: var(--clr-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Standard "tilbage til X" navigation: pil + tekst, brugt øverst på detalje-/undersider. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.875rem;
 }
 
@@ -1592,8 +1599,9 @@ input[type="file"]::-webkit-file-upload-button:hover {
 
 /* ── Udfyldelse ── */
 .form-fill-page {
-  max-width: 720px;
-  margin: 0 auto;
+  /* Fylder samme bredde som opret-siden (.form-builder-page) i stedet for at
+     være unødigt smal og centreret. */
+  width: 100%;
 }
 .form-fill-section {
   padding: 0.5rem 0 0.25rem;
