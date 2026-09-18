@@ -1,6 +1,7 @@
 using Serilog;
 using Serilog.Events;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using web.Data;
 using web.Data.Entities;
@@ -164,6 +165,23 @@ try
     }
 
     // Configure the HTTP request pipeline.
+
+    // Must run before everything else: the container sits behind a reverse proxy that terminates
+    // TLS, so Kestrel only ever sees plain HTTP. Trusting X-Forwarded-Proto (and X-Forwarded-For)
+    // here makes Request.Scheme/Request.Host reflect what the client actually used (https in
+    // production, through the proxy) instead of what the container saw (http) — this is what
+    // absolute links built from Request.Scheme (e.g. Kommunikation's form links) rely on. The
+    // proxy's address isn't fixed/known in advance, so known-proxy/network restrictions are
+    // cleared rather than configured; in dev there is no proxy, so no forwarded headers arrive
+    // and Scheme/Host simply stay as Kestrel saw them (http).
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    };
+    forwardedHeadersOptions.KnownIPNetworks.Clear();
+    forwardedHeadersOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler("/Home/Error");
