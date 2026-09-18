@@ -188,6 +188,9 @@ namespace web.ViewModels
 
         /// <summary>Arrangement.PublicId — used as the Id route value when posting back from the public /Tilmelding link.</summary>
         public Guid ArrangementPublicId { get; set; }
+
+        /// <summary>Set when Status is NotYetOpen, so the view can show a live countdown to this date.</summary>
+        public DateTime? RegistrationOpensAtUtc { get; set; }
     }
 
     /// <summary>

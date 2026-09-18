@@ -53,6 +53,9 @@ namespace web.ViewModels
 
         /// <summary>Mirrors the arrangement's AllowedGroups — same purpose as AllowedPersonIds.</summary>
         public List<int> AllowedGroupIds { get; set; } = new();
+
+        /// <summary>Danish sentence stating when registration opens (or that it's already open), inserted into the message body when this arrangement is selected so recipients know upfront when they can pick shifts.</summary>
+        public string DefaultLinkText { get; set; } = string.Empty;
     }
 
     public class CommunicationMessageDetailViewModel

@@ -15,6 +15,12 @@
     var pageTitle = Model.Arrangement?.Title;
     var fieldErrors = Model.FieldErrors;
     var da = CultureInfo.GetCultureInfo("da-DK");
+
+    // Dates read back from SQLite come out as Kind.Unspecified — mark explicitly as UTC before
+    // formatting to "o" so the countdown script parses an unambiguous instant, not local time.
+    var registrationOpensAtIso = Model.Arrangement?.RegistrationOpensAtUtc is { } opensAtUtc
+        ? DateTime.SpecifyKind(opensAtUtc, DateTimeKind.Utc).ToString("o")
+        : null;
 }
 
 <!DOCTYPE html>
@@ -62,6 +68,20 @@
                         <i class="bi bi-exclamation-circle" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
                         <h2 class="mt-3">Arrangementet blev ikke fundet</h2>
                         <p class="text-muted">Linket er ugyldigt, eller arrangementet findes ikke længere.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicArrangementStatus.NotYetOpen)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-hourglass-split" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
+                        <h2 class="mt-3">@(Model.Arrangement?.Title)</h2>
+                        <p class="text-muted mb-3">Tilmelding til dette arrangement er ikke åbnet endnu.</p>
+                        <p class="text-muted small mb-1">Åbner om:</p>
+                        <div class="arrangement-countdown" data-opens-at-utc="@registrationOpensAtIso">
+                            <span class="fs-4 fw-semibold" id="arrangementCountdownText">—</span>
+                        </div>
                     </div>
                 </div>
             }
@@ -320,6 +340,41 @@
                     });
                 });
             });
+
+            // Live dage/timer/minutter-nedtælling til RegistrationOpensAtUtc, så en modtager der
+            // klikker på et link før tid kan se, hvor længe der er til tilmeldingen åbner.
+            const countdownEl = document.querySelector('.arrangement-countdown');
+            const countdownText = document.getElementById('arrangementCountdownText');
+            const opensAtUtc = countdownEl?.dataset.opensAtUtc;
+            const opensAt = opensAtUtc ? new Date(opensAtUtc) : null;
+            if (countdownEl && countdownText && opensAt) {
+                let timer;
+                const updateCountdown = () => {
+                    const diffMs = opensAt.getTime() - Date.now();
+                    if (diffMs <= 0) {
+                        countdownText.textContent = 'Åbner nu';
+                        clearInterval(timer);
+                        return;
+                    }
+
+                    const totalMinutes = Math.floor(diffMs / 60000);
+                    const days = Math.floor(totalMinutes / (60 * 24));
+                    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+                    const minutes = totalMinutes % 60;
+
+                    const parts = [];
+                    if (days > 0) parts.push(`${days} ${days === 1 ? 'dag' : 'dage'}`);
+                    if (days > 0 || hours > 0) parts.push(`${hours} ${hours === 1 ? 'time' : 'timer'}`);
+                    parts.push(`${minutes} ${minutes === 1 ? 'minut' : 'minutter'}`);
+
+                    countdownText.textContent = parts.length > 1
+                        ? parts.slice(0, -1).join(', ') + ' og ' + parts[parts.length - 1]
+                        : parts[0];
+                };
+
+                updateCountdown();
+                timer = setInterval(updateCountdown, 30000);
+            }
         });
     </script>
 </body>

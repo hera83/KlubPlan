@@ -11,6 +11,9 @@ namespace web.Constants
         /// <summary>Arrangement found, registration open, identity resolved and allowed — safe to sign up.</summary>
         Ok,
         NotFound,
+
+        /// <summary>Registration hasn't started yet (now &lt; RegistrationOpensAtUtc) — the view shows a countdown to the opening date instead of the plain "closed" message.</summary>
+        NotYetOpen,
         Closed,
         MissingIdentity,
         InvalidIdentity,

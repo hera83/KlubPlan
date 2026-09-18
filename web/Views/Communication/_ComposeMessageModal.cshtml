@@ -51,7 +51,7 @@
 
                         <div class="col-md-12">
                             <label class="form-label">Indhold</label>
-                            <textarea name="Body" class="form-control" rows="5" placeholder="Skriv besked..."></textarea>
+                            <textarea name="Body" id="composeBody" class="form-control" rows="5" placeholder="Skriv besked..."></textarea>
                             <div class="form-text"><i class="bi bi-info-circle me-1"></i>Brug {{Navn}} i teksten, så indsættes modtagerens navn automatisk.</div>
                         </div>
 
@@ -109,7 +109,8 @@
                                             <option value="@arrangement.Id"
                                                     data-restricted="@arrangement.IsRestricted.ToString().ToLower()"
                                                     data-allowed-persons="@string.Join(",", arrangement.AllowedPersonIds)"
-                                                    data-allowed-groups="@string.Join(",", arrangement.AllowedGroupIds)">
+                                                    data-allowed-groups="@string.Join(",", arrangement.AllowedGroupIds)"
+                                                    data-default-text="@arrangement.DefaultLinkText">
                                                 @arrangement.Title
                                             </option>
                                         }
@@ -191,6 +192,24 @@
         const arrangementWrap = document.getElementById('composeArrangementWrap');
         const arrangementSelect = document.getElementById('composeArrangementSelect');
         const arrangementRestrictedHint = document.getElementById('composeArrangementRestrictedHint');
+        const composeBody = document.getElementById('composeBody');
+
+        // Drops (or swaps out) a default sentence about when registration opens/is open into the
+        // body, so recipients know upfront when they can pick shifts. Tracks the last inserted
+        // sentence so switching arrangements replaces it instead of piling up duplicates.
+        let lastArrangementDefaultText = '';
+        const applyArrangementDefaultText = (text) => {
+            if (!composeBody) return;
+            let value = composeBody.value;
+            if (lastArrangementDefaultText && value.includes(lastArrangementDefaultText)) {
+                value = value.replace(lastArrangementDefaultText, '').replace(/\n{3,}/g, '\n\n').trim();
+            }
+            if (text) {
+                value = value ? `${value}\n\n${text}` : text;
+            }
+            composeBody.value = value;
+            lastArrangementDefaultText = text || '';
+        };
 
         // Mirrors the attached arrangement's own Adgang-liste onto the recipient pickers: when it's
         // restricted, only the allowed groups/persons stay selectable (and get auto-checked) — an
@@ -228,11 +247,14 @@
             if (!attachArrangementToggle.checked) {
                 arrangementSelect.value = '';
                 applyArrangementAccessRestriction(null);
+                applyArrangementDefaultText('');
             }
         });
 
         arrangementSelect?.addEventListener('change', () => {
-            applyArrangementAccessRestriction(arrangementSelect.selectedOptions[0]);
+            const selected = arrangementSelect.selectedOptions[0];
+            applyArrangementAccessRestriction(selected);
+            applyArrangementDefaultText(selected?.value ? (selected.dataset.defaultText || '') : '');
         });
 
     })();

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -38,22 +39,46 @@ namespace web.Repositories.Communication
             var formOptions = forms
                 .GroupBy(f => f.RootFormId ?? f.Id)
                 .Select(g => g.OrderByDescending(f => f.VersionNumber).First())
+                .Where(f => f.IsAcceptingResponses)
                 .OrderBy(f => f.Title)
                 .Select(f => new CommunicationFormOptionViewModel { Id = f.Id, Title = f.Title, IsAnonymous = f.IsAnonymous })
                 .ToList();
 
-            var arrangementOptions = await _context.Arrangements
+            var arrangementRows = await _context.Arrangements
                 .AsNoTracking()
                 .OrderBy(a => a.Title)
-                .Select(a => new CommunicationArrangementOptionViewModel
+                .Select(a => new
                 {
-                    Id = a.Id,
-                    Title = a.Title,
+                    a.Id,
+                    a.Title,
                     IsRestricted = a.AccessMode == ArrangementAccessMode.Restricted,
                     AllowedPersonIds = a.AllowedPersons.Select(p => p.PersonId).ToList(),
-                    AllowedGroupIds = a.AllowedGroups.Select(g => g.PersonGroupId).ToList()
+                    AllowedGroupIds = a.AllowedGroups.Select(g => g.PersonGroupId).ToList(),
+                    a.RegistrationOpensAtUtc,
+                    a.RegistrationClosesAtUtc,
+                    a.RegistrationForcedOpen
                 })
                 .ToListAsync(ct);
+
+            // Closed arrangements drop out of the picker entirely — only not-yet-open and open
+            // ones are valid link targets (mirrors the admin Tilmelding list's status).
+            var arrangementOptions = arrangementRows
+                .Select(a => new
+                {
+                    a,
+                    Status = ArrangementRegistrationStatuses.GetStatus(a.RegistrationOpensAtUtc, a.RegistrationClosesAtUtc, a.RegistrationForcedOpen)
+                })
+                .Where(x => x.Status != ArrangementRegistrationStatus.Closed)
+                .Select(x => new CommunicationArrangementOptionViewModel
+                {
+                    Id = x.a.Id,
+                    Title = x.a.Title,
+                    IsRestricted = x.a.IsRestricted,
+                    AllowedPersonIds = x.a.AllowedPersonIds,
+                    AllowedGroupIds = x.a.AllowedGroupIds,
+                    DefaultLinkText = BuildArrangementDefaultLinkText(x.Status, x.a.RegistrationOpensAtUtc)
+                })
+                .ToList();
 
             var messageEntities = await _context.CommunicationMessages
                 .AsNoTracking()
@@ -521,6 +546,20 @@ namespace web.Repositories.Communication
                     .OrderBy(n => n)
                     .ToList()
             };
+        }
+
+        /// <summary>
+        /// Danish sentence telling the recipient upfront when they'll be able to pick shifts,
+        /// so it can be dropped into the message body as soon as a Tilmelding link is picked.
+        /// </summary>
+        private static string BuildArrangementDefaultLinkText(ArrangementRegistrationStatus status, DateTime? opensAtUtc)
+        {
+            if (status == ArrangementRegistrationStatus.Open)
+                return "Tilmeldingen er åben nu – I kan allerede gå ind og vælge vagter via linket.";
+
+            var opensLocal = DateTime.SpecifyKind(opensAtUtc!.Value, DateTimeKind.Utc).ToLocalTime();
+            var da = CultureInfo.GetCultureInfo("da-DK");
+            return $"Tilmeldingen åbner {opensLocal.ToString("d. MMMM yyyy 'kl.' HH:mm", da)} – I kan gå ind og vælge vagter fra det tidspunkt.";
         }
 
         /// <summary>

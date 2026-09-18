@@ -485,7 +485,10 @@ namespace web.Repositories.Registrations
             if (arrangement is null)
                 return (PublicArrangementStatus.NotFound, null, null);
 
-            if (!IsRegistrationOpen(arrangement))
+            var registrationStatus = ArrangementRegistrationStatuses.GetStatus(arrangement.RegistrationOpensAtUtc, arrangement.RegistrationClosesAtUtc, arrangement.RegistrationForcedOpen);
+            if (registrationStatus == ArrangementRegistrationStatus.NotYetOpen)
+                return (PublicArrangementStatus.NotYetOpen, arrangement, null);
+            if (registrationStatus == ArrangementRegistrationStatus.Closed)
                 return (PublicArrangementStatus.Closed, arrangement, null);
 
             if (personPublicId is null || personPublicId == Guid.Empty)
@@ -516,17 +519,6 @@ namespace web.Repositories.Registrations
                 : (PublicArrangementStatus.Ok, arrangement, person);
         }
 
-        /// <summary>True when registration is currently open, mirroring the RegistrationForcedOpen/dates logic shown in the admin list (_ArrangementsTableBody.cshtml).</summary>
-        private static bool IsRegistrationOpen(Arrangement arrangement)
-        {
-            if (arrangement.RegistrationForcedOpen) return true;
-
-            var now = DateTime.UtcNow;
-            if (arrangement.RegistrationOpensAtUtc.HasValue && now < arrangement.RegistrationOpensAtUtc.Value) return false;
-            if (arrangement.RegistrationClosesAtUtc.HasValue && now > arrangement.RegistrationClosesAtUtc.Value) return false;
-            return true;
-        }
-
         private async Task<PublicArrangementAccessViewModel> BuildPublicArrangementAccessViewModelAsync(PublicArrangementStatus status, Arrangement? arrangement, Guid? personPublicId, CancellationToken ct)
         {
             var vm = new PublicArrangementAccessViewModel { Status = status };
@@ -540,7 +532,8 @@ namespace web.Repositories.Registrations
                     ArrangementPublicId = arrangement.PublicId,
                     Title = arrangement.Title,
                     Description = arrangement.Description,
-                    PersonPublicId = personPublicId
+                    PersonPublicId = personPublicId,
+                    RegistrationOpensAtUtc = arrangement.RegistrationOpensAtUtc
                 };
                 return vm;
             }
