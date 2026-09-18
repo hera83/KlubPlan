@@ -1,6 +1,7 @@
 @model web.ViewModels.MeetingDetailViewModel
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using web.Constants
+@using web.Infrastructure
 
 <form id="meetingAntiForgeryForm" class="d-none">@Html.AntiForgeryToken()</form>
 
@@ -33,7 +34,7 @@
                 {
                     <span><i class="bi bi-layers me-1"></i>Version @Model.VersionNumber</span>
                 }
-                <span><i class="bi bi-clock me-1"></i>@Model.MeetingDateUtc.ToString("dddd d. MMMM yyyy 'kl.' HH:mm")</span>
+                <span><i class="bi bi-clock me-1"></i>@Model.MeetingDateUtc.ToDanishWeekdayDateTimeWithKl()</span>
                 @if (!string.IsNullOrEmpty(Model.Location))
                 {
                     <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>

@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.CommunicationIndexViewModel
 
 <div>
@@ -72,7 +73,7 @@
                                         <td>
                                             <span class="@message.StatusBadgeClass">@message.Status</span>
                                         </td>
-                                        <td>@(message.SentAtUtc?.ToLocalTime().ToString("g") ?? "-")</td>
+                                        <td>@(message.SentAtUtc?.ToLocalTime().ToDanishDateTime() ?? "-")</td>
                                         <td class="text-end">
                                             @if (Model.IsAdmin)
                                             {

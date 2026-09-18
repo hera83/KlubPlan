@@ -1,4 +1,5 @@
 @using web.Constants
+@using web.Infrastructure
 @model web.ViewModels.SmsFilterViewModel
 
 <div class="table-responsive">
@@ -49,7 +50,7 @@
                         </td>
                         <td>@sms.SegmentCount</td>
                         <td>@(sms.TotalPriceDkk is null ? "–" : sms.TotalPriceDkk.Value.ToString("0.00") + " kr.")</td>
-                        <td>@sms.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@sms.CreatedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
                                 <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#sendSmsModal"

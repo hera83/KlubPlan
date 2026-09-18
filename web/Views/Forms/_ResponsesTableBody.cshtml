@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.FormResponsesViewModel
 
 <div class="table-responsive form-responses-table-wrap">
@@ -25,7 +26,7 @@
                 {
                     <tr>
                         <td>@row.SubmittedByDisplayName</td>
-                        <td>@row.SubmittedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@row.SubmittedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         @foreach (var col in Model.Columns)
                         {
                             <td>@(row.Answers.TryGetValue(col.FormFieldId, out var v) && !string.IsNullOrEmpty(v) ? v : "–")</td>

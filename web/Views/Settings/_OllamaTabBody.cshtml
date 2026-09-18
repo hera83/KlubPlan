@@ -85,7 +85,7 @@
                                 <td>@(m.ParameterSize ?? "–")</td>
                                 <td>@(m.QuantizationLevel ?? "–")</td>
                                 <td>@ByteSizeFormatter.Format(m.Size)</td>
-                                <td>@(m.ModifiedAt?.ToLocalTime().ToString("g") ?? "–")</td>
+                                <td>@(m.ModifiedAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
                                         <button class="btn btn-sm btn-secondary btn-icon" type="button" data-ollama-load

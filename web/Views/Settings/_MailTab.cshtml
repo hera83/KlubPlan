@@ -233,7 +233,7 @@
         // toppen, derefter en skillelinje og den oprindelige mail citeret.
         const buildReplyBody = (message) => {
             const original = message.textBody || (message.htmlBody ? htmlToPlainText(message.htmlBody) : '');
-            const sentDate = new Date(message.receivedAtUtc).toLocaleString('da-DK');
+            const sentDate = window.FvDate.formatDateTime(message.receivedAtUtc);
             const header = `-----Oprindelig meddelelse-----\nFra: ${message.from}\nSendt: ${sentDate}\nTil: ${(message.to || []).join(', ')}\nEmne: ${message.subject || ''}\n\n`;
             return `\n\n${header}${original}`;
         };
@@ -260,7 +260,7 @@
                 document.getElementById('viewMailSubject').textContent = message.subject || '(Intet emne)';
                 document.getElementById('viewMailFrom').textContent = message.from;
                 document.getElementById('viewMailTo').textContent = (message.to || []).join(', ');
-                document.getElementById('viewMailReceived').textContent = new Date(message.receivedAtUtc).toLocaleString('da-DK');
+                document.getElementById('viewMailReceived').textContent = window.FvDate.formatDateTime(message.receivedAtUtc);
 
                 const attachmentsEl = document.getElementById('viewMailAttachments');
                 attachmentsEl.innerHTML = '';

@@ -26,7 +26,7 @@
                     <tr>
                         <td>@m.Name <span class="badge-ok ms-1">Aktiv</span></td>
                         <td>@ByteSizeFormatter.Format(m.SizeVram)</td>
-                        <td>@(m.ExpiresAt?.ToLocalTime().ToString("g") ?? "–")</td>
+                        <td>@(m.ExpiresAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                     </tr>
                 }
             }

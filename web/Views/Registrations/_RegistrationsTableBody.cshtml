@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.ArrangementRegistrationsViewModel
 
 <div class="table-responsive form-responses-table-wrap">
@@ -26,7 +27,7 @@
                 {
                     <tr>
                         <td>@row.PersonName</td>
-                        <td>@row.RegisteredAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@row.RegisteredAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td>
                             @if (row.ShiftLabels.Count == 0)
                             {

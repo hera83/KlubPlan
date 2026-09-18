@@ -1,5 +1,6 @@
 @using System.Text.Json
 @using web.Constants
+@using web.Infrastructure
 @model web.ViewModels.MeetingFilterViewModel
 
 <div class="table-responsive">
@@ -30,7 +31,7 @@
                     <tr>
                         <td><a asp-action="Details" asp-route-id="@meeting.Id">@meeting.Title</a></td>
                         <td>v@(meeting.VersionNumber)@(meeting.VersionCount > 1 ? $" / {meeting.VersionCount}" : "")</td>
-                        <td>@meeting.MeetingDateUtc.ToString("d. MMM yyyy HH:mm")</td>
+                        <td>@meeting.MeetingDateUtc.ToDanishDateTime()</td>
                         <td>@(string.IsNullOrEmpty(meeting.Location) ? "–" : meeting.Location)</td>
                         <td>
                             @if (meeting.Groups.Count == 0)

@@ -1,4 +1,5 @@
 @using web.Constants
+@using web.Infrastructure
 @model web.ViewModels.UserFilterViewModel
 
 <div class="table-responsive">
@@ -42,7 +43,7 @@
                                 @(user.IsActive ? "Aktiv" : "Deaktiveret")
                             </span>
                         </td>
-                        <td>@user.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@user.CreatedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
                                 <button class="btn btn-sm btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#editUserModal"

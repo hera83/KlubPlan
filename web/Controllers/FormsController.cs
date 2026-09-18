@@ -248,7 +248,7 @@ namespace web.Controllers
 
             foreach (var row in model.Rows)
             {
-                var cells = new List<string> { row.SubmittedByDisplayName, row.SubmittedAtUtc.ToLocalTime().ToString("g") };
+                var cells = new List<string> { row.SubmittedByDisplayName, row.SubmittedAtUtc.ToLocalTime().ToDanishDateTime() };
                 cells.AddRange(model.Columns.Select(c => row.Answers.TryGetValue(c.FormFieldId, out var v) ? v : string.Empty));
                 sb.AppendLine(string.Join(";", cells.Select(CsvEscape)));
             }

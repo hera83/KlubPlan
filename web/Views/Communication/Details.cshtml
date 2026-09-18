@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.CommunicationMessageDetailViewModel
 
 <div>
@@ -13,7 +14,7 @@
                 </span>
                 @if (Model.SentAtUtc.HasValue)
                 {
-                    <span><i class="bi bi-clock me-1"></i>Sendt @Model.SentAtUtc.Value.ToLocalTime().ToString("g")</span>
+                    <span><i class="bi bi-clock me-1"></i>Sendt @Model.SentAtUtc.Value.ToLocalTime().ToDanishDateTime()</span>
                 }
                 @if (!string.IsNullOrEmpty(Model.FormTitle))
                 {

@@ -61,7 +61,7 @@
                             <tr>
                                 <td>@g.Name</td>
                                 <td>@g.DocumentCount</td>
-                                <td>@g.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>@g.CreatedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
                                         <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#uploadAiGatewayDocumentModal"
@@ -116,7 +116,7 @@
                                 <td>@(d.GroupName ?? "–")</td>
                                 <td>@ByteSizeFormatter.Format(d.SizeBytes)</td>
                                 <td>@(d.Status ?? "–")</td>
-                                <td>@d.UploadedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>@d.UploadedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
                                         <a class="btn btn-sm btn-secondary btn-icon" href="@Url.Action("DownloadAiGatewayDocument", new { id = d.Id })" title="Download" aria-label="Download">
@@ -175,7 +175,7 @@
                                 <td>@(m.ParameterSize ?? "–")</td>
                                 <td>@(m.QuantizationLevel ?? "–")</td>
                                 <td>@ByteSizeFormatter.Format(m.Size)</td>
-                                <td>@(m.ModifiedAt?.ToLocalTime().ToString("g") ?? "–")</td>
+                                <td>@(m.ModifiedAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                             </tr>
                         }
                     }

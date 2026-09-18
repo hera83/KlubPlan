@@ -1,4 +1,23 @@
 (() => {
+    // ─── Date formatting ────────────────────────────────────────────────────
+    // Mirrors web/Infrastructure/DateTimeDisplayExtensions.cs — keep both in sync.
+    const DANISH_MONTHS = ['jan.', 'feb.', 'mar.', 'apr.', 'maj', 'jun.', 'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'dec.'];
+
+    const formatDanishDate = (value) => {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return `${date.getDate()}. ${DANISH_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+    };
+
+    const formatDanishDateTime = (value) => {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${formatDanishDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    window.FvDate = { formatDate: formatDanishDate, formatDateTime: formatDanishDateTime };
+
     // ─── Sidebar ─────────────────────────────────────────────────────────────
     const shell = document.querySelector('.app-shell');
     const toggle = document.getElementById('sidebarToggle');

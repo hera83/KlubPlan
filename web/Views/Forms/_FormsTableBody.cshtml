@@ -1,5 +1,6 @@
 @model web.ViewModels.FormFilterViewModel
 @using System.Text.Json
+@using web.Infrastructure
 
 <div class="table-responsive">
     <table class="table table-striped align-middle">
@@ -46,7 +47,7 @@
                                 <span class="badge-warn">Lukket</span>
                             }
                         </td>
-                        <td>@form.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@form.CreatedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="text-end">
                             @{
                                 var versionsJson = form.VersionCount > 1

@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.ArrangementFilterViewModel
 
 @functions {
@@ -67,7 +68,7 @@
                 {
                     <tr>
                         <td class="fw-semibold">@arrangement.Title</td>
-                        <td>@(arrangement.EventDateUtc.HasValue ? arrangement.EventDateUtc.Value.ToLocalTime().ToString("g") : "Ingen vagter")</td>
+                        <td>@(arrangement.EventDateUtc.HasValue ? arrangement.EventDateUtc.Value.ToLocalTime().ToDanishDateTime() : "Ingen vagter")</td>
                         <td>@arrangement.RegistrationCount</td>
                         <td>
                             @if (arrangement.MissingCount == 0)

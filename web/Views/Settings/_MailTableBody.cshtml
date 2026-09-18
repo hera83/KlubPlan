@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.MailFilterViewModel
 
 <div class="table-responsive">
@@ -54,7 +55,7 @@
                                 </div>
                             }
                         </td>
-                        <td>@mail.ReceivedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@mail.ReceivedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
                                 <button class="btn btn-sm btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#viewMailModal"

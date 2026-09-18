@@ -1,7 +1,7 @@
 @using web.Constants
 @using web.Data
 @using web.Data.Entities
-@using System.Globalization
+@using web.Infrastructure
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext Db
 @model web.ViewModels.PublicArrangementAccessViewModel
@@ -14,7 +14,6 @@
         .FirstOrDefaultAsync() ?? ThemeMode.System;
     var pageTitle = Model.Arrangement?.Title;
     var fieldErrors = Model.FieldErrors;
-    var da = CultureInfo.GetCultureInfo("da-DK");
 
     // Dates read back from SQLite come out as Kind.Unspecified — mark explicitly as UTC before
     // formatting to "o" so the countdown script parses an unambiguous instant, not local time.
@@ -263,7 +262,7 @@
                                     {
                                         var shiftsInDay = dayGroup.ToList();
                                         var dayId = "arrangementDay_" + dayGroup.Key.ToString("yyyyMMdd");
-                                        var dayLabel = dayGroup.Key.ToString("dddd 'den' d. MMMM yyyy", da);
+                                        var dayLabel = dayGroup.Key.ToDanishWeekdayDate();
 
                                         <div class="arrangement-day-group">
                                             <button type="button" class="arrangement-day-header" data-bs-toggle="collapse" data-bs-target="#@dayId" aria-expanded="false" aria-controls="@dayId">

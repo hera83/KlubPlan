@@ -1,3 +1,4 @@
+@using web.Infrastructure
 @model web.ViewModels.SmsSettingsViewModel
 
 <div class="row g-3 mb-3">
@@ -29,7 +30,7 @@
                     @(Model.BalanceDkk is null ? "–" : Model.BalanceDkk.Value.ToString("0.00") + " kr.")
                     @if (Model.BalanceUpdatedAtUtc.HasValue)
                     {
-                        <text> (opdateret @Model.BalanceUpdatedAtUtc.Value.ToLocalTime().ToString("g"))</text>
+                        <text> (opdateret @Model.BalanceUpdatedAtUtc.Value.ToLocalTime().ToDanishDateTime())</text>
                     }
                 </div>
             </div>
@@ -43,7 +44,7 @@
                     @(Model.CurrentPriceDkk is null ? "–" : Model.CurrentPriceDkk.Value.ToString("0.00") + " kr.")
                     @if (Model.CurrentPriceUpdatedAtUtc.HasValue)
                     {
-                        <text> (opdateret @Model.CurrentPriceUpdatedAtUtc.Value.ToLocalTime().ToString("g"))</text>
+                        <text> (opdateret @Model.CurrentPriceUpdatedAtUtc.Value.ToLocalTime().ToDanishDateTime())</text>
                     }
                 </div>
             </div>
@@ -479,7 +480,7 @@
                 `${btn.dataset.segmentcount || '0'} / ${totalPrice ? parseFloat(totalPrice).toFixed(2) + ' kr.' : '–'}`;
 
             const createdAt = btn.dataset.createdat;
-            document.getElementById('viewSmsCreatedAt').textContent = createdAt ? new Date(createdAt).toLocaleString('da-DK') : '';
+            document.getElementById('viewSmsCreatedAt').textContent = createdAt ? window.FvDate.formatDateTime(createdAt) : '';
 
             const failureReason = btn.dataset.failurereason || '';
             document.getElementById('viewSmsFailureReasonLabel').classList.toggle('d-none', !failureReason);

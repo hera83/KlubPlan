@@ -1,9 +1,8 @@
 @model web.ViewModels.ArrangementBuilderViewModel
-@using System.Globalization
 @using web.Constants
+@using web.Infrastructure
 @{
     ViewData["Title"] = "Forhåndsvisning – " + Model.Title;
-    var da = CultureInfo.GetCultureInfo("da-DK");
 
     // Vagter uden ledige pladser vises ikke — i dag har ingen vagter tilmeldte endnu (den
     // offentlige tilmeldingsflow findes ikke endnu), så NeededCount er reelt antal ledige
@@ -145,7 +144,7 @@
                     {
                         var shiftsInDay = dayGroup.ToList();
                         var dayId = "arrangementDay_" + dayGroup.Key.ToString("yyyyMMdd");
-                        var dayLabel = dayGroup.Key.ToString("dddd 'den' d. MMMM yyyy", da);
+                        var dayLabel = dayGroup.Key.ToDanishWeekdayDate();
 
                         <div class="arrangement-day-group">
                             <button type="button" class="arrangement-day-header" data-bs-toggle="collapse" data-bs-target="#@dayId" aria-expanded="false" aria-controls="@dayId">

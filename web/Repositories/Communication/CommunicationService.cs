@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -6,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using web.Constants;
 using web.Data;
 using web.Data.Entities;
+using web.Infrastructure;
 using web.Repositories.Communication.Dtos;
 using web.Repositories.Communication.Interfaces;
 using web.ViewModels;
@@ -558,8 +558,7 @@ namespace web.Repositories.Communication
                 return "Tilmeldingen er åben nu – I kan allerede gå ind og vælge vagter via linket.";
 
             var opensLocal = DateTime.SpecifyKind(opensAtUtc!.Value, DateTimeKind.Utc).ToLocalTime();
-            var da = CultureInfo.GetCultureInfo("da-DK");
-            return $"Tilmeldingen åbner {opensLocal.ToString("d. MMMM yyyy 'kl.' HH:mm", da)} – I kan gå ind og vælge vagter fra det tidspunkt.";
+            return $"Tilmeldingen åbner {opensLocal.ToDanishDateTimeWithKl()} – I kan gå ind og vælge vagter fra det tidspunkt.";
         }
 
         /// <summary>

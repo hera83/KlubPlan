@@ -99,7 +99,7 @@ namespace web.Controllers
 
             foreach (var row in model.Rows)
             {
-                var cells = new List<string> { row.PersonName, row.RegisteredAtUtc.ToLocalTime().ToString("g"), string.Join(", ", row.ShiftLabels) };
+                var cells = new List<string> { row.PersonName, row.RegisteredAtUtc.ToLocalTime().ToDanishDateTime(), string.Join(", ", row.ShiftLabels) };
                 cells.AddRange(model.Columns.Select(c => row.Answers.TryGetValue(c.ArrangementFormFieldId, out var v) ? v : string.Empty));
                 sb.AppendLine(string.Join(";", cells.Select(CsvEscape)));
             }
