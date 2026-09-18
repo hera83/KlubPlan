@@ -171,6 +171,10 @@ namespace web.Data
             {
                 entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.PublicId)
+                    .IsRequired()
+                    .HasConversion<string>();
+
                 entity.Property(e => e.Title)
                     .IsRequired()
                     .HasMaxLength(200);
@@ -192,6 +196,8 @@ namespace web.Data
 
                 entity.HasIndex(e => e.CreatedAtUtc);
                 entity.HasIndex(e => e.RootFormId);
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
             });
 
             // Configure FormField
@@ -223,9 +229,6 @@ namespace web.Data
             builder.Entity<FormSubmission>(entity =>
             {
                 entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.SubmittedByUserId)
-                    .IsRequired();
 
                 entity.Property(e => e.SubmittedAtUtc)
                     .IsRequired();
@@ -279,7 +282,14 @@ namespace web.Data
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
 
+                entity.Property(e => e.PublicId)
+                    .IsRequired()
+                    .HasConversion<string>();
+
                 entity.HasIndex(e => e.Uid)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.PublicId)
                     .IsUnique();
 
                 entity.HasIndex(e => e.Name);

@@ -9,6 +9,12 @@ namespace web.Data.Entities
     {
         public int Id { get; set; }
 
+        /// <summary>
+        /// Unguessable id used in the public link (/Formular?Id=..) so hopping between the
+        /// sequential, internal Id values can't be used to reach forms one isn't meant to see.
+        /// </summary>
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         public string Title { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -18,6 +24,13 @@ namespace web.Data.Entities
         /// definition are kept. Toggled from the builder without deleting anything.
         /// </summary>
         public bool IsAcceptingResponses { get; set; } = true;
+
+        /// <summary>
+        /// When true, submissions to this form are not linked to the submitting user
+        /// (FormSubmission.SubmittedByUserId is left null) — used for forms where only the
+        /// aggregate answers matter, not who answered.
+        /// </summary>
+        public bool IsAnonymous { get; set; }
 
         /// <summary>
         /// Points to the root Form of this version chain. Null means this Form IS the root

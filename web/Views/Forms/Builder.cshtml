@@ -52,7 +52,12 @@
             {
                 <div class="form-check form-switch form-builder-accepting-toggle" title="Om formularen tager imod svar lige nu">
                     <input class="form-check-input" type="checkbox" asp-for="IsAcceptingResponses" id="isAcceptingResponses" />
-                    <label class="form-check-label" for="isAcceptingResponses">Tager imod svar</label>
+                    <label class="form-check-label" for="isAcceptingResponses">Åben</label>
+                </div>
+
+                <div class="form-check form-switch form-builder-accepting-toggle" title="Svar gemmes ikke med afsenderens navn">
+                    <input class="form-check-input" type="checkbox" asp-for="IsAnonymous" id="isAnonymous" />
+                    <label class="form-check-label" for="isAnonymous">Accepter anonyme</label>
                 </div>
 
                 <button type="submit" class="btn btn-primary" id="saveFormBtn">

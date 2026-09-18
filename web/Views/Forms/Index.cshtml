@@ -44,6 +44,17 @@
         const formsRoot = document.getElementById('formsTableRoot');
 
         formsRoot?.addEventListener('click', async (e) => {
+            const copyBtn = e.target.closest('[data-copy-link]');
+            if (copyBtn) {
+                try {
+                    await navigator.clipboard.writeText(copyBtn.dataset.copyLink);
+                    window.FvToast?.show('success', 'Linket er kopieret til udklipsholderen.');
+                } catch {
+                    window.FvToast?.show('error', 'Linket kunne ikke kopieres.');
+                }
+                return;
+            }
+
             const toggleBtn = e.target.closest('[data-toggle-accepting]');
             if (!toggleBtn) return;
             toggleBtn.disabled = true;

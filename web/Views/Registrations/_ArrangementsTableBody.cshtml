@@ -1,8 +1,13 @@
 @model web.ViewModels.ArrangementFilterViewModel
 
 @functions {
-    (string Label, string BadgeClass) GetRegistrationStatus(DateTime? opensAtUtc, DateTime? closesAtUtc)
+    (string Label, string BadgeClass) GetRegistrationStatus(DateTime? opensAtUtc, DateTime? closesAtUtc, bool forcedOpen)
     {
+        if (forcedOpen)
+        {
+            return ("Åben", "badge-ok");
+        }
+
         var now = DateTime.UtcNow;
 
         if (opensAtUtc.HasValue && now < opensAtUtc.Value)
@@ -25,6 +30,15 @@
         }
 
         return ("Åben", "badge-ok");
+    }
+
+    /// <summary>Whether the dates alone (ignoring RegistrationForcedOpen) currently allow registration.</summary>
+    bool IsOpenByDates(DateTime? opensAtUtc, DateTime? closesAtUtc)
+    {
+        var now = DateTime.UtcNow;
+        if (opensAtUtc.HasValue && now < opensAtUtc.Value) return false;
+        if (closesAtUtc.HasValue && now > closesAtUtc.Value) return false;
+        return true;
     }
 }
 
@@ -66,7 +80,10 @@
                             }
                         </td>
                         <td>
-                            @{ var status = GetRegistrationStatus(arrangement.RegistrationOpensAtUtc, arrangement.RegistrationClosesAtUtc); }
+                            @{
+                                var status = GetRegistrationStatus(arrangement.RegistrationOpensAtUtc, arrangement.RegistrationClosesAtUtc, arrangement.RegistrationForcedOpen);
+                                var showRegistrationToggle = arrangement.RegistrationForcedOpen || !IsOpenByDates(arrangement.RegistrationOpensAtUtc, arrangement.RegistrationClosesAtUtc);
+                            }
                             <span class="@status.BadgeClass">@status.Label</span>
                         </td>
                         <td class="text-end">
@@ -74,6 +91,15 @@
                                 <a class="btn btn-sm btn-secondary btn-icon" asp-action="Preview" asp-route-id="@arrangement.Id" title="Vis" aria-label="Vis">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                @if (showRegistrationToggle)
+                                {
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-toggle-registration
+                                            data-url="@Url.Action("ToggleRegistrationOpen", new { id = arrangement.Id })"
+                                            title="@(arrangement.RegistrationForcedOpen ? "Tilbage til ønskede dato indtastninger" : "Åben for tilmeldinger")"
+                                            aria-label="@(arrangement.RegistrationForcedOpen ? "Tilbage til ønskede dato indtastninger" : "Åben for tilmeldinger")">
+                                        <i class="bi @(arrangement.RegistrationForcedOpen ? "bi-arrow-counterclockwise" : "bi-unlock")"></i>
+                                    </button>
+                                }
                                 <a class="btn btn-sm btn-secondary btn-icon" asp-action="Edit" asp-route-id="@arrangement.Id" title="Rediger" aria-label="Rediger">
                                     <i class="bi bi-pencil"></i>
                                 </a>

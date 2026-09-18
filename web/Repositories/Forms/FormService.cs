@@ -55,9 +55,11 @@ namespace web.Repositories.Forms
                 .Select(x => new
                 {
                     x.Form.Id,
+                    x.Form.PublicId,
                     x.Form.Title,
                     x.Form.Description,
                     x.Form.IsAcceptingResponses,
+                    x.Form.IsAnonymous,
                     x.Form.CreatedAtUtc,
                     x.Form.UpdatedAtUtc,
                     x.Form.VersionNumber,
@@ -72,9 +74,11 @@ namespace web.Repositories.Forms
             filter.Forms = page.Select(p => new FormListItemViewModel
             {
                 Id = p.Id,
+                PublicId = p.PublicId,
                 Title = p.Title,
                 Description = p.Description,
                 IsAcceptingResponses = p.IsAcceptingResponses,
+                IsAnonymous = p.IsAnonymous,
                 CreatedAtUtc = p.CreatedAtUtc,
                 UpdatedAtUtc = p.UpdatedAtUtc,
                 FieldCount = p.FieldCount,
@@ -140,6 +144,7 @@ namespace web.Repositories.Forms
                 Title = form.Title,
                 Description = form.Description,
                 IsAcceptingResponses = form.IsAcceptingResponses,
+                IsAnonymous = form.IsAnonymous,
                 Fields = form.Fields
                     .OrderBy(fl => fl.Order)
                     .Select(fl => new FormFieldBuilderViewModel
@@ -196,6 +201,7 @@ namespace web.Repositories.Forms
             form.Title = dto.Title.Trim();
             form.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
             form.IsAcceptingResponses = dto.IsAcceptingResponses;
+            form.IsAnonymous = dto.IsAnonymous;
 
             var existingFields = form.Fields.ToDictionary(f => f.Id);
             var keptFieldIds = new HashSet<int>();
@@ -280,6 +286,7 @@ namespace web.Repositories.Forms
                 Title = source.Title,
                 Description = source.Description,
                 IsAcceptingResponses = true,
+                IsAnonymous = source.IsAnonymous,
                 RootFormId = effectiveRootId,
                 VersionNumber = latestVersionNumber + 1,
                 CreatedByUserId = userId,
@@ -354,6 +361,7 @@ namespace web.Repositories.Forms
                 Title = form.Title,
                 Description = form.Description,
                 IsAcceptingResponses = form.IsAcceptingResponses && isLatestVersion,
+                IsAnonymous = form.IsAnonymous,
                 Fields = form.Fields
                     .OrderBy(f => f.Order)
                     .Select(f => new FormFieldFillViewModel
@@ -381,45 +389,58 @@ namespace web.Repositories.Forms
             if (!form.IsAcceptingResponses || !await IsLatestVersionAsync(form.Id, ct))
                 return new SubmitFormResponseDto { Success = false, ErrorMessage = "Formularen tager ikke længere imod svar." };
 
-            var answersByField = dto.Answers.ToDictionary(a => a.FormFieldId);
-            var fieldErrors = new Dictionary<int, string>();
             var submission = new FormSubmission
             {
                 FormId = form.Id,
-                SubmittedByUserId = dto.UserId,
+                SubmittedByUserId = form.IsAnonymous ? null : dto.UserId,
                 SubmittedAtUtc = DateTime.UtcNow
             };
 
-            foreach (var field in form.Fields.Where(f => FormFieldTypes.IsAnswerable(f.FieldType)).OrderBy(f => f.Order))
-            {
-                answersByField.TryGetValue(field.Id, out var answer);
-                var isCheckboxes = FormFieldTypes.AllowsMultipleValues(field.FieldType);
-
-                var values = isCheckboxes
-                    ? (answer?.Values ?? new List<string>()).Where(v => !string.IsNullOrWhiteSpace(v)).ToList()
-                    : new List<string>();
-                var singleValue = isCheckboxes ? null : answer?.Value?.Trim();
-
-                var isEmpty = isCheckboxes ? values.Count == 0 : string.IsNullOrWhiteSpace(singleValue);
-
-                if (field.IsRequired && isEmpty)
-                {
-                    fieldErrors[field.Id] = "Dette felt er påkrævet.";
-                    continue;
-                }
-
-                var valueText = isCheckboxes ? (values.Count > 0 ? string.Join(", ", values) : null) : singleValue;
-                submission.Answers.Add(new FormAnswer { FormFieldId = field.Id, ValueText = valueText });
-            }
-
+            var (answers, fieldErrors) = BuildSubmissionAnswers(form, dto.Answers);
             if (fieldErrors.Count > 0)
                 return new SubmitFormResponseDto { Success = false, FieldErrors = fieldErrors };
+
+            foreach (var answer in answers)
+                submission.Answers.Add(answer);
 
             _context.FormSubmissions.Add(submission);
             await _context.SaveChangesAsync(ct);
 
             _logger.LogInformation("User {UserId} submitted a response to form {FormId}", dto.UserId, dto.FormId);
             return new SubmitFormResponseDto { Success = true };
+        }
+
+        public async Task<PublicFormAccessViewModel> GetPublicFormAsync(Guid formPublicId, Guid? personPublicId, CancellationToken ct = default)
+        {
+            var (status, form, _) = await ResolvePublicFormAccessAsync(formPublicId, personPublicId, ct);
+            return BuildPublicFormAccessViewModel(status, form, personPublicId);
+        }
+
+        public async Task<SubmitPublicFormResponseDto> SubmitPublicFormAsync(SubmitPublicFormRequestDto dto, CancellationToken ct = default)
+        {
+            var (status, form, person) = await ResolvePublicFormAccessAsync(dto.FormPublicId, dto.PersonPublicId, ct);
+            if (status != PublicFormStatus.Ok || form is null)
+                return new SubmitPublicFormResponseDto { Status = status };
+
+            var submission = new FormSubmission
+            {
+                FormId = form.Id,
+                SubmittedByPersonId = person?.Id,
+                SubmittedAtUtc = DateTime.UtcNow
+            };
+
+            var (answers, fieldErrors) = BuildSubmissionAnswers(form, dto.Answers);
+            if (fieldErrors.Count > 0)
+                return new SubmitPublicFormResponseDto { Status = PublicFormStatus.Ok, Success = false, FieldErrors = fieldErrors };
+
+            foreach (var answer in answers)
+                submission.Answers.Add(answer);
+
+            _context.FormSubmissions.Add(submission);
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Person {PersonId} submitted a public response to form {FormId}", person?.Id, form.Id);
+            return new SubmitPublicFormResponseDto { Status = PublicFormStatus.Ok, Success = true, FormTitle = form.Title };
         }
 
         public async Task<FormResponsesViewModel?> GetResponsesAsync(int formId, int page, int pageSize, CancellationToken ct = default)
@@ -491,16 +512,26 @@ namespace web.Repositories.Forms
 
             if (submissions.Count == 0) return new List<FormResponseRowViewModel>();
 
-            var userIds = submissions.Select(s => s.SubmittedByUserId).Distinct().ToList();
+            var userIds = submissions.Select(s => s.SubmittedByUserId).Where(id => id != null).Distinct().ToList();
             var displayNames = await _context.Users
                 .AsNoTracking()
                 .Where(u => userIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
 
+            var personIds = submissions.Select(s => s.SubmittedByPersonId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+            var personNames = await _context.People
+                .AsNoTracking()
+                .Where(p => personIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+
             return submissions.Select(s => new FormResponseRowViewModel
             {
                 SubmissionId = s.Id,
-                SubmittedByDisplayName = displayNames.TryGetValue(s.SubmittedByUserId, out var name) ? name : "Ukendt bruger",
+                SubmittedByDisplayName = s.SubmittedByUserId is not null
+                    ? (displayNames.TryGetValue(s.SubmittedByUserId, out var userName) ? userName : "Ukendt bruger")
+                    : s.SubmittedByPersonId is not null
+                        ? (personNames.TryGetValue(s.SubmittedByPersonId.Value, out var personName) ? personName : "Ukendt person")
+                        : "Anonym",
                 SubmittedAtUtc = s.SubmittedAtUtc,
                 Answers = s.Answers.ToDictionary(a => a.FormFieldId, a => a.ValueText ?? string.Empty)
             }).ToList();
@@ -544,6 +575,107 @@ namespace web.Repositories.Forms
                 CurrentVersionId: isLatestVersion ? null : latestInSeries.Id,
                 PreviousVersionId: currentIndex + 1 < seriesVersions.Count ? seriesVersions[currentIndex + 1].Id : null,
                 NextVersionId: currentIndex > 0 ? seriesVersions[currentIndex - 1].Id : null);
+        }
+
+        /// <summary>Validates and converts posted answers against a form's answerable fields. Shared by SubmitFormAsync and SubmitPublicFormAsync.</summary>
+        private static (List<FormAnswer> Answers, Dictionary<int, string> FieldErrors) BuildSubmissionAnswers(Form form, List<SubmitFormAnswerDto> answers)
+        {
+            var answersByField = answers.ToDictionary(a => a.FormFieldId);
+            var fieldErrors = new Dictionary<int, string>();
+            var result = new List<FormAnswer>();
+
+            foreach (var field in form.Fields.Where(f => FormFieldTypes.IsAnswerable(f.FieldType)).OrderBy(f => f.Order))
+            {
+                answersByField.TryGetValue(field.Id, out var answer);
+                var isCheckboxes = FormFieldTypes.AllowsMultipleValues(field.FieldType);
+
+                var values = isCheckboxes
+                    ? (answer?.Values ?? new List<string>()).Where(v => !string.IsNullOrWhiteSpace(v)).ToList()
+                    : new List<string>();
+                var singleValue = isCheckboxes ? null : answer?.Value?.Trim();
+
+                var isEmpty = isCheckboxes ? values.Count == 0 : string.IsNullOrWhiteSpace(singleValue);
+
+                if (field.IsRequired && isEmpty)
+                {
+                    fieldErrors[field.Id] = "Dette felt er påkrævet.";
+                    continue;
+                }
+
+                var valueText = isCheckboxes ? (values.Count > 0 ? string.Join(", ", values) : null) : singleValue;
+                result.Add(new FormAnswer { FormFieldId = field.Id, ValueText = valueText });
+            }
+
+            return (result, fieldErrors);
+        }
+
+        /// <summary>
+        /// Gate for the public, unauthenticated /Formular link: resolves the form and, unless it
+        /// is anonymous, requires the UId query parameter to resolve to a real Person who hasn't
+        /// already answered. Never resolves/uses a Person for an anonymous form — identity is
+        /// never recorded for those regardless of what the link contains.
+        /// </summary>
+        private async Task<(PublicFormStatus Status, Form? Form, Person? Person)> ResolvePublicFormAccessAsync(Guid formPublicId, Guid? personPublicId, CancellationToken ct)
+        {
+            var form = await _context.Forms
+                .Include(f => f.Fields)
+                .FirstOrDefaultAsync(f => f.PublicId == formPublicId, ct);
+
+            if (form is null)
+                return (PublicFormStatus.NotFound, null, null);
+
+            if (!form.IsAcceptingResponses || !await IsLatestVersionAsync(form.Id, ct))
+                return (PublicFormStatus.Closed, form, null);
+
+            if (form.IsAnonymous)
+                return (PublicFormStatus.Ok, form, null);
+
+            if (personPublicId is null || personPublicId == Guid.Empty)
+                return (PublicFormStatus.MissingIdentity, form, null);
+
+            var person = await _context.People.FirstOrDefaultAsync(p => p.PublicId == personPublicId.Value, ct);
+            if (person is null)
+                return (PublicFormStatus.InvalidIdentity, form, null);
+
+            var alreadySubmitted = await _context.FormSubmissions
+                .AnyAsync(s => s.FormId == form.Id && s.SubmittedByPersonId == person.Id, ct);
+
+            return alreadySubmitted
+                ? (PublicFormStatus.AlreadySubmitted, form, person)
+                : (PublicFormStatus.Ok, form, person);
+        }
+
+        private static PublicFormAccessViewModel BuildPublicFormAccessViewModel(PublicFormStatus status, Form? form, Guid? personPublicId)
+        {
+            var vm = new PublicFormAccessViewModel { Status = status };
+            if (form is null) return vm;
+
+            vm.Form = new FormFillViewModel
+            {
+                FormId = form.Id,
+                FormPublicId = form.PublicId,
+                Title = form.Title,
+                Description = form.Description,
+                IsAcceptingResponses = status == PublicFormStatus.Ok,
+                IsAnonymous = form.IsAnonymous,
+                PersonPublicId = personPublicId,
+                Fields = status == PublicFormStatus.Ok
+                    ? form.Fields
+                        .OrderBy(f => f.Order)
+                        .Select(f => new FormFieldFillViewModel
+                        {
+                            FormFieldId = f.Id,
+                            Label = f.Label,
+                            HelpText = f.HelpText,
+                            FieldType = f.FieldType,
+                            IsRequired = f.IsRequired,
+                            Options = ParseOptions(f.OptionsJson)
+                        })
+                        .ToList()
+                    : new List<FormFieldFillViewModel>()
+            };
+
+            return vm;
         }
 
         private static List<string> ParseOptions(string? optionsJson)

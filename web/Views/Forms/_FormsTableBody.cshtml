@@ -66,11 +66,16 @@
                                         <i class="bi bi-file-earmark-plus"></i>
                                     </button>
                                 }
-                                @if (form.IsAcceptingResponses)
+                                <a class="btn btn-sm btn-secondary btn-icon" asp-action="Preview" asp-route-id="@form.Id" title="Vis" aria-label="Vis">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if (form.IsAnonymous)
                                 {
-                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Fill" asp-route-id="@form.Id" title="Udfyld" aria-label="Udfyld">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
+                                    var publicLink = $"{Url.Action("Index", "Formular", null, Context.Request.Scheme)}?Id={form.PublicId}";
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-copy-link="@publicLink"
+                                            title="Kopier anonymt formular-link" aria-label="Kopier anonymt formular-link">
+                                        <i class="bi bi-link-45deg"></i>
+                                    </button>
                                 }
                                 @if (Model.IsAdmin)
                                 {

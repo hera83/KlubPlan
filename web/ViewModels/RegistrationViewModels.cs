@@ -21,6 +21,9 @@ namespace web.ViewModels
         public DateTime? RegistrationOpensAtUtc { get; set; }
         public DateTime? RegistrationClosesAtUtc { get; set; }
 
+        /// <summary>True = temporarily forced open regardless of the dates above.</summary>
+        public bool RegistrationForcedOpen { get; set; }
+
         public DateTime CreatedAtUtc { get; set; }
     }
 

@@ -118,6 +118,16 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegeneratePersonPublicId(int id)
+        {
+            var regenerated = await _peopleService.RegeneratePublicIdAsync(id, HttpContext.RequestAborted);
+            return regenerated
+                ? this.ToastSuccessJson("Nyt link-id genereret. Tidligere udleverede formular-links til denne person virker ikke længere.")
+                : this.ToastErrorJson("Personen blev ikke fundet.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreatePersonGroup(CreatePersonGroupViewModel model)
         {
             if (!ModelState.IsValid)

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Data;
 
@@ -10,9 +11,11 @@ using web.Data;
 namespace web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918074209_AddFormPublicId")]
+    partial class AddFormPublicId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -166,7 +169,7 @@ namespace web.Data.Migrations
 
                     b.HasKey("Key");
 
-                    b.ToTable("AppSettings", (string)null);
+                    b.ToTable("AppSettings");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ApplicationUser", b =>
@@ -299,7 +302,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("CreatedAtUtc");
 
-                    b.ToTable("Arrangements", (string)null);
+                    b.ToTable("Arrangements");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementAllowedGroup", b =>
@@ -314,7 +317,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("ArrangementAllowedGroups", (string)null);
+                    b.ToTable("ArrangementAllowedGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementAllowedPerson", b =>
@@ -329,7 +332,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("ArrangementAllowedPersons", (string)null);
+                    b.ToTable("ArrangementAllowedPersons");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementFormField", b =>
@@ -368,7 +371,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementId", "Order");
 
-                    b.ToTable("ArrangementFormFields", (string)null);
+                    b.ToTable("ArrangementFormFields");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementShift", b =>
@@ -407,7 +410,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementId", "Order");
 
-                    b.ToTable("ArrangementShifts", (string)null);
+                    b.ToTable("ArrangementShifts");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementShiftRequirement", b =>
@@ -431,7 +434,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementShiftId", "Order");
 
-                    b.ToTable("ArrangementShiftRequirements", (string)null);
+                    b.ToTable("ArrangementShiftRequirements");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FileMetadata", b =>
@@ -486,7 +489,7 @@ namespace web.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FileMetadata", (string)null);
+                    b.ToTable("FileMetadata");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Form", b =>
@@ -539,7 +542,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("RootFormId");
 
-                    b.ToTable("Forms", (string)null);
+                    b.ToTable("Forms");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormAnswer", b =>
@@ -563,7 +566,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormSubmissionId");
 
-                    b.ToTable("FormAnswers", (string)null);
+                    b.ToTable("FormAnswers");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormField", b =>
@@ -602,7 +605,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId", "Order");
 
-                    b.ToTable("FormFields", (string)null);
+                    b.ToTable("FormFields");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormSubmission", b =>
@@ -627,7 +630,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId");
 
-                    b.ToTable("FormSubmissions", (string)null);
+                    b.ToTable("FormSubmissions");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Meeting", b =>
@@ -679,7 +682,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("RootMeetingId");
 
-                    b.ToTable("Meetings", (string)null);
+                    b.ToTable("Meetings");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingAttachment", b =>
@@ -720,7 +723,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("MeetingId");
 
-                    b.ToTable("MeetingAttachments", (string)null);
+                    b.ToTable("MeetingAttachments");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingAttendee", b =>
@@ -738,7 +741,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("MeetingAttendees", (string)null);
+                    b.ToTable("MeetingAttendees");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingDecision", b =>
@@ -773,7 +776,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ResponsibleUserId");
 
-                    b.ToTable("MeetingDecisions", (string)null);
+                    b.ToTable("MeetingDecisions");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingGroup", b =>
@@ -788,7 +791,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("MeetingGroups", (string)null);
+                    b.ToTable("MeetingGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Person", b =>
@@ -837,7 +840,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Uid")
                         .IsUnique();
 
-                    b.ToTable("People", (string)null);
+                    b.ToTable("People");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGroup", b =>
@@ -862,7 +865,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("PersonGroups", (string)null);
+                    b.ToTable("PersonGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGroupMembership", b =>
@@ -882,7 +885,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("PersonGroupMemberships", (string)null);
+                    b.ToTable("PersonGroupMemberships");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGuardian", b =>
@@ -914,7 +917,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("PersonGuardians", (string)null);
+                    b.ToTable("PersonGuardians");
                 });
 
             modelBuilder.Entity("web.Data.Entities.SmsMessage", b =>
@@ -981,7 +984,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PhoneNumber");
 
-                    b.ToTable("SmsMessages", (string)null);
+                    b.ToTable("SmsMessages");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ThemeSetting", b =>
@@ -1059,7 +1062,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Name", "ThemeMode")
                         .IsUnique();
 
-                    b.ToTable("ThemeSettings", (string)null);
+                    b.ToTable("ThemeSettings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

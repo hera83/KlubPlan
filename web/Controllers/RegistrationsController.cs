@@ -75,6 +75,16 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleRegistrationOpen(int id, CancellationToken ct)
+        {
+            var result = await _arrangementService.ToggleRegistrationOpenAsync(id, ct);
+            return result.Success
+                ? this.ToastSuccessJson(result.IsOpen ? "Tilmeldingen er nu midlertidigt åbnet." : "Tilmeldingen følger nu igen de angivne datoer.")
+                : this.ToastErrorJson(result.ErrorMessage ?? "Kunne ikke opdatere tilmeldingen.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(ArrangementBuilderViewModel model, CancellationToken ct)
         {
             if (!ModelState.IsValid)

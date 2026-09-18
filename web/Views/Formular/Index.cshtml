@@ -1,0 +1,234 @@
+@using web.Constants
+@using web.Data
+@using web.Data.Entities
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@model web.ViewModels.PublicFormAccessViewModel
+@{
+    Layout = null;
+    var themeMode = await Db.AppSettings
+        .AsNoTracking()
+        .Where(s => s.Key == AppSettingKeys.ActiveThemeMode)
+        .Select(s => s.Value)
+        .FirstOrDefaultAsync() ?? ThemeMode.System;
+    var pageTitle = Model.Form?.Title;
+    var fieldErrors = Model.FieldErrors;
+}
+
+<!DOCTYPE html>
+<html lang="da" data-theme-mode="@themeMode">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(string.IsNullOrWhiteSpace(pageTitle) ? "Formular" : pageTitle) - KlubPlan</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <script>
+        (function () {
+            var mode = (document.documentElement.dataset.themeMode || 'system').toLowerCase();
+            var theme;
+            if (mode === 'light') { theme = 'light'; }
+            else if (mode === 'dark') { theme = 'dark'; }
+            else { theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" id="themeStylesheet" href="~/theme.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="public-form-wrapper">
+        <div class="public-form-card">
+            @if (Model.Submitted)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-check-circle text-success" style="font-size:2.5rem;"></i>
+                        <h2 class="mt-3">Tak for din besvarelse!</h2>
+                        @if (!string.IsNullOrWhiteSpace(Model.Form?.Title))
+                        {
+                            <p class="text-muted">@Model.Form!.Title</p>
+                        }
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicFormStatus.NotFound)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-exclamation-circle" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
+                        <h2 class="mt-3">Formularen blev ikke fundet</h2>
+                        <p class="text-muted">Linket er ugyldigt, eller formularen findes ikke længere.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicFormStatus.Closed)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-lock" style="font-size:2.5rem;color:var(--clr-text-dim);"></i>
+                        <h2 class="mt-3">@(Model.Form?.Title)</h2>
+                        <p class="text-muted">Denne formular tager ikke længere imod svar.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicFormStatus.MissingIdentity)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size:2.5rem;"></i>
+                        <h2 class="mt-3">Manglende bruger-id</h2>
+                        <p class="text-muted">Dette link mangler et bruger-id og kan derfor ikke udfyldes. Kontakt afsenderen for at få et gyldigt link.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicFormStatus.InvalidIdentity)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size:2.5rem;"></i>
+                        <h2 class="mt-3">Ugyldigt link</h2>
+                        <p class="text-muted">Bruger-id'et i linket findes ikke. Kontakt afsenderen for at få et gyldigt link.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Status == PublicFormStatus.AlreadySubmitted)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-info-circle" style="font-size:2.5rem;color:var(--clr-info);"></i>
+                        <h2 class="mt-3">@(Model.Form?.Title)</h2>
+                        <p class="text-muted">Der er allerede givet et svar via dette link.</p>
+                    </div>
+                </div>
+            }
+            else if (Model.Form is not null)
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h1>@Model.Form.Title</h1>
+                        @if (Model.Form.IsAnonymous)
+                        {
+                            <p class="text-muted small"><i class="bi bi-incognito me-1"></i>Denne formular er anonym — dit navn gemmes ikke sammen med dit svar.</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Form.Description))
+                        {
+                            <p class="text-muted">@Model.Form.Description</p>
+                        }
+
+                        <form asp-controller="Formular" asp-action="Submit" asp-route-id="@Model.Form.FormPublicId" asp-route-uId="@Model.Form.PersonPublicId" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            @{ var i = 0; }
+                            @foreach (var field in Model.Form.Fields)
+                            {
+                                if (field.FieldType == FormFieldType.SectionHeading)
+                                {
+                                    <div class="form-fill-section">
+                                        @if (!string.IsNullOrWhiteSpace(field.Label))
+                                        {
+                                            <h5>@field.Label</h5>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                        {
+                                            <p class="text-muted small form-fill-section-text">@field.HelpText</p>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    var hasError = fieldErrors.ContainsKey(field.FormFieldId);
+                                    var answerIndex = i;
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            @field.Label
+                                            @if (field.IsRequired)
+                                            {
+                                                <span class="form-fill-required">*</span>
+                                            }
+                                        </label>
+                                        @if (!string.IsNullOrWhiteSpace(field.HelpText))
+                                        {
+                                            <div class="form-text mb-1">@field.HelpText</div>
+                                        }
+                                        <input type="hidden" name="answers[@answerIndex].FormFieldId" value="@field.FormFieldId" />
+
+                                        @switch (field.FieldType)
+                                        {
+                                            case FormFieldType.LongText:
+                                                <textarea class="form-control @(hasError ? "input-validation-error" : "")" rows="3" name="answers[@answerIndex].Value" required="@field.IsRequired">@field.SubmittedValue</textarea>
+                                                break;
+                                            case FormFieldType.Number:
+                                                <input type="number" class="form-control @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                                break;
+                                            case FormFieldType.Email:
+                                                <input type="email" class="form-control @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                                break;
+                                            case FormFieldType.Phone:
+                                                <input type="tel" class="form-control @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                                break;
+                                            case FormFieldType.Date:
+                                                <input type="date" class="form-control @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                                break;
+                                            case FormFieldType.Dropdown:
+                                                <select class="form-select @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" required="@field.IsRequired">
+                                                    <option value="">Vælg...</option>
+                                                    @foreach (var option in field.Options)
+                                                    {
+                                                        <option value="@option" selected="@(field.SubmittedValue == option)">@option</option>
+                                                    }
+                                                </select>
+                                                break;
+                                            case FormFieldType.MultipleChoice:
+                                                <div>
+                                                    @foreach (var option in field.Options)
+                                                    {
+                                                        var optionId = $"f{field.FormFieldId}_{option.GetHashCode()}";
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="answers[@answerIndex].Value" id="@optionId" value="@option" required="@field.IsRequired" checked="@(field.SubmittedValue == option)" />
+                                                            <label class="form-check-label" for="@optionId">@option</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                break;
+                                            case FormFieldType.Checkboxes:
+                                                <div>
+                                                    @foreach (var option in field.Options)
+                                                    {
+                                                        var optionId = $"f{field.FormFieldId}_{option.GetHashCode()}";
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="answers[@answerIndex].Values" id="@optionId" value="@option" checked="@field.SubmittedValues.Contains(option)" />
+                                                            <label class="form-check-label" for="@optionId">@option</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                break;
+                                            default:
+                                                <input type="text" class="form-control @(hasError ? "input-validation-error" : "")" name="answers[@answerIndex].Value" value="@field.SubmittedValue" required="@field.IsRequired" />
+                                                break;
+                                        }
+
+                                        @if (hasError)
+                                        {
+                                            <div class="field-validation-error mt-1">@fieldErrors[field.FormFieldId]</div>
+                                        }
+                                    </div>
+                                    i++;
+                                }
+                            }
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i> Send
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>

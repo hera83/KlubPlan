@@ -21,6 +21,7 @@ namespace web.Repositories.Forms.Dtos
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsAcceptingResponses { get; set; } = true;
+        public bool IsAnonymous { get; set; }
         public string? UserId { get; set; }
         public List<SaveFormFieldDto> Fields { get; set; } = new();
     }

@@ -8,9 +8,13 @@ namespace web.ViewModels
     public class FormListItemViewModel
     {
         public int Id { get; set; }
+
+        /// <summary>Used for the public /Formular link instead of Id — see Form.PublicId.</summary>
+        public Guid PublicId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsAcceptingResponses { get; set; }
+        public bool IsAnonymous { get; set; }
         public int FieldCount { get; set; }
         public int ResponseCount { get; set; }
         public bool HasCurrentUserSubmitted { get; set; }
@@ -81,6 +85,8 @@ namespace web.ViewModels
 
         public bool IsAcceptingResponses { get; set; } = true;
 
+        public bool IsAnonymous { get; set; }
+
         public List<FormFieldBuilderViewModel> Fields { get; set; } = new();
 
         public int VersionNumber { get; set; }
@@ -119,7 +125,32 @@ namespace web.ViewModels
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsAcceptingResponses { get; set; } = true;
+        public bool IsAnonymous { get; set; }
         public List<FormFieldFillViewModel> Fields { get; set; } = new();
+
+        /// <summary>Round-tripped from the UId query parameter on the public /Formular link; null for the internal, logged-in Fill page.</summary>
+        public Guid? PersonPublicId { get; set; }
+
+        /// <summary>Form.PublicId — used as the Id route value when posting back from the public /Formular link.</summary>
+        public Guid FormPublicId { get; set; }
+    }
+
+    // ── Offentligt link (Formular) ──────────────────────────────────────────
+
+    /// <summary>
+    /// Result of resolving GET/POST /Formular?Id=..&amp;UId=.. — the gate outcome plus (when
+    /// available) the form to render, so the same view can show the fill-out form, a closed/error
+    /// message, or the "already answered" notice.
+    /// </summary>
+    public class PublicFormAccessViewModel
+    {
+        public PublicFormStatus Status { get; set; }
+        public FormFillViewModel? Form { get; set; }
+
+        /// <summary>True once the POST has been saved successfully — the view then shows a thank-you message instead of the field list.</summary>
+        public bool Submitted { get; set; }
+
+        public Dictionary<int, string> FieldErrors { get; set; } = new();
     }
 
     public class FormAnswerInputViewModel

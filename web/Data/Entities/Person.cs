@@ -17,6 +17,12 @@ namespace web.Data.Entities
         /// </summary>
         public string Uid { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Unguessable id used in public, unauthenticated links (e.g. /Formular?Id=..&amp;UId=..)
+        /// so a person can be identified without exposing the sequential, human-readable Uid.
+        /// </summary>
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; } = string.Empty;
 
         public DateOnly? BirthDate { get; set; }

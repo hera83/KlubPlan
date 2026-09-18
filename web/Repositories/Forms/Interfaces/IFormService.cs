@@ -19,6 +19,11 @@ namespace web.Repositories.Forms.Interfaces
 
         Task<SubmitFormResponseDto> SubmitFormAsync(SubmitFormRequestDto dto, CancellationToken ct = default);
 
+        /// <summary>Access gate + form data for the public, unauthenticated /Formular link. formPublicId is Form.PublicId, not Form.Id.</summary>
+        Task<PublicFormAccessViewModel> GetPublicFormAsync(Guid formPublicId, Guid? personPublicId, CancellationToken ct = default);
+
+        Task<SubmitPublicFormResponseDto> SubmitPublicFormAsync(SubmitPublicFormRequestDto dto, CancellationToken ct = default);
+
         Task<FormResponsesViewModel?> GetResponsesAsync(int formId, int page, int pageSize, CancellationToken ct = default);
 
         /// <summary>Rows for CSV export: one row per submission, in the same column order as GetResponsesAsync.</summary>

@@ -20,6 +20,14 @@ namespace web.Data.Entities
 
         public DateTime? RegistrationClosesAtUtc { get; set; }
 
+        /// <summary>
+        /// Temporarily forces registration open regardless of RegistrationOpensAtUtc/
+        /// RegistrationClosesAtUtc, toggled from the list. False (default) means "follow the
+        /// dates". There is no equivalent forced-closed state — closing is done by editing the
+        /// dates directly.
+        /// </summary>
+        public bool RegistrationForcedOpen { get; set; }
+
         public ArrangementAccessMode AccessMode { get; set; } = ArrangementAccessMode.Open;
 
         /// <summary>User who created the arrangement. Nullable so it survives the user being deleted.</summary>

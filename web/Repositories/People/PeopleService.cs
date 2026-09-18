@@ -244,6 +244,20 @@ namespace web.Repositories.People
             return true;
         }
 
+        public async Task<bool> RegeneratePublicIdAsync(int id, CancellationToken ct = default)
+        {
+            var person = await _context.People.FirstOrDefaultAsync(p => p.Id == id, ct);
+            if (person is null)
+                return false;
+
+            person.PublicId = Guid.NewGuid();
+            person.UpdatedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Person {PersonId} public-id regenerated (e.g. link revoked)", id);
+            return true;
+        }
+
         public async Task<List<PersonGroupViewModel>> GetGroupsAsync(CancellationToken ct = default)
         {
             return await _context.PersonGroups

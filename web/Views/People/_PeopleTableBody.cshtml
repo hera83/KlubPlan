@@ -77,6 +77,11 @@
                                         data-id="@person.Id" title="Rediger" aria-label="Rediger">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#regeneratePersonPublicIdModal"
+                                        data-id="@person.Id" data-name="@person.Name"
+                                        title="Generér nyt link-id (spærrer tidligere formular-links)" aria-label="Generér nyt link-id">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
                                 <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deletePersonModal"
                                         data-id="@person.Id" data-name="@person.Name"
                                         title="Slet" aria-label="Slet">

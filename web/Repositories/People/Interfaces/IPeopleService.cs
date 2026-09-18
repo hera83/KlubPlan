@@ -15,6 +15,13 @@ namespace web.Repositories.People.Interfaces
 
         Task<bool> DeletePersonAsync(int id, CancellationToken ct = default);
 
+        /// <summary>
+        /// Swaps Person.PublicId for a fresh Guid, invalidating any public /Formular link that
+        /// used the old value. Nothing else in the system references PublicId (all internal
+        /// relations use the int Id), so this is always safe to do — e.g. if a link leaked.
+        /// </summary>
+        Task<bool> RegeneratePublicIdAsync(int id, CancellationToken ct = default);
+
         Task<List<PersonGroupViewModel>> GetGroupsAsync(CancellationToken ct = default);
 
         Task<PersonGroupMutationResponseDto> CreateGroupAsync(string name, CancellationToken ct = default);

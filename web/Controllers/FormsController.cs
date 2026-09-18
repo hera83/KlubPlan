@@ -84,6 +84,7 @@ namespace web.Controllers
                 Title = model.Title,
                 Description = model.Description,
                 IsAcceptingResponses = model.IsAcceptingResponses,
+                IsAnonymous = model.IsAnonymous,
                 UserId = _userManager.GetUserId(User),
                 Fields = model.Fields.Select(f => new SaveFormFieldDto
                 {
@@ -128,6 +129,18 @@ namespace web.Controllers
             return result.Success
                 ? Json(new { success = true, message = "Ny version oprettet.", type = "success", formId = result.FormId })
                 : this.ToastErrorJson(result.ErrorMessage ?? "Kunne ikke oprette ny version.");
+        }
+
+        public async Task<IActionResult> Preview(int id, CancellationToken ct)
+        {
+            var model = await _formService.GetFormForFillAsync(id, ct);
+            if (model is null)
+            {
+                this.ToastError("Formularen blev ikke fundet.");
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(model);
         }
 
         public async Task<IActionResult> Fill(int id, CancellationToken ct)
@@ -262,6 +275,7 @@ namespace web.Controllers
                 Title = model.Title,
                 Description = model.Description,
                 IsAcceptingResponses = !model.IsAcceptingResponses,
+                IsAnonymous = model.IsAnonymous,
                 Fields = model.Fields.Select(f => new SaveFormFieldDto
                 {
                     Id = f.Id,

@@ -47,6 +47,7 @@ namespace web.Repositories.Registrations
                     NeededCount = a.Shifts.Sum(s => s.NeededCount),
                     a.RegistrationOpensAtUtc,
                     a.RegistrationClosesAtUtc,
+                    a.RegistrationForcedOpen,
                     a.CreatedAtUtc
                 })
                 .ToListAsync(ct);
@@ -67,6 +68,7 @@ namespace web.Repositories.Registrations
                         MissingCount = Math.Max(0, a.NeededCount - registrationCount),
                         RegistrationOpensAtUtc = a.RegistrationOpensAtUtc,
                         RegistrationClosesAtUtc = a.RegistrationClosesAtUtc,
+                        RegistrationForcedOpen = a.RegistrationForcedOpen,
                         CreatedAtUtc = a.CreatedAtUtc
                     };
                 })
@@ -324,6 +326,26 @@ namespace web.Repositories.Registrations
 
             _logger.LogInformation("Arrangement {ArrangementId} saved with {FieldCount} formularfelter og {ShiftCount} vagter", arrangement.Id, dto.FormFields.Count, dto.Shifts.Count);
             return new SaveArrangementResponseDto { Success = true, ArrangementId = arrangement.Id };
+        }
+
+        /// <summary>
+        /// Flips RegistrationForcedOpen: closed → temporarily forced open (overriding the dates),
+        /// forced open → back to following the configured dates. There is no forced-closed state —
+        /// closing registration is done by editing the dates.
+        /// </summary>
+        public async Task<ToggleArrangementRegistrationResponseDto> ToggleRegistrationOpenAsync(int id, CancellationToken ct = default)
+        {
+            var arrangement = await _context.Arrangements.FirstOrDefaultAsync(a => a.Id == id, ct);
+            if (arrangement is null)
+                return new ToggleArrangementRegistrationResponseDto { Success = false, ErrorMessage = "Arrangementet blev ikke fundet." };
+
+            arrangement.RegistrationForcedOpen = !arrangement.RegistrationForcedOpen;
+            arrangement.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Arrangement {ArrangementId} registration forced-open set to {ForcedOpen}", arrangement.Id, arrangement.RegistrationForcedOpen);
+            return new ToggleArrangementRegistrationResponseDto { Success = true, IsOpen = arrangement.RegistrationForcedOpen };
         }
 
         public async Task<bool> DeleteArrangementAsync(int id, CancellationToken ct = default)

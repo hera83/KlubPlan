@@ -37,3 +37,29 @@
 </div>
 
 @await Html.PartialAsync("_ArrangementDeleteModal")
+
+<script>
+    (() => {
+        const arrangementsRoot = document.getElementById('arrangementsTableRoot');
+
+        arrangementsRoot?.addEventListener('click', async (e) => {
+            const toggleBtn = e.target.closest('[data-toggle-registration]');
+            if (!toggleBtn) return;
+            toggleBtn.disabled = true;
+            try {
+                const res = await fetch(toggleBtn.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'fetch',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                });
+                const data = await res.json();
+                window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+                if (data.success) window.FvDataTable?.reload(arrangementsRoot);
+            } finally {
+                toggleBtn.disabled = false;
+            }
+        });
+    })();
+</script>

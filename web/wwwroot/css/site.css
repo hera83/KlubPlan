@@ -1133,6 +1133,22 @@ input[type="file"]::-webkit-file-upload-button:hover {
   margin: 0;
 }
 
+/* ── Offentligt formular-link (/Formular) — samme idé som .auth-wrapper/.auth-card, men
+   bredere så formularfelter har plads ── */
+.public-form-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--clr-bg);
+  padding: 3rem 1rem;
+}
+
+.public-form-card {
+  width: 100%;
+  max-width: 640px;
+}
+
 /* ── Misc utilities ── */
 .text-muted { color: var(--clr-text-muted) !important; }
 .form-text { color: var(--clr-text-muted); }

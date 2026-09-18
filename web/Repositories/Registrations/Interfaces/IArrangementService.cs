@@ -16,6 +16,8 @@ namespace web.Repositories.Registrations.Interfaces
 
         Task<bool> DeleteArrangementAsync(int id, CancellationToken ct = default);
 
+        Task<ToggleArrangementRegistrationResponseDto> ToggleRegistrationOpenAsync(int id, CancellationToken ct = default);
+
         Task<List<PersonGroupOptionViewModel>> GetGroupOptionsAsync(CancellationToken ct = default);
 
         Task<List<ArrangementPersonOptionViewModel>> GetPersonOptionsAsync(CancellationToken ct = default);

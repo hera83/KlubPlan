@@ -245,6 +245,35 @@
     </div>
 </div>
 
+<!-- Generér nyt link-id modal -->
+<div class="modal fade" id="regeneratePersonPublicIdModal" tabindex="-1" aria-labelledby="regeneratePersonPublicIdModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="regeneratePersonPublicIdModalLabel"><i class="bi bi-arrow-repeat me-2"></i>Generér nyt link-id</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil generere et nyt link-id til <strong id="regeneratePersonPublicIdName"></strong>?
+                Alle tidligere udleverede formular-links til denne person holder op med at virke. Brug dette hvis et link
+                er kommet i de forkerte hænder.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="RegeneratePersonPublicId" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="regeneratePersonPublicIdId" />
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat me-1"></i> Generér nyt link-id
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Administrer grupper modal -->
 <div class="modal fade" id="manageGroupsModal" tabindex="-1" aria-labelledby="manageGroupsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -476,6 +505,16 @@
             if (!btn) return;
             document.getElementById('deletePersonId').value = btn.dataset.id;
             document.getElementById('deletePersonName').textContent = btn.dataset.name;
+        });
+
+        // ─── Generér nyt link-id ────────────────────────────────────────────────
+        const regeneratePersonPublicIdModal = document.getElementById('regeneratePersonPublicIdModal');
+        handleAjaxSubmit(regeneratePersonPublicIdModal?.querySelector('form'), regeneratePersonPublicIdModal, () => window.FvDataTable?.reload(peopleRoot));
+        regeneratePersonPublicIdModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('regeneratePersonPublicIdId').value = btn.dataset.id;
+            document.getElementById('regeneratePersonPublicIdName').textContent = btn.dataset.name;
         });
 
         // ─── Grupper: genindlæsning efter oprettelse/omdøbning/sletning ───────────
