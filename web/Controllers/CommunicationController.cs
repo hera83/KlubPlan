@@ -72,5 +72,16 @@ namespace web.Controllers
                 ? this.ToastSuccessJson("Beskeden er sendt.")
                 : this.ToastErrorJson(result.ErrorMessage ?? "Beskeden kunne ikke sendes.");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "AdminOrDeveloper")]
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        {
+            var success = await _communicationService.DeleteMessageAsync(id, ct);
+            return success
+                ? this.ToastSuccessJson("Beskeden er slettet.")
+                : this.ToastErrorJson("Beskeden blev ikke fundet.");
+        }
     }
 }

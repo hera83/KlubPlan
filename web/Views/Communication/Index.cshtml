@@ -81,6 +81,10 @@
                                                             title="@(message.IsDraft ? "Send" : "Send igen")" aria-label="@(message.IsDraft ? "Send" : "Send igen")">
                                                         <i class="bi @(message.IsDraft ? "bi-send" : "bi-arrow-repeat")"></i>
                                                     </button>
+                                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteCommunicationModal"
+                                                            data-id="@message.Id" data-title="@message.Subject" title="Slet" aria-label="Slet">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                 </div>
                                             }
                                         </td>
@@ -104,6 +108,7 @@
 @if (Model.IsAdmin)
 {
     @await Html.PartialAsync("_ComposeMessageModal", Model)
+    @await Html.PartialAsync("_CommunicationDeleteModal")
 }
 
 <script>

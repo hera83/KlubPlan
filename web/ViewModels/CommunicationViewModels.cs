@@ -39,15 +39,34 @@ namespace web.ViewModels
         public string Status { get; set; } = string.Empty;
         public string StatusBadgeClass { get; set; } = "badge-info";
         public string RecipientSummary { get; set; } = string.Empty;
+        public bool IsSent { get; set; }
+        public bool ViaEmail { get; set; }
+        public bool ViaSms { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? SentAtUtc { get; set; }
+
+        /// <summary>Name of the attached form, if a form link was sent with the message. Informational only.</summary>
+        public string? FormTitle { get; set; }
+
+        /// <summary>The full target audience (every person covered by the selected groups/persons), not just those who ended up with a resolvable address.</summary>
         public List<CommunicationRecipientDetailViewModel> Recipients { get; set; } = new();
     }
 
     public class CommunicationRecipientDetailViewModel
     {
         public string DisplayName { get; set; } = string.Empty;
-        public string Channel { get; set; } = string.Empty;
+
+        /// <summary>Addresses this person actually got a message queued to (their own or a guardian's) — empty if none, whether from missing contact info or dedup with another recipient.</summary>
+        public List<CommunicationRecipientAddressViewModel> EmailAddresses { get; set; } = new();
+        public List<CommunicationRecipientAddressViewModel> SmsAddresses { get; set; } = new();
+
+        /// <summary>True if the person or any of their guardians has an email/mobile at all, independent of whether it was deduped away by another recipient.</summary>
+        public bool HasEmailContact { get; set; }
+        public bool HasSmsContact { get; set; }
+    }
+
+    public class CommunicationRecipientAddressViewModel
+    {
         public string Address { get; set; } = string.Empty;
         public string DeliveryStatus { get; set; } = string.Empty;
     }

@@ -27,5 +27,8 @@ namespace web.Repositories.Communication.Interfaces
 
         /// <summary>(Re-)resolves recipients and sends an existing message — used for sending a saved draft and for "Send igen".</summary>
         Task<SaveMessageResponseDto> SendExistingAsync(int id, string baseUrl, CancellationToken ct = default);
+
+        /// <summary>Deletes a message and its group/person selections and recipient audit trail. Queued SmsMessage/CommunicationEmailMessage rows are kept (they're the delivery record, not owned by the message).</summary>
+        Task<bool> DeleteMessageAsync(int id, CancellationToken ct = default);
     }
 }

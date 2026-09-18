@@ -73,6 +73,9 @@ namespace web.Repositories.Communication
         {
             var message = await _context.CommunicationMessages
                 .AsNoTracking()
+                .Include(m => m.Form)
+                .Include(m => m.Groups)
+                .Include(m => m.DirectPersons)
                 .Include(m => m.Recipients).ThenInclude(r => r.SmsMessage)
                 .Include(m => m.Recipients).ThenInclude(r => r.CommunicationEmailMessage)
                 .FirstOrDefaultAsync(m => m.Id == id, ct);
@@ -82,6 +85,51 @@ namespace web.Repositories.Communication
                 return null;
             }
 
+            var groupIds = message.Groups.Select(g => g.PersonGroupId).ToList();
+            var personIds = message.DirectPersons.Select(p => p.PersonId).ToList();
+
+            // The full target audience — every person covered by the selected groups/persons —
+            // not just the ones that ended up with a resolvable address. People with no email/
+            // mobile at all (own or via a guardian) still belong on this list, flagged as missing
+            // contact info, so gaps in the club's contact data are visible instead of silently
+            // disappearing.
+            var targets = await _context.People
+                .AsNoTracking()
+                .Where(p => personIds.Contains(p.Id) || p.Memberships.Any(m => groupIds.Contains(m.GroupId)))
+                .OrderBy(p => p.Name)
+                .Include(p => p.Guardians)
+                .ToListAsync(ct);
+
+            var recipientsByPerson = message.Recipients.ToLookup(r => r.PersonId);
+
+            var recipients = targets.Select(person =>
+            {
+                var personRecipients = recipientsByPerson[person.Id];
+
+                return new CommunicationRecipientDetailViewModel
+                {
+                    DisplayName = person.Name,
+                    EmailAddresses = personRecipients
+                        .Where(r => r.Channel == CommunicationChannel.Email)
+                        .Select(r => new CommunicationRecipientAddressViewModel
+                        {
+                            Address = r.Address,
+                            DeliveryStatus = r.CommunicationEmailMessage?.Status.ToString() ?? CommunicationEmailMessageStatus.Pending.ToString()
+                        })
+                        .ToList(),
+                    HasEmailContact = !string.IsNullOrWhiteSpace(person.Email) || person.Guardians.Any(g => !string.IsNullOrWhiteSpace(g.Email)),
+                    SmsAddresses = personRecipients
+                        .Where(r => r.Channel == CommunicationChannel.Sms)
+                        .Select(r => new CommunicationRecipientAddressViewModel
+                        {
+                            Address = r.Address,
+                            DeliveryStatus = r.SmsMessage?.Status ?? SmsMessageStatus.Pending
+                        })
+                        .ToList(),
+                    HasSmsContact = !string.IsNullOrWhiteSpace(person.Mobile) || person.Guardians.Any(g => !string.IsNullOrWhiteSpace(g.Mobile))
+                };
+            }).ToList();
+
             return new CommunicationMessageDetailViewModel
             {
                 Id = message.Id,
@@ -90,20 +138,13 @@ namespace web.Repositories.Communication
                 Status = CommunicationMessageStatuses.GetUILabel(message.Status),
                 StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(message.Status),
                 RecipientSummary = message.RecipientSummary,
+                IsSent = message.SentAtUtc.HasValue,
+                ViaEmail = message.ViaEmail,
+                ViaSms = message.ViaSms,
                 CreatedAtUtc = message.CreatedAtUtc,
                 SentAtUtc = message.SentAtUtc,
-                Recipients = message.Recipients
-                    .OrderBy(r => r.DisplayName)
-                    .Select(r => new CommunicationRecipientDetailViewModel
-                    {
-                        DisplayName = r.DisplayName,
-                        Channel = r.Channel,
-                        Address = r.Address,
-                        DeliveryStatus = r.Channel == CommunicationChannel.Sms
-                            ? (r.SmsMessage?.Status ?? SmsMessageStatus.Pending)
-                            : (r.CommunicationEmailMessage?.Status.ToString() ?? CommunicationEmailMessageStatus.Pending.ToString())
-                    })
-                    .ToList()
+                FormTitle = message.Form?.Title,
+                Recipients = recipients
             };
         }
 
@@ -274,6 +315,22 @@ namespace web.Repositories.Communication
             return await SendMessageInternalAsync(message, baseUrl, ct);
         }
 
+        public async Task<bool> DeleteMessageAsync(int id, CancellationToken ct = default)
+        {
+            var message = await _context.CommunicationMessages.FirstOrDefaultAsync(m => m.Id == id, ct);
+            if (message is null)
+            {
+                return false;
+            }
+
+            // Groups/DirectPersons/Recipients cascade-delete with the message; the underlying
+            // SmsMessage/CommunicationEmailMessage rows are kept — they're the actual delivery
+            // record and aren't owned by this message.
+            _context.CommunicationMessages.Remove(message);
+            await _context.SaveChangesAsync(ct);
+            return true;
+        }
+
         private async Task<SaveMessageResponseDto> SendMessageInternalAsync(CommunicationMessage message, string baseUrl, CancellationToken ct)
         {
             var groupIds = message.Groups.Select(g => g.PersonGroupId).ToList();
@@ -298,7 +355,7 @@ namespace web.Repositories.Communication
 
             if (message.FormId.HasValue)
             {
-                form = await _context.Forms.AsNoTracking().FirstOrDefaultAsync(f => f.Id == message.FormId.Value, ct);
+                form = await GetLatestFormVersionAsync(message.FormId.Value, ct);
                 if (form is not null)
                 {
                     // Non-anonymous forms always require a personal link server-side, regardless of
@@ -380,6 +437,27 @@ namespace web.Repositories.Communication
             await _context.SaveChangesAsync(ct);
 
             return new SaveMessageResponseDto { Success = true, MessageId = message.Id };
+        }
+
+        /// <summary>
+        /// Resolves a form id to the current latest version in its version series (Form.RootFormId
+        /// chain), so a resend always uses whatever version is live now — with its own PublicId —
+        /// even if the message was originally attached to a since-superseded version.
+        /// </summary>
+        private async Task<Form?> GetLatestFormVersionAsync(int formId, CancellationToken ct)
+        {
+            var attachedForm = await _context.Forms.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formId, ct);
+            if (attachedForm is null)
+            {
+                return null;
+            }
+
+            var rootId = attachedForm.RootFormId ?? attachedForm.Id;
+            var seriesForms = await _context.Forms.AsNoTracking()
+                .Where(f => f.Id == rootId || f.RootFormId == rootId)
+                .ToListAsync(ct);
+
+            return seriesForms.OrderByDescending(f => f.VersionNumber).FirstOrDefault();
         }
 
         private async Task<int> CountTargetPersonsAsync(IReadOnlyCollection<int> groupIds, IReadOnlyCollection<int> personIds, CancellationToken ct)
