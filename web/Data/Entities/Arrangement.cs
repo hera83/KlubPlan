@@ -12,6 +12,13 @@ namespace web.Data.Entities
     {
         public int Id { get; set; }
 
+        /// <summary>
+        /// Unguessable id used in the public link (/Tilmelding?Id=..) so hopping between the
+        /// sequential, internal Id values can't be used to reach arrangements one isn't meant to
+        /// see. Mirrors Form.PublicId.
+        /// </summary>
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         public string Title { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -44,5 +51,7 @@ namespace web.Data.Entities
         public virtual ICollection<ArrangementAllowedPerson> AllowedPersons { get; set; } = new List<ArrangementAllowedPerson>();
 
         public virtual ICollection<ArrangementAllowedGroup> AllowedGroups { get; set; } = new List<ArrangementAllowedGroup>();
+
+        public virtual ICollection<ArrangementRegistration> Registrations { get; set; } = new List<ArrangementRegistration>();
     }
 }

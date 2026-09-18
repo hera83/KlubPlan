@@ -1676,10 +1676,6 @@ input[type="file"]::-webkit-file-upload-button:hover {
   text-align: left;
   cursor: pointer;
 }
-.arrangement-day-header-static {
-  cursor: default;
-}
-
 .arrangement-day-chevron {
   color: var(--clr-text-muted);
   transition: transform 0.15s;

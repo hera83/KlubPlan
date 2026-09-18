@@ -19,6 +19,10 @@
                 {
                     <span><i class="bi bi-link-45deg me-1"></i>Link til formular: @Model.FormTitle</span>
                 }
+                @if (!string.IsNullOrEmpty(Model.ArrangementTitle))
+                {
+                    <span><i class="bi bi-link-45deg me-1"></i>Link til tilmelding: @Model.ArrangementTitle</span>
+                }
             </p>
         </div>
     </div>

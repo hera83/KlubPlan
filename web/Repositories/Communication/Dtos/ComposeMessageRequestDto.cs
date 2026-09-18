@@ -23,6 +23,9 @@ namespace web.Repositories.Communication.Dtos
         /// <summary>"shared" or "personal" — only meaningful when FormId is set.</summary>
         public string? LinkType { get; set; }
 
+        /// <summary>Attached arrangement (Tilmelding), if any. Its link is always personal — Tilmelding has no anonymous mode.</summary>
+        public int? ArrangementId { get; set; }
+
         /// <summary>"draft" or "send".</summary>
         public string Action { get; set; } = "draft";
     }

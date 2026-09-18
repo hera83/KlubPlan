@@ -1,0 +1,78 @@
+@model web.ViewModels.ArrangementRegistrationsViewModel
+
+<div class="table-responsive form-responses-table-wrap">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>Tilmeldt</th>
+                <th>Vagter</th>
+                @foreach (var col in Model.Columns)
+                {
+                    <th>@col.Label</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr>
+                    <td colspan="@(Model.Columns.Count + 3)" class="text-muted">Ingen tilmeldinger endnu.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.PersonName</td>
+                        <td>@row.RegisteredAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>
+                            @if (row.ShiftLabels.Count == 0)
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                            else
+                            {
+                                @foreach (var label in row.ShiftLabels)
+                                {
+                                    <span class="badge-info d-block mb-1">@label</span>
+                                }
+                            }
+                        </td>
+                        @foreach (var col in Model.Columns)
+                        {
+                            <td>@(row.Answers.TryGetValue(col.ArrangementFormFieldId, out var v) && !string.IsNullOrEmpty(v) ? v : "–")</td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel
+        {
+            Page = Model.Page,
+            TotalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)
+        })
+    </div>
+</div>

@@ -16,6 +16,14 @@ namespace web.Data.Entities
 
         public string Body { get; set; } = string.Empty;
 
+        /// <summary>
+        /// HTML rendering of Body — same content, with links as clickable &lt;a href&gt; tags and
+        /// line breaks as &lt;br&gt;. Sent as the HTML alternative alongside Body (plain text) so
+        /// email clients that support HTML show real hyperlinks. Null falls back to plain text
+        /// only. Never used for SMS — SmsMessage.Body stays plain text regardless.
+        /// </summary>
+        public string? HtmlBody { get; set; }
+
         public CommunicationEmailMessageStatus Status { get; set; } = CommunicationEmailMessageStatus.Pending;
 
         public string? FailureReason { get; set; }

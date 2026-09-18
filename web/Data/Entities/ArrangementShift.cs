@@ -28,5 +28,7 @@ namespace web.Data.Entities
         public virtual Arrangement Arrangement { get; set; } = null!;
 
         public virtual ICollection<ArrangementShiftRequirement> Requirements { get; set; } = new List<ArrangementShiftRequirement>();
+
+        public virtual ICollection<ArrangementRegistrationShift> Registrations { get; set; } = new List<ArrangementRegistrationShift>();
     }
 }

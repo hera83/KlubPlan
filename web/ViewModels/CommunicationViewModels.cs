@@ -7,6 +7,7 @@ namespace web.ViewModels
         public List<PersonGroupOptionViewModel> GroupOptions { get; set; } = new();
         public List<ArrangementPersonOptionViewModel> PersonOptions { get; set; } = new();
         public List<CommunicationFormOptionViewModel> FormOptions { get; set; } = new();
+        public List<CommunicationArrangementOptionViewModel> ArrangementOptions { get; set; } = new();
     }
 
     public class CommunicationMessageListItemViewModel
@@ -38,6 +39,22 @@ namespace web.ViewModels
         public bool IsAnonymous { get; set; }
     }
 
+    /// <summary>Unlike CommunicationFormOptionViewModel, there is no IsAnonymous flag — Tilmelding links are always personal.</summary>
+    public class CommunicationArrangementOptionViewModel
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+
+        /// <summary>True when the arrangement's own Adgang-tab restricts sign-up to specific persons/groups.</summary>
+        public bool IsRestricted { get; set; }
+
+        /// <summary>Mirrors the arrangement's AllowedPersons — used to auto-select and lock the compose modal's recipient pickers so a personal Tilmelding link can't be sent to someone without access.</summary>
+        public List<int> AllowedPersonIds { get; set; } = new();
+
+        /// <summary>Mirrors the arrangement's AllowedGroups — same purpose as AllowedPersonIds.</summary>
+        public List<int> AllowedGroupIds { get; set; } = new();
+    }
+
     public class CommunicationMessageDetailViewModel
     {
         public int Id { get; set; }
@@ -55,6 +72,9 @@ namespace web.ViewModels
 
         /// <summary>Name of the attached form, if a form link was sent with the message. Informational only.</summary>
         public string? FormTitle { get; set; }
+
+        /// <summary>Name of the attached arrangement, if a Tilmelding link was sent with the message. Informational only.</summary>
+        public string? ArrangementTitle { get; set; }
 
         /// <summary>The full target audience (every person covered by the selected groups/persons), not just those who ended up with a resolvable address.</summary>
         public List<CommunicationRecipientDetailViewModel> Recipients { get; set; } = new();

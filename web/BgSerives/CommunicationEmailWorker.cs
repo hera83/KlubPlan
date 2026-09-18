@@ -77,7 +77,8 @@ namespace web.BgSerives
                         {
                             To = [message.ToAddress],
                             Subject = message.Subject,
-                            TextBody = message.Body
+                            TextBody = message.Body,
+                            HtmlBody = message.HtmlBody
                         },
                         cancellationToken);
 

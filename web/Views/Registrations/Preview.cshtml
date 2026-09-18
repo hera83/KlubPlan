@@ -144,27 +144,17 @@
                     @foreach (var dayGroup in dayGroups)
                     {
                         var shiftsInDay = dayGroup.ToList();
-                        var multiple = shiftsInDay.Count > 1;
                         var dayId = "arrangementDay_" + dayGroup.Key.ToString("yyyyMMdd");
                         var dayLabel = dayGroup.Key.ToString("dddd 'den' d. MMMM yyyy", da);
 
                         <div class="arrangement-day-group">
-                            @if (multiple)
-                            {
-                                <button type="button" class="arrangement-day-header" data-bs-toggle="collapse" data-bs-target="#@dayId" aria-expanded="false" aria-controls="@dayId">
-                                    <i class="bi bi-chevron-right arrangement-day-chevron"></i>
-                                    <span class="arrangement-day-title">@dayLabel</span>
-                                    <span class="badge-info">@shiftsInDay.Count vagter</span>
-                                </button>
-                            }
-                            else
-                            {
-                                <div class="arrangement-day-header arrangement-day-header-static">
-                                    <span class="arrangement-day-title">@dayLabel</span>
-                                </div>
-                            }
+                            <button type="button" class="arrangement-day-header" data-bs-toggle="collapse" data-bs-target="#@dayId" aria-expanded="false" aria-controls="@dayId">
+                                <i class="bi bi-chevron-right arrangement-day-chevron"></i>
+                                <span class="arrangement-day-title">@dayLabel</span>
+                                <span class="badge-info">@shiftsInDay.Count vagt@(shiftsInDay.Count == 1 ? "" : "er")</span>
+                            </button>
 
-                            <div class="@(multiple ? "collapse" : "")" id="@(multiple ? dayId : null)">
+                            <div class="collapse" id="@dayId">
                                 <div class="arrangement-day-body">
                                     @foreach (var shift in shiftsInDay)
                                     {

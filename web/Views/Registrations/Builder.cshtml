@@ -136,14 +136,14 @@
                         <div class="col-md-6">
                             <label class="form-label">Grupper</label>
                             <div class="border rounded p-2" style="max-height:220px;overflow-y:auto;">
-                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementGroups", ["Name"] = "AllowedGroupIds" })
+                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementGroups", ["Name"] = "AllowedGroupIds", ["SelectedIds"] = Model.AllowedGroupIds })
                             </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Personer</label>
                             <input type="search" class="form-control form-control-sm mb-2" id="arrangementPersonFilter" placeholder="Søg efter navn..." autocomplete="off" />
                             <div class="border rounded p-2" id="arrangementPersonsWrap" style="max-height:220px;overflow-y:auto;">
-                                @await Html.PartialAsync("_ArrangementPersonCheckboxes", Model.PersonOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementPersons" })
+                                @await Html.PartialAsync("_ArrangementPersonCheckboxes", Model.PersonOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "arrangementPersons", ["SelectedIds"] = Model.AllowedPersonIds })
                             </div>
                         </div>
                     </div>

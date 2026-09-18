@@ -4,9 +4,10 @@ namespace web.Data.Entities
 {
     /// <summary>
     /// A broadcast message sent to one or more Persons/PersonGroups over Email and/or SMS, with an
-    /// optional attached Form link. Groups/Persons are stored (CommunicationMessageGroup /
-    /// CommunicationMessageRecipientPerson) so a draft can be re-resolved and (re-)sent later; the
-    /// actual resolved, deduped send targets are recorded in CommunicationMessageRecipient.
+    /// optional attached Form link and/or Arrangement (Tilmelding) link. Groups/Persons are stored
+    /// (CommunicationMessageGroup / CommunicationMessageRecipientPerson) so a draft can be
+    /// re-resolved and (re-)sent later; the actual resolved, deduped send targets are recorded in
+    /// CommunicationMessageRecipient.
     /// </summary>
     public class CommunicationMessage
     {
@@ -29,6 +30,9 @@ namespace web.Data.Entities
         /// <summary>"shared" or "personal" — only meaningful when FormId is set.</summary>
         public string? LinkType { get; set; }
 
+        /// <summary>Attached arrangement (Tilmelding), if any. Kept even if the arrangement is later deleted (FK is SetNull). Its link is always personal — Tilmelding has no anonymous mode.</summary>
+        public int? ArrangementId { get; set; }
+
         /// <summary>Snapshot of the target groups/persons' names at last send, for display without re-resolving.</summary>
         public string RecipientSummary { get; set; } = string.Empty;
 
@@ -44,6 +48,8 @@ namespace web.Data.Entities
         public DateTime? SentAtUtc { get; set; }
 
         public virtual Form? Form { get; set; }
+
+        public virtual Arrangement? Arrangement { get; set; }
 
         public virtual ICollection<CommunicationMessageGroup> Groups { get; set; } = new List<CommunicationMessageGroup>();
 

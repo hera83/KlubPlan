@@ -1,3 +1,6 @@
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using web.Constants;
 using web.Data;
@@ -39,6 +42,19 @@ namespace web.Repositories.Communication
                 .Select(f => new CommunicationFormOptionViewModel { Id = f.Id, Title = f.Title, IsAnonymous = f.IsAnonymous })
                 .ToList();
 
+            var arrangementOptions = await _context.Arrangements
+                .AsNoTracking()
+                .OrderBy(a => a.Title)
+                .Select(a => new CommunicationArrangementOptionViewModel
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    IsRestricted = a.AccessMode == ArrangementAccessMode.Restricted,
+                    AllowedPersonIds = a.AllowedPersons.Select(p => p.PersonId).ToList(),
+                    AllowedGroupIds = a.AllowedGroups.Select(g => g.PersonGroupId).ToList()
+                })
+                .ToListAsync(ct);
+
             var messageEntities = await _context.CommunicationMessages
                 .AsNoTracking()
                 .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
@@ -67,7 +83,8 @@ namespace web.Repositories.Communication
                 Messages = messages,
                 GroupOptions = groups,
                 PersonOptions = people,
-                FormOptions = formOptions
+                FormOptions = formOptions,
+                ArrangementOptions = arrangementOptions
             };
         }
 
@@ -76,6 +93,7 @@ namespace web.Repositories.Communication
             var message = await _context.CommunicationMessages
                 .AsNoTracking()
                 .Include(m => m.Form)
+                .Include(m => m.Arrangement)
                 .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
                 .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
                 .Include(m => m.Recipients).ThenInclude(r => r.SmsMessage)
@@ -147,6 +165,7 @@ namespace web.Repositories.Communication
                 CreatedAtUtc = message.CreatedAtUtc,
                 SentAtUtc = message.SentAtUtc,
                 FormTitle = message.Form?.Title,
+                ArrangementTitle = message.Arrangement?.Title,
                 Recipients = recipients
             };
         }
@@ -232,6 +251,28 @@ namespace web.Repositories.Communication
 
             var groupIds = dto.GroupIds.Distinct().ToList();
             var personIds = dto.AllowedPersonIds.Distinct().ToList();
+
+            // Defense in depth: the compose modal's JS already restricts the recipient pickers to
+            // an attached Restricted arrangement's own allow-list, but that's client-side only —
+            // re-apply the same filter here so a personal Tilmelding link can never be saved for
+            // someone who isn't actually allowed to sign up.
+            if (dto.ArrangementId.HasValue)
+            {
+                var arrangement = await _context.Arrangements
+                    .AsNoTracking()
+                    .Include(a => a.AllowedPersons)
+                    .Include(a => a.AllowedGroups)
+                    .FirstOrDefaultAsync(a => a.Id == dto.ArrangementId.Value, ct);
+
+                if (arrangement is not null && arrangement.AccessMode == ArrangementAccessMode.Restricted)
+                {
+                    var allowedGroupIds = arrangement.AllowedGroups.Select(g => g.PersonGroupId).ToHashSet();
+                    var allowedPersonIds = arrangement.AllowedPersons.Select(p => p.PersonId).ToHashSet();
+                    groupIds = groupIds.Where(allowedGroupIds.Contains).ToList();
+                    personIds = personIds.Where(allowedPersonIds.Contains).ToList();
+                }
+            }
+
             if (groupIds.Count == 0 && personIds.Count == 0)
             {
                 return new SaveMessageResponseDto { Success = false, ErrorMessage = "Vælg mindst én modtager (gruppe eller person)." };
@@ -278,6 +319,7 @@ namespace web.Repositories.Communication
             message.ViaSms = dto.ViaSms;
             message.FormId = dto.FormId;
             message.LinkType = dto.FormId.HasValue ? (dto.LinkType == "personal" ? "personal" : "shared") : null;
+            message.ArrangementId = dto.ArrangementId;
             message.Status = CommunicationMessageStatus.Draft;
 
             foreach (var groupId in groupIds)
@@ -352,9 +394,10 @@ namespace web.Repositories.Communication
             }
 
             Form? form = null;
-            var usePersonalLink = false;
-            string? sharedLink = null;
-            var personPublicIds = new Dictionary<int, Guid>();
+            Arrangement? arrangement = null;
+            var usePersonalFormLink = false;
+            string? sharedFormLink = null;
+            var needsPersonPublicIds = false;
 
             if (message.FormId.HasValue)
             {
@@ -363,19 +406,35 @@ namespace web.Repositories.Communication
                 {
                     // Non-anonymous forms always require a personal link server-side, regardless of
                     // what the client sent — mirrors the compose modal's own JS rule.
-                    usePersonalLink = !form.IsAnonymous || message.LinkType == "personal";
-                    if (usePersonalLink)
+                    usePersonalFormLink = !form.IsAnonymous || message.LinkType == "personal";
+                    if (usePersonalFormLink)
                     {
-                        var distinctPersonIds = resolved.Select(r => r.PersonId).Distinct().ToList();
-                        personPublicIds = await _context.People
-                            .Where(p => distinctPersonIds.Contains(p.Id))
-                            .ToDictionaryAsync(p => p.Id, p => p.PublicId, ct);
+                        needsPersonPublicIds = true;
                     }
                     else
                     {
-                        sharedLink = $"{baseUrl}/Formular?Id={form.PublicId}";
+                        sharedFormLink = $"{baseUrl}/Formular?Id={form.PublicId}";
                     }
                 }
+            }
+
+            if (message.ArrangementId.HasValue)
+            {
+                arrangement = await _context.Arrangements.AsNoTracking().FirstOrDefaultAsync(a => a.Id == message.ArrangementId.Value, ct);
+                if (arrangement is not null)
+                {
+                    // Tilmelding has no anonymous mode — the link is always personal.
+                    needsPersonPublicIds = true;
+                }
+            }
+
+            var personPublicIds = new Dictionary<int, Guid>();
+            if (needsPersonPublicIds)
+            {
+                var distinctPersonIds = resolved.Select(r => r.PersonId).Distinct().ToList();
+                personPublicIds = await _context.People
+                    .Where(p => distinctPersonIds.Contains(p.Id))
+                    .ToDictionaryAsync(p => p.Id, p => p.PublicId, ct);
             }
 
             foreach (var recipient in resolved)
@@ -384,14 +443,20 @@ namespace web.Repositories.Communication
 
                 if (form is not null)
                 {
-                    var link = usePersonalLink && personPublicIds.TryGetValue(recipient.PersonId, out var publicId)
-                        ? $"{baseUrl}/Formular?Id={form.PublicId}&UId={publicId}"
-                        : sharedLink;
+                    var link = usePersonalFormLink && personPublicIds.TryGetValue(recipient.PersonId, out var formPublicId)
+                        ? $"{baseUrl}/Formular?Id={form.PublicId}&UId={formPublicId}"
+                        : sharedFormLink;
 
                     if (link is not null)
                     {
                         body = $"{body}\n\n{form.Title}: {link}";
                     }
+                }
+
+                if (arrangement is not null && personPublicIds.TryGetValue(recipient.PersonId, out var arrangementPersonPublicId))
+                {
+                    var link = $"{baseUrl}/Tilmelding?Id={arrangement.PublicId}&UId={arrangementPersonPublicId}";
+                    body = $"{body}\n\n{arrangement.Title}: {link}";
                 }
 
                 var recipientRow = new CommunicationMessageRecipient
@@ -422,6 +487,7 @@ namespace web.Repositories.Communication
                         ToAddress = recipient.Address,
                         Subject = message.Subject,
                         Body = body,
+                        HtmlBody = BuildHtmlEmailBody(body),
                         Status = CommunicationEmailMessageStatus.Pending
                     };
                     _context.CommunicationEmailMessages.Add(email);
@@ -511,5 +577,32 @@ namespace web.Repositories.Communication
 
             return parts.Count > 0 ? string.Join(", ", parts) : "Ingen modtagere";
         }
+
+        /// <summary>
+        /// Renders the plain-text email body (same text used for SMS) as HTML: bare http(s) links
+        /// become clickable &lt;a href&gt; tags and line breaks become &lt;br&gt;. Sent as the HTML
+        /// alternative alongside the plain-text Body — SmsMessage.Body is never touched by this,
+        /// SMS always stays plain text.
+        /// </summary>
+        private static string BuildHtmlEmailBody(string plainBody)
+        {
+            var html = new StringBuilder();
+            var lastIndex = 0;
+
+            foreach (Match match in UrlPattern.Matches(plainBody))
+            {
+                html.Append(WebUtility.HtmlEncode(plainBody[lastIndex..match.Index]));
+                var encodedUrl = WebUtility.HtmlEncode(match.Value);
+                html.Append($"<a href=\"{encodedUrl}\">{encodedUrl}</a>");
+                lastIndex = match.Index + match.Length;
+            }
+
+            html.Append(WebUtility.HtmlEncode(plainBody[lastIndex..]));
+
+            var htmlBody = html.ToString().Replace("\r\n", "\n").Replace("\n", "<br>\n");
+            return $"<!DOCTYPE html><html><body style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1a1a;\">{htmlBody}</body></html>";
+        }
+
+        private static readonly Regex UrlPattern = new(@"https?://[^\s<>""]+", RegexOptions.Compiled);
     }
 }

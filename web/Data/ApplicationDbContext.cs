@@ -53,6 +53,9 @@ namespace web.Data
         public DbSet<ArrangementShiftRequirement> ArrangementShiftRequirements { get; set; } = null!;
         public DbSet<ArrangementAllowedPerson> ArrangementAllowedPersons { get; set; } = null!;
         public DbSet<ArrangementAllowedGroup> ArrangementAllowedGroups { get; set; } = null!;
+        public DbSet<ArrangementRegistration> ArrangementRegistrations { get; set; } = null!;
+        public DbSet<ArrangementRegistrationAnswer> ArrangementRegistrationAnswers { get; set; } = null!;
+        public DbSet<ArrangementRegistrationShift> ArrangementRegistrationShifts { get; set; } = null!;
 
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
@@ -491,6 +494,10 @@ namespace web.Data
             {
                 entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.PublicId)
+                    .IsRequired()
+                    .HasConversion<string>();
+
                 entity.Property(e => e.Title)
                     .IsRequired()
                     .HasMaxLength(200);
@@ -507,6 +514,8 @@ namespace web.Data
                     .IsRequired();
 
                 entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
             });
 
             // Configure ArrangementFormField
@@ -608,6 +617,67 @@ namespace web.Data
                 entity.HasIndex(e => e.PersonGroupId);
             });
 
+            // Configure ArrangementRegistration
+            builder.Entity<ArrangementRegistration>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.RegisteredAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany(a => a.Registrations)
+                    .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Person)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // One registration per person per arrangement — enforces "can't sign up twice" at
+                // the database level too, not just via the app-level gate check.
+                entity.HasIndex(e => new { e.ArrangementId, e.PersonId })
+                    .IsUnique();
+            });
+
+            // Configure ArrangementRegistrationAnswer
+            builder.Entity<ArrangementRegistrationAnswer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.ArrangementRegistration)
+                    .WithMany(r => r.Answers)
+                    .HasForeignKey(e => e.ArrangementRegistrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ArrangementFormField)
+                    .WithMany(f => f.Answers)
+                    .HasForeignKey(e => e.ArrangementFormFieldId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.ArrangementRegistrationId);
+                entity.HasIndex(e => e.ArrangementFormFieldId);
+            });
+
+            // Configure ArrangementRegistrationShift (join entity: which shifts a registration covers)
+            builder.Entity<ArrangementRegistrationShift>(entity =>
+            {
+                entity.HasKey(e => new { e.ArrangementRegistrationId, e.ArrangementShiftId });
+
+                entity.HasOne(e => e.ArrangementRegistration)
+                    .WithMany(r => r.Shifts)
+                    .HasForeignKey(e => e.ArrangementRegistrationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ArrangementShift)
+                    .WithMany(s => s.Registrations)
+                    .HasForeignKey(e => e.ArrangementShiftId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.ArrangementShiftId);
+            });
+
             // Configure CommunicationMessage
             builder.Entity<CommunicationMessage>(entity =>
             {
@@ -637,6 +707,11 @@ namespace web.Data
                 entity.HasOne(e => e.Form)
                     .WithMany()
                     .HasForeignKey(e => e.FormId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Arrangement)
+                    .WithMany()
+                    .HasForeignKey(e => e.ArrangementId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => e.CreatedAtUtc);

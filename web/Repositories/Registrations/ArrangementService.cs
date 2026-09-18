@@ -45,6 +45,7 @@ namespace web.Repositories.Registrations
                     a.Title,
                     EventDateUtc = a.Shifts.Any() ? a.Shifts.Min(s => s.StartUtc) : (DateTime?)null,
                     NeededCount = a.Shifts.Sum(s => s.NeededCount),
+                    RegistrationCount = a.Shifts.Sum(s => s.Registrations.Count),
                     a.RegistrationOpensAtUtc,
                     a.RegistrationClosesAtUtc,
                     a.RegistrationForcedOpen,
@@ -53,24 +54,17 @@ namespace web.Repositories.Registrations
                 .ToListAsync(ct);
 
             filter.Arrangementer = page
-                .Select(a =>
+                .Select(a => new ArrangementListItemViewModel
                 {
-                    // TODO: erstat RegistrationCount med et rigtigt tilmeldingstal, når den offentlige
-                    // tilmeldingsflow (og dermed en registrerings-tabel) er bygget. Mangler-tallet trækker
-                    // allerede RegistrationCount fra, så det bliver korrekt automatisk den dag.
-                    const int registrationCount = 0;
-                    return new ArrangementListItemViewModel
-                    {
-                        Id = a.Id,
-                        Title = a.Title,
-                        EventDateUtc = a.EventDateUtc,
-                        RegistrationCount = registrationCount,
-                        MissingCount = Math.Max(0, a.NeededCount - registrationCount),
-                        RegistrationOpensAtUtc = a.RegistrationOpensAtUtc,
-                        RegistrationClosesAtUtc = a.RegistrationClosesAtUtc,
-                        RegistrationForcedOpen = a.RegistrationForcedOpen,
-                        CreatedAtUtc = a.CreatedAtUtc
-                    };
+                    Id = a.Id,
+                    Title = a.Title,
+                    EventDateUtc = a.EventDateUtc,
+                    RegistrationCount = a.RegistrationCount,
+                    MissingCount = Math.Max(0, a.NeededCount - a.RegistrationCount),
+                    RegistrationOpensAtUtc = a.RegistrationOpensAtUtc,
+                    RegistrationClosesAtUtc = a.RegistrationClosesAtUtc,
+                    RegistrationForcedOpen = a.RegistrationForcedOpen,
+                    CreatedAtUtc = a.CreatedAtUtc
                 })
                 .ToList();
 
@@ -375,6 +369,65 @@ namespace web.Repositories.Registrations
                 .ToListAsync(ct);
         }
 
+        public async Task<PublicArrangementAccessViewModel> GetPublicArrangementAsync(Guid arrangementPublicId, Guid? personPublicId, CancellationToken ct = default)
+        {
+            var (status, arrangement, _) = await ResolvePublicArrangementAccessAsync(arrangementPublicId, personPublicId, ct);
+            return await BuildPublicArrangementAccessViewModelAsync(status, arrangement, personPublicId, ct);
+        }
+
+        public async Task<SubmitPublicArrangementResponseDto> SubmitPublicArrangementAsync(SubmitPublicArrangementRequestDto dto, CancellationToken ct = default)
+        {
+            var (status, arrangement, person) = await ResolvePublicArrangementAccessAsync(dto.ArrangementPublicId, dto.PersonPublicId, ct);
+            if (status != PublicArrangementStatus.Ok || arrangement is null || person is null)
+                return new SubmitPublicArrangementResponseDto { Status = status };
+
+            var (answers, fieldErrors) = BuildRegistrationAnswers(arrangement, dto.Answers);
+            if (fieldErrors.Count > 0)
+                return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, FieldErrors = fieldErrors };
+
+            var selectedShiftIds = dto.SelectedShiftIds.Distinct().ToList();
+            var shiftsById = arrangement.Shifts.ToDictionary(s => s.Id);
+
+            if (selectedShiftIds.Any(id => !shiftsById.ContainsKey(id)))
+                return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = "En eller flere valgte vagter findes ikke længere." };
+
+            if (selectedShiftIds.Count == 0 && arrangement.Shifts.Count > 0)
+                return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = "Vælg mindst én vagt." };
+
+            var registration = new ArrangementRegistration
+            {
+                ArrangementId = arrangement.Id,
+                PersonId = person.Id,
+                RegisteredAtUtc = DateTime.UtcNow
+            };
+
+            foreach (var shiftId in selectedShiftIds)
+            {
+                var shift = shiftsById[shiftId];
+
+                // Re-check capacity and required confirmations here (not just client-side) — the
+                // gate above only validates identity/access, not per-shift state, which can have
+                // changed since the GET rendered the form.
+                var takenCount = await _context.ArrangementRegistrationShifts.CountAsync(rs => rs.ArrangementShiftId == shiftId, ct);
+                if (takenCount >= shift.NeededCount)
+                    return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"'{shift.Title}' har ikke flere ledige pladser." };
+
+                if (shift.Requirements.Count > 0 && shift.Requirements.Any(r => !dto.ConfirmedRequirementIds.Contains(r.Id)))
+                    return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"Du skal bekræfte alle krav for at tilmelde dig '{shift.Title}'." };
+
+                registration.Shifts.Add(new ArrangementRegistrationShift { ArrangementShiftId = shiftId });
+            }
+
+            foreach (var answer in answers)
+                registration.Answers.Add(answer);
+
+            _context.ArrangementRegistrations.Add(registration);
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Person {PersonId} registered publicly for arrangement {ArrangementId}", person.Id, arrangement.Id);
+            return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = true, ArrangementTitle = arrangement.Title };
+        }
+
         /// <summary>
         /// Datofelterne i opsætningssiden (Detaljer-fanen, vagternes start/slut) er
         /// &lt;input type="datetime-local"&gt; og indeholder derfor administratorens lokale
@@ -411,6 +464,240 @@ namespace web.Repositories.Registrations
             {
                 return new List<string>();
             }
+        }
+
+        /// <summary>
+        /// Gate for the public, unauthenticated /Tilmelding link: resolves the arrangement and
+        /// always requires the UId query parameter to resolve to a real Person — unlike
+        /// Formularer, Tilmelding has no anonymous mode, since the whole point of signing up is
+        /// knowing who is coming. Also enforces the access list (AllowedPersons/AllowedGroups)
+        /// when AccessMode is Restricted, and blocks a Person who already registered.
+        /// </summary>
+        private async Task<(PublicArrangementStatus Status, Arrangement? Arrangement, Person? Person)> ResolvePublicArrangementAccessAsync(Guid arrangementPublicId, Guid? personPublicId, CancellationToken ct)
+        {
+            var arrangement = await _context.Arrangements
+                .Include(a => a.FormFields)
+                .Include(a => a.Shifts).ThenInclude(s => s.Requirements)
+                .Include(a => a.AllowedPersons)
+                .Include(a => a.AllowedGroups)
+                .FirstOrDefaultAsync(a => a.PublicId == arrangementPublicId, ct);
+
+            if (arrangement is null)
+                return (PublicArrangementStatus.NotFound, null, null);
+
+            if (!IsRegistrationOpen(arrangement))
+                return (PublicArrangementStatus.Closed, arrangement, null);
+
+            if (personPublicId is null || personPublicId == Guid.Empty)
+                return (PublicArrangementStatus.MissingIdentity, arrangement, null);
+
+            var person = await _context.People.FirstOrDefaultAsync(p => p.PublicId == personPublicId.Value, ct);
+            if (person is null)
+                return (PublicArrangementStatus.InvalidIdentity, arrangement, null);
+
+            if (arrangement.AccessMode == ArrangementAccessMode.Restricted)
+            {
+                var allowedPersonIds = arrangement.AllowedPersons.Select(p => p.PersonId).ToHashSet();
+                var isDirectlyAllowed = allowedPersonIds.Contains(person.Id);
+
+                var allowedGroupIds = arrangement.AllowedGroups.Select(g => g.PersonGroupId).ToList();
+                var isAllowedViaGroup = allowedGroupIds.Count > 0 && await _context.PersonGroupMemberships
+                    .AnyAsync(m => m.PersonId == person.Id && allowedGroupIds.Contains(m.GroupId), ct);
+
+                if (!isDirectlyAllowed && !isAllowedViaGroup)
+                    return (PublicArrangementStatus.NotAllowed, arrangement, person);
+            }
+
+            var alreadyRegistered = await _context.ArrangementRegistrations
+                .AnyAsync(r => r.ArrangementId == arrangement.Id && r.PersonId == person.Id, ct);
+
+            return alreadyRegistered
+                ? (PublicArrangementStatus.AlreadyRegistered, arrangement, person)
+                : (PublicArrangementStatus.Ok, arrangement, person);
+        }
+
+        /// <summary>True when registration is currently open, mirroring the RegistrationForcedOpen/dates logic shown in the admin list (_ArrangementsTableBody.cshtml).</summary>
+        private static bool IsRegistrationOpen(Arrangement arrangement)
+        {
+            if (arrangement.RegistrationForcedOpen) return true;
+
+            var now = DateTime.UtcNow;
+            if (arrangement.RegistrationOpensAtUtc.HasValue && now < arrangement.RegistrationOpensAtUtc.Value) return false;
+            if (arrangement.RegistrationClosesAtUtc.HasValue && now > arrangement.RegistrationClosesAtUtc.Value) return false;
+            return true;
+        }
+
+        private async Task<PublicArrangementAccessViewModel> BuildPublicArrangementAccessViewModelAsync(PublicArrangementStatus status, Arrangement? arrangement, Guid? personPublicId, CancellationToken ct)
+        {
+            var vm = new PublicArrangementAccessViewModel { Status = status };
+            if (arrangement is null) return vm;
+
+            if (status != PublicArrangementStatus.Ok)
+            {
+                vm.Arrangement = new ArrangementFillViewModel
+                {
+                    ArrangementId = arrangement.Id,
+                    ArrangementPublicId = arrangement.PublicId,
+                    Title = arrangement.Title,
+                    Description = arrangement.Description,
+                    PersonPublicId = personPublicId
+                };
+                return vm;
+            }
+
+            var takenCountByShift = await _context.ArrangementRegistrationShifts
+                .Where(rs => arrangement.Shifts.Select(s => s.Id).Contains(rs.ArrangementShiftId))
+                .GroupBy(rs => rs.ArrangementShiftId)
+                .Select(g => new { ArrangementShiftId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ArrangementShiftId, x => x.Count, ct);
+
+            vm.Arrangement = new ArrangementFillViewModel
+            {
+                ArrangementId = arrangement.Id,
+                ArrangementPublicId = arrangement.PublicId,
+                Title = arrangement.Title,
+                Description = arrangement.Description,
+                PersonPublicId = personPublicId,
+                Fields = arrangement.FormFields
+                    .OrderBy(f => f.Order)
+                    .Select(f => new ArrangementFieldFillViewModel
+                    {
+                        ArrangementFormFieldId = f.Id,
+                        Label = f.Label,
+                        HelpText = f.HelpText,
+                        FieldType = f.FieldType,
+                        IsRequired = f.IsRequired,
+                        Options = ParseOptions(f.OptionsJson)
+                    })
+                    .ToList(),
+                Shifts = arrangement.Shifts
+                    .OrderBy(s => s.StartUtc)
+                    .ThenBy(s => s.Order)
+                    .Select(s => new ArrangementShiftFillViewModel
+                    {
+                        Id = s.Id,
+                        Title = s.Title,
+                        Start = ToLocal(s.StartUtc),
+                        End = ToLocal(s.EndUtc),
+                        Location = s.Location,
+                        RemainingCount = Math.Max(0, s.NeededCount - takenCountByShift.GetValueOrDefault(s.Id)),
+                        Requirements = s.Requirements
+                            .OrderBy(r => r.Order)
+                            .Select(r => new ArrangementShiftRequirementFillViewModel { Id = r.Id, Text = r.Text })
+                            .ToList()
+                    })
+                    .Where(s => s.RemainingCount > 0)
+                    .ToList()
+            };
+
+            return vm;
+        }
+
+        public async Task<ArrangementRegistrationsViewModel?> GetArrangementRegistrationsAsync(int arrangementId, int page, int pageSize, CancellationToken ct = default)
+        {
+            var vm = await BuildRegistrationsShellAsync(arrangementId, ct);
+            if (vm is null) return null;
+
+            vm.Page = page < 1 ? 1 : page;
+            vm.PageSize = pageSize is < 5 or > 500 ? 10 : pageSize;
+
+            vm.TotalCount = await _context.ArrangementRegistrations.CountAsync(r => r.ArrangementId == arrangementId, ct);
+            vm.Rows = await BuildRegistrationRowsAsync(arrangementId, vm.Page, vm.PageSize, ct);
+
+            return vm;
+        }
+
+        public async Task<ArrangementRegistrationsViewModel?> GetAllArrangementRegistrationsForExportAsync(int arrangementId, CancellationToken ct = default)
+        {
+            var vm = await BuildRegistrationsShellAsync(arrangementId, ct);
+            if (vm is null) return null;
+
+            vm.TotalCount = await _context.ArrangementRegistrations.CountAsync(r => r.ArrangementId == arrangementId, ct);
+            vm.Page = 1;
+            vm.PageSize = vm.TotalCount == 0 ? 1 : vm.TotalCount;
+            vm.Rows = await BuildRegistrationRowsAsync(arrangementId, 1, vm.PageSize, ct);
+
+            return vm;
+        }
+
+        private async Task<ArrangementRegistrationsViewModel?> BuildRegistrationsShellAsync(int arrangementId, CancellationToken ct)
+        {
+            var arrangement = await _context.Arrangements
+                .AsNoTracking()
+                .Include(a => a.FormFields)
+                .FirstOrDefaultAsync(a => a.Id == arrangementId, ct);
+
+            if (arrangement is null) return null;
+
+            return new ArrangementRegistrationsViewModel
+            {
+                ArrangementId = arrangement.Id,
+                ArrangementTitle = arrangement.Title,
+                Columns = arrangement.FormFields
+                    .Where(f => FormFieldTypes.IsAnswerable(f.FieldType))
+                    .OrderBy(f => f.Order)
+                    .Select(f => new ArrangementRegistrationColumnViewModel { ArrangementFormFieldId = f.Id, Label = f.Label })
+                    .ToList()
+            };
+        }
+
+        private async Task<List<ArrangementRegistrationRowViewModel>> BuildRegistrationRowsAsync(int arrangementId, int page, int pageSize, CancellationToken ct)
+        {
+            var registrations = await _context.ArrangementRegistrations
+                .AsNoTracking()
+                .Where(r => r.ArrangementId == arrangementId)
+                .OrderByDescending(r => r.RegisteredAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Include(r => r.Person)
+                .Include(r => r.Answers)
+                .Include(r => r.Shifts).ThenInclude(s => s.ArrangementShift)
+                .ToListAsync(ct);
+
+            return registrations.Select(r => new ArrangementRegistrationRowViewModel
+            {
+                RegistrationId = r.Id,
+                PersonName = r.Person.Name,
+                RegisteredAtUtc = r.RegisteredAtUtc,
+                Answers = r.Answers.ToDictionary(a => a.ArrangementFormFieldId, a => a.ValueText ?? string.Empty),
+                ShiftLabels = r.Shifts
+                    .Select(rs => rs.ArrangementShift)
+                    .OrderBy(s => s.StartUtc)
+                    .Select(s => $"{s.Title} ({ToLocal(s.StartUtc):dd/MM HH:mm}–{ToLocal(s.EndUtc):HH:mm})")
+                    .ToList()
+            }).ToList();
+        }
+
+        /// <summary>Validates and converts posted answers against an arrangement's answerable fields. Mirrors FormService.BuildSubmissionAnswers.</summary>
+        private static (List<ArrangementRegistrationAnswer> Answers, Dictionary<int, string> FieldErrors) BuildRegistrationAnswers(Arrangement arrangement, List<SubmitArrangementAnswerDto> answers)
+        {
+            var answersByField = answers.ToDictionary(a => a.ArrangementFormFieldId);
+            var fieldErrors = new Dictionary<int, string>();
+            var result = new List<ArrangementRegistrationAnswer>();
+
+            foreach (var field in arrangement.FormFields.Where(f => FormFieldTypes.IsAnswerable(f.FieldType)).OrderBy(f => f.Order))
+            {
+                answersByField.TryGetValue(field.Id, out var answer);
+                var isCheckboxes = FormFieldTypes.AllowsMultipleValues(field.FieldType);
+
+                var values = isCheckboxes
+                    ? (answer?.Values ?? new List<string>()).Where(v => !string.IsNullOrWhiteSpace(v)).ToList()
+                    : new List<string>();
+                var singleValue = isCheckboxes ? null : answer?.Value?.Trim();
+
+                var isEmpty = isCheckboxes ? values.Count == 0 : string.IsNullOrWhiteSpace(singleValue);
+
+                if (field.IsRequired && isEmpty)
+                {
+                    fieldErrors[field.Id] = "Dette felt er påkrævet.";
+                    continue;
+                }
+
+                var valueText = isCheckboxes ? (values.Count > 0 ? string.Join(", ", values) : null) : singleValue;
+                result.Add(new ArrangementRegistrationAnswer { ArrangementFormFieldId = field.Id, ValueText = valueText });
+            }
+
+            return (result, fieldErrors);
         }
     }
 }

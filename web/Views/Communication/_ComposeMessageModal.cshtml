@@ -90,6 +90,39 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="composeAttachArrangement">
+                                <label class="form-check-label" for="composeAttachArrangement">Vedhæft link til tilmelding</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 d-none" id="composeArrangementWrap">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Arrangement</label>
+                                    <select class="form-select" id="composeArrangementSelect" name="ArrangementId">
+                                        <option value="">Vælg arrangement...</option>
+                                        @foreach (var arrangement in Model.ArrangementOptions)
+                                        {
+                                            <option value="@arrangement.Id"
+                                                    data-restricted="@arrangement.IsRestricted.ToString().ToLower()"
+                                                    data-allowed-persons="@string.Join(",", arrangement.AllowedPersonIds)"
+                                                    data-allowed-groups="@string.Join(",", arrangement.AllowedGroupIds)">
+                                                @arrangement.Title
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-12">
+                                    <p class="text-muted small mb-0">Tilmelding kræver altid en modtager, så der sendes personlige links.</p>
+                                </div>
+                                <div class="col-md-12 d-none" id="composeArrangementRestrictedHint">
+                                    <p class="text-muted small mb-0"><i class="bi bi-shield-lock me-1"></i>Dette arrangement har en adgangsliste — kun de grupper/personer, der har adgang til tilmeldingen, kan vælges som modtagere.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -112,6 +145,7 @@
     (() => {
         const personFilter = document.getElementById('composePersonFilter');
         const personsWrap = document.getElementById('composePersonsWrap');
+        const groupsWrap = document.getElementById('composeGroupsWrap');
         personFilter?.addEventListener('input', () => {
             const term = personFilter.value.trim().toLowerCase();
             personsWrap.querySelectorAll('.form-check').forEach((row) => {
@@ -151,6 +185,54 @@
                 linkShared.disabled = false;
                 formHint.textContent = 'Formularen tager imod anonyme svar – vælg selv om linket skal være delt eller personligt.';
             }
+        });
+
+        const attachArrangementToggle = document.getElementById('composeAttachArrangement');
+        const arrangementWrap = document.getElementById('composeArrangementWrap');
+        const arrangementSelect = document.getElementById('composeArrangementSelect');
+        const arrangementRestrictedHint = document.getElementById('composeArrangementRestrictedHint');
+
+        // Mirrors the attached arrangement's own Adgang-liste onto the recipient pickers: when it's
+        // restricted, only the allowed groups/persons stay selectable (and get auto-checked) — an
+        // admin should never be able to send a personal Tilmelding link to someone without access.
+        const applyArrangementAccessRestriction = (selectedOption) => {
+            const isRestricted = selectedOption?.dataset.restricted === 'true';
+            const allowedGroupIds = new Set((selectedOption?.dataset.allowedGroups || '').split(',').filter(Boolean));
+            const allowedPersonIds = new Set((selectedOption?.dataset.allowedPersons || '').split(',').filter(Boolean));
+
+            arrangementRestrictedHint?.classList.toggle('d-none', !isRestricted);
+
+            groupsWrap.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+                if (isRestricted) {
+                    const allowed = allowedGroupIds.has(cb.value);
+                    cb.checked = allowed;
+                    cb.disabled = !allowed;
+                } else {
+                    cb.disabled = false;
+                }
+            });
+
+            personsWrap.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+                if (isRestricted) {
+                    const allowed = allowedPersonIds.has(cb.value);
+                    cb.checked = allowed;
+                    cb.disabled = !allowed;
+                } else {
+                    cb.disabled = false;
+                }
+            });
+        };
+
+        attachArrangementToggle?.addEventListener('change', () => {
+            arrangementWrap.classList.toggle('d-none', !attachArrangementToggle.checked);
+            if (!attachArrangementToggle.checked) {
+                arrangementSelect.value = '';
+                applyArrangementAccessRestriction(null);
+            }
+        });
+
+        arrangementSelect?.addEventListener('change', () => {
+            applyArrangementAccessRestriction(arrangementSelect.selectedOptions[0]);
         });
 
     })();

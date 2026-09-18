@@ -32,5 +32,7 @@ namespace web.Data.Entities
         public string? OptionsJson { get; set; }
 
         public virtual Arrangement Arrangement { get; set; } = null!;
+
+        public virtual ICollection<ArrangementRegistrationAnswer> Answers { get; set; } = new List<ArrangementRegistrationAnswer>();
     }
 }
