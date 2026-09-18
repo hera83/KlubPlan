@@ -1,6 +1,143 @@
+@model web.ViewModels.CommunicationIndexViewModel
+
 <div>
-    <div class="page-header">
-        <h1><i class="bi bi-chat-dots me-2"></i>Kommunikation</h1>
-        <p>Indhold kommer snart.</p>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-chat-dots me-2"></i>Kommunikation</h1>
+            <p>Send beskeder til enkeltpersoner eller grupper, og del links til formularer</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div id="communicationTableRoot">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg i beskeder..." id="communicationSearch" autocomplete="off" />
+                        </div>
+                    </div>
+                    @if (Model.IsAdmin)
+                    {
+                        <div class="table-toolbar-end">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#composeMessageModal" title="Ny besked" aria-label="Ny besked">
+                                <i class="bi bi-plus-lg me-1"></i> Ny besked
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle" id="communicationTable">
+                        <thead>
+                            <tr>
+                                <th>Emne</th>
+                                <th>Modtagere</th>
+                                <th>Kanal</th>
+                                <th>Status</th>
+                                <th>Sendt</th>
+                                <th class="text-end">Handlinger</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Messages.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted">Ingen beskeder sendt endnu.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var message in Model.Messages)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@message.Subject</td>
+                                        <td>@message.RecipientSummary <span class="text-muted small">(@message.RecipientCount)</span></td>
+                                        <td>
+                                            <div class="d-inline-flex gap-1">
+                                                @if (message.ViaEmail)
+                                                {
+                                                    <span class="badge-info"><i class="bi bi-envelope me-1"></i>E-mail</span>
+                                                }
+                                                @if (message.ViaSms)
+                                                {
+                                                    <span class="badge-info"><i class="bi bi-chat-text me-1"></i>SMS</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="@message.StatusBadgeClass">@message.Status</span>
+                                        </td>
+                                        <td>@(message.SentAtUtc?.ToLocalTime().ToString("g") ?? "-")</td>
+                                        <td class="text-end">
+                                            @if (Model.IsAdmin)
+                                            {
+                                                <div class="d-inline-flex gap-1">
+                                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@message.Id" title="Vis besked" aria-label="Vis besked">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-send-id="@message.Id"
+                                                            title="@(message.IsDraft ? "Send" : "Send igen")" aria-label="@(message.IsDraft ? "Send" : "Send igen")">
+                                                        <i class="bi @(message.IsDraft ? "bi-send" : "bi-arrow-repeat")"></i>
+                                                    </button>
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <p class="table-footer-count">
+                        @(Model.Messages.Count == 0 ? "Ingen resultater" : $"Viser {Model.Messages.Count} af {Model.Messages.Count}")
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+@if (Model.IsAdmin)
+{
+    @await Html.PartialAsync("_ComposeMessageModal", Model)
+}
+
+<script>
+    (() => {
+        const searchInput = document.getElementById('communicationSearch');
+        const table = document.getElementById('communicationTable');
+        searchInput?.addEventListener('input', () => {
+            const term = searchInput.value.trim().toLowerCase();
+            table.querySelectorAll('tbody tr').forEach((row) => {
+                const text = row.textContent.toLowerCase();
+                row.classList.toggle('d-none', term.length > 0 && !text.includes(term));
+            });
+        });
+
+        table?.addEventListener('click', async (e) => {
+            const sendBtn = e.target.closest('[data-send-id]');
+            if (!sendBtn) return;
+
+            sendBtn.disabled = true;
+            try {
+                const res = await fetch('@Url.Action("SendExisting")', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'fetch',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: new URLSearchParams({ id: sendBtn.dataset.sendId })
+                });
+                const data = await res.json();
+                window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+                if (data.success) location.reload();
+            } finally {
+                sendBtn.disabled = false;
+            }
+        });
+    })();
+</script>

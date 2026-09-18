@@ -1,0 +1,157 @@
+@model web.ViewModels.CommunicationIndexViewModel
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+
+<!-- Ny besked -->
+<div class="modal fade" id="composeMessageModal" tabindex="-1" aria-labelledby="composeMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form id="composeMessageForm" asp-controller="Communication" asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" value="0" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="composeMessageModalLabel"><i class="bi bi-envelope-plus me-2"></i>Ny besked</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Emne</label>
+                            <input name="Subject" class="form-control" required maxlength="200" placeholder="Fx Husk tilmelding til forældremøde" />
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Kanal</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ViaEmail" value="true" id="composeViaEmail" checked />
+                                    <input type="hidden" name="ViaEmail" value="false" />
+                                    <label class="form-check-label" for="composeViaEmail"><i class="bi bi-envelope me-1"></i>E-mail</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ViaSms" value="true" id="composeViaSms" />
+                                    <input type="hidden" name="ViaSms" value="false" />
+                                    <label class="form-check-label" for="composeViaSms"><i class="bi bi-chat-text me-1"></i>SMS</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Grupper</label>
+                            <div class="border rounded p-2" id="composeGroupsWrap" style="max-height:180px;overflow-y:auto;">
+                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "composeGroup" })
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Personer</label>
+                            <input type="search" class="form-control form-control-sm mb-2" id="composePersonFilter" placeholder="Søg efter navn..." autocomplete="off" />
+                            <div class="border rounded p-2" id="composePersonsWrap" style="max-height:180px;overflow-y:auto;">
+                                @await Html.PartialAsync("~/Views/Registrations/_ArrangementPersonCheckboxes.cshtml", Model.PersonOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "composePerson" })
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Indhold</label>
+                            <textarea name="Body" class="form-control" rows="5" placeholder="Skriv besked..."></textarea>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Brug {{Navn}} i teksten, så indsættes modtagerens navn automatisk.</div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="composeAttachForm">
+                                <label class="form-check-label" for="composeAttachForm">Vedhæft link til formular</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 d-none" id="composeFormWrap">
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label">Formular</label>
+                                    <select class="form-select" id="composeFormSelect" name="FormId">
+                                        <option value="">Vælg formular...</option>
+                                        @foreach (var form in Model.FormOptions)
+                                        {
+                                            <option value="@form.Id" data-anonymous="@form.IsAnonymous.ToString().ToLower()">@form.Title</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">Linktype</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="LinkType" id="composeLinkShared" value="shared" checked>
+                                        <label class="form-check-label" for="composeLinkShared">Delt link (samme til alle)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="LinkType" id="composeLinkPersonal" value="personal">
+                                        <label class="form-check-label" for="composeLinkPersonal">Personligt link (ét pr. modtager)</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <p class="text-muted small mb-0" id="composeFormHint"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" name="Action" value="draft" class="btn btn-outline-primary" id="composeSaveDraftBtn">
+                        <i class="bi bi-floppy2 me-1"></i> Gem kladde
+                    </button>
+                    <button type="submit" name="Action" value="send" class="btn btn-primary" id="composeSendBtn">
+                        <i class="bi bi-send me-1"></i> Send
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const personFilter = document.getElementById('composePersonFilter');
+        const personsWrap = document.getElementById('composePersonsWrap');
+        personFilter?.addEventListener('input', () => {
+            const term = personFilter.value.trim().toLowerCase();
+            personsWrap.querySelectorAll('.form-check').forEach((row) => {
+                const label = row.querySelector('label')?.textContent.toLowerCase() || '';
+                row.classList.toggle('d-none', term.length > 0 && !label.includes(term));
+            });
+        });
+
+        const attachFormToggle = document.getElementById('composeAttachForm');
+        const formWrap = document.getElementById('composeFormWrap');
+        attachFormToggle?.addEventListener('change', () => {
+            formWrap.classList.toggle('d-none', !attachFormToggle.checked);
+            if (!attachFormToggle.checked) {
+                formSelect.value = '';
+                formHint.textContent = '';
+                linkShared.disabled = false;
+            }
+        });
+
+        const formSelect = document.getElementById('composeFormSelect');
+        const linkPersonal = document.getElementById('composeLinkPersonal');
+        const linkShared = document.getElementById('composeLinkShared');
+        const formHint = document.getElementById('composeFormHint');
+        formSelect?.addEventListener('change', () => {
+            const selected = formSelect.selectedOptions[0];
+            if (!selected?.value) {
+                formHint.textContent = '';
+                linkShared.disabled = false;
+                return;
+            }
+            const isAnonymous = selected.dataset.anonymous === 'true';
+            if (!isAnonymous) {
+                linkPersonal.checked = true;
+                linkShared.disabled = true;
+                formHint.textContent = 'Denne formular kræver en modtager, så der sendes personlige links.';
+            } else {
+                linkShared.disabled = false;
+                formHint.textContent = 'Formularen tager imod anonyme svar – vælg selv om linket skal være delt eller personligt.';
+            }
+        });
+
+    })();
+</script>

@@ -18,6 +18,8 @@ using web.Repositories.People;
 using web.Repositories.People.Interfaces;
 using web.Repositories.Registrations;
 using web.Repositories.Registrations.Interfaces;
+using web.Repositories.Communication;
+using web.Repositories.Communication.Interfaces;
 using web.BgSerives;
 using web.Services.AiGateway;
 using web.Services.AiGateway.Interfaces;
@@ -128,6 +130,7 @@ try
     builder.Services.AddScoped<IPeopleService, PeopleService>();
     builder.Services.AddScoped<IMeetingsService, MeetingsService>();
     builder.Services.AddScoped<IArrangementService, ArrangementService>();
+    builder.Services.AddScoped<ICommunicationService, CommunicationService>();
     builder.Services.AddSingleton<ITranscriptionQueue, TranscriptionQueue>();
     builder.Services.AddHostedService<TranscriptionWorker>();
 
@@ -138,6 +141,17 @@ try
     else
     {
         Log.Warning("Sms:BaseUrl eller Sms:ApiKey er ikke konfigureret; SmsWorker kører ikke.");
+    }
+
+    var mailSmtpHost = builder.Configuration["Mail:Smtp:Host"];
+    var mailFromAddress = builder.Configuration["Mail:Smtp:FromAddress"];
+    if (!string.IsNullOrWhiteSpace(mailSmtpHost) && !string.IsNullOrWhiteSpace(mailFromAddress))
+    {
+        builder.Services.AddHostedService<CommunicationEmailWorker>();
+    }
+    else
+    {
+        Log.Warning("Mail:Smtp:Host eller Mail:Smtp:FromAddress er ikke konfigureret; CommunicationEmailWorker kører ikke.");
     }
 
     var app = builder.Build();

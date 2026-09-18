@@ -54,6 +54,14 @@ namespace web.Data
         public DbSet<ArrangementAllowedPerson> ArrangementAllowedPersons { get; set; } = null!;
         public DbSet<ArrangementAllowedGroup> ArrangementAllowedGroups { get; set; } = null!;
 
+        // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
+        // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
+        public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
+        public DbSet<CommunicationMessageGroup> CommunicationMessageGroups { get; set; } = null!;
+        public DbSet<CommunicationMessageRecipientPerson> CommunicationMessageRecipientPersons { get; set; } = null!;
+        public DbSet<CommunicationMessageRecipient> CommunicationMessageRecipients { get; set; } = null!;
+        public DbSet<CommunicationEmailMessage> CommunicationEmailMessages { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -598,6 +606,151 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => e.PersonGroupId);
+            });
+
+            // Configure CommunicationMessage
+            builder.Entity<CommunicationMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Subject)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Body)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
+                entity.Property(e => e.LinkType)
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.RecipientSummary)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Form)
+                    .WithMany()
+                    .HasForeignKey(e => e.FormId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.CreatedAtUtc);
+            });
+
+            // Configure CommunicationMessageGroup (join entity for CommunicationMessage <-> PersonGroup many-to-many)
+            builder.Entity<CommunicationMessageGroup>(entity =>
+            {
+                entity.HasKey(e => new { e.CommunicationMessageId, e.PersonGroupId });
+
+                entity.HasOne(e => e.CommunicationMessage)
+                    .WithMany(m => m.Groups)
+                    .HasForeignKey(e => e.CommunicationMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PersonGroup)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PersonGroupId);
+            });
+
+            // Configure CommunicationMessageRecipientPerson (join entity for CommunicationMessage <-> Person many-to-many)
+            builder.Entity<CommunicationMessageRecipientPerson>(entity =>
+            {
+                entity.HasKey(e => new { e.CommunicationMessageId, e.PersonId });
+
+                entity.HasOne(e => e.CommunicationMessage)
+                    .WithMany(m => m.DirectPersons)
+                    .HasForeignKey(e => e.CommunicationMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Person)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PersonId);
+            });
+
+            // Configure CommunicationMessageRecipient (resolved, deduped send targets)
+            builder.Entity<CommunicationMessageRecipient>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DisplayName)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Channel)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(e => e.Address)
+                    .IsRequired()
+                    .HasMaxLength(256);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.CommunicationMessage)
+                    .WithMany(m => m.Recipients)
+                    .HasForeignKey(e => e.CommunicationMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Person)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.SmsMessage)
+                    .WithMany()
+                    .HasForeignKey(e => e.SmsMessageId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.CommunicationEmailMessage)
+                    .WithMany()
+                    .HasForeignKey(e => e.CommunicationEmailMessageId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.CommunicationMessageId);
+                entity.HasIndex(e => new { e.Channel, e.Address });
+            });
+
+            // Configure CommunicationEmailMessage (outbound email queue, mirrors SmsMessage)
+            builder.Entity<CommunicationEmailMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.ToAddress)
+                    .IsRequired()
+                    .HasMaxLength(256);
+
+                entity.Property(e => e.Subject)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Body)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
+                entity.Property(e => e.FailureReason)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => e.ToAddress);
             });
         }
     }
