@@ -7,7 +7,10 @@
             <h1><i class="bi bi-chat-dots me-2"></i>@Model.Subject</h1>
             <p class="d-flex flex-wrap align-items-center gap-3 mb-0">
                 <span class="@Model.StatusBadgeClass">@Model.Status</span>
-                <span><i class="bi bi-people me-1"></i>@Model.RecipientSummary</span>
+                <span class="d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-people"></i>
+                    @await Html.PartialAsync("_RecipientBadges", Model.RecipientBadges)
+                </span>
                 @if (Model.SentAtUtc.HasValue)
                 {
                     <span><i class="bi bi-clock me-1"></i>Sendt @Model.SentAtUtc.Value.ToLocalTime().ToString("g")</span>

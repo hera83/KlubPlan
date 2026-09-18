@@ -41,6 +41,8 @@ namespace web.Repositories.Communication
 
             var messageEntities = await _context.CommunicationMessages
                 .AsNoTracking()
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
+                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
                 .OrderByDescending(m => m.CreatedAtUtc)
                 .ToListAsync(ct);
 
@@ -50,7 +52,7 @@ namespace web.Repositories.Communication
                 Subject = m.Subject,
                 ViaEmail = m.ViaEmail,
                 ViaSms = m.ViaSms,
-                RecipientSummary = m.RecipientSummary,
+                RecipientBadges = BuildRecipientBadges(m),
                 RecipientCount = m.RecipientCount,
                 Status = CommunicationMessageStatuses.GetUILabel(m.Status),
                 StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(m.Status),
@@ -74,8 +76,8 @@ namespace web.Repositories.Communication
             var message = await _context.CommunicationMessages
                 .AsNoTracking()
                 .Include(m => m.Form)
-                .Include(m => m.Groups)
-                .Include(m => m.DirectPersons)
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
+                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
                 .Include(m => m.Recipients).ThenInclude(r => r.SmsMessage)
                 .Include(m => m.Recipients).ThenInclude(r => r.CommunicationEmailMessage)
                 .FirstOrDefaultAsync(m => m.Id == id, ct);
@@ -138,6 +140,7 @@ namespace web.Repositories.Communication
                 Status = CommunicationMessageStatuses.GetUILabel(message.Status),
                 StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(message.Status),
                 RecipientSummary = message.RecipientSummary,
+                RecipientBadges = BuildRecipientBadges(message),
                 IsSent = message.SentAtUtc.HasValue,
                 ViaEmail = message.ViaEmail,
                 ViaSms = message.ViaSms,
@@ -437,6 +440,21 @@ namespace web.Repositories.Communication
             await _context.SaveChangesAsync(ct);
 
             return new SaveMessageResponseDto { Success = true, MessageId = message.Id };
+        }
+
+        private static CommunicationRecipientBadgesViewModel BuildRecipientBadges(CommunicationMessage message)
+        {
+            return new CommunicationRecipientBadgesViewModel
+            {
+                Groups = message.Groups
+                    .Select(g => new PersonGroupOptionViewModel { Id = g.PersonGroupId, Name = g.PersonGroup.Name })
+                    .OrderBy(g => g.Name)
+                    .ToList(),
+                DirectPersonNames = message.DirectPersons
+                    .Select(dp => dp.Person.Name)
+                    .OrderBy(n => n)
+                    .ToList()
+            };
         }
 
         /// <summary>

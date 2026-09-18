@@ -15,13 +15,20 @@ namespace web.ViewModels
         public string Subject { get; set; } = string.Empty;
         public bool ViaEmail { get; set; }
         public bool ViaSms { get; set; }
-        public string RecipientSummary { get; set; } = string.Empty;
+        public CommunicationRecipientBadgesViewModel RecipientBadges { get; set; } = new();
         public int RecipientCount { get; set; }
         public string Status { get; set; } = string.Empty;
         public string StatusBadgeClass { get; set; } = "badge-info";
         public bool IsDraft { get; set; }
         public DateTime? SentAtUtc { get; set; }
         public DateTime CreatedAtUtc { get; set; }
+    }
+
+    /// <summary>Selected groups + directly-selected persons, for the compact badge display in the table and on Details (mirrors Meetings' group-badge treatment).</summary>
+    public class CommunicationRecipientBadgesViewModel
+    {
+        public List<PersonGroupOptionViewModel> Groups { get; set; } = new();
+        public List<string> DirectPersonNames { get; set; } = new();
     }
 
     public class CommunicationFormOptionViewModel
@@ -39,6 +46,7 @@ namespace web.ViewModels
         public string Status { get; set; } = string.Empty;
         public string StatusBadgeClass { get; set; } = "badge-info";
         public string RecipientSummary { get; set; } = string.Empty;
+        public CommunicationRecipientBadgesViewModel RecipientBadges { get; set; } = new();
         public bool IsSent { get; set; }
         public bool ViaEmail { get; set; }
         public bool ViaSms { get; set; }

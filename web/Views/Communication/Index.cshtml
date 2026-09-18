@@ -53,7 +53,10 @@
                                 {
                                     <tr>
                                         <td class="fw-semibold">@message.Subject</td>
-                                        <td>@message.RecipientSummary <span class="text-muted small">(@message.RecipientCount)</span></td>
+                                        <td>
+                                            @await Html.PartialAsync("_RecipientBadges", message.RecipientBadges)
+                                            <span class="text-muted small">(@message.RecipientCount)</span>
+                                        </td>
                                         <td>
                                             <div class="d-inline-flex gap-1">
                                                 @if (message.ViaEmail)

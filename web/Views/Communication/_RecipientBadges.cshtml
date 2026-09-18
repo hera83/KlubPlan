@@ -1,0 +1,38 @@
+@model web.ViewModels.CommunicationRecipientBadgesViewModel
+
+@if (Model.Groups.Count == 0 && Model.DirectPersonNames.Count == 0)
+{
+    <span class="text-muted">–</span>
+}
+else
+{
+    <span class="d-inline-flex flex-wrap align-items-center gap-1">
+        @foreach (var group in Model.Groups)
+        {
+            var firstWord = group.Name.Split(' ', 2)[0];
+            var hasMore = group.Name.Length > firstWord.Length;
+            if (hasMore)
+            {
+                <span class="group-badge" data-group-badge tabindex="0">
+                    <span class="badge-info group-badge-short">@firstWord…</span>
+                    <span class="badge-info group-badge-full">@group.Name</span>
+                </span>
+            }
+            else
+            {
+                <span class="badge-info">@group.Name</span>
+            }
+        }
+        @if (Model.DirectPersonNames.Count > 0 && Model.DirectPersonNames.Count <= 3)
+        {
+            @foreach (var name in Model.DirectPersonNames)
+            {
+                <span class="badge-info"><i class="bi bi-person me-1"></i>@name</span>
+            }
+        }
+        else if (Model.DirectPersonNames.Count > 3)
+        {
+            <span class="badge-info" title="@string.Join(", ", Model.DirectPersonNames)"><i class="bi bi-people me-1"></i>@Model.DirectPersonNames.Count</span>
+        }
+    </span>
+}
