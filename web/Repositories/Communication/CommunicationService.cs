@@ -25,6 +25,28 @@ namespace web.Repositories.Communication
 
         public async Task<CommunicationIndexViewModel> GetIndexDataAsync(bool isAdmin, CancellationToken ct = default)
         {
+            var composeOptions = await GetComposeOptionsAsync(ct);
+
+            var messageEntities = await _context.CommunicationMessages
+                .AsNoTracking()
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
+                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
+                .OrderByDescending(m => m.CreatedAtUtc)
+                .ToListAsync(ct);
+
+            return new CommunicationIndexViewModel
+            {
+                IsAdmin = isAdmin,
+                Messages = messageEntities.Select(MapMessageListItem).ToList(),
+                GroupOptions = composeOptions.GroupOptions,
+                PersonOptions = composeOptions.PersonOptions,
+                FormOptions = composeOptions.FormOptions,
+                ArrangementOptions = composeOptions.ArrangementOptions
+            };
+        }
+
+        public async Task<ComposeOptionsViewModel> GetComposeOptionsAsync(CancellationToken ct = default)
+        {
             var groups = await _context.PersonGroups
                 .OrderBy(g => g.Name)
                 .Select(g => new PersonGroupOptionViewModel { Id = g.Id, Name = g.Name })
@@ -80,38 +102,42 @@ namespace web.Repositories.Communication
                 })
                 .ToList();
 
-            var messageEntities = await _context.CommunicationMessages
-                .AsNoTracking()
-                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
-                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
-                .OrderByDescending(m => m.CreatedAtUtc)
-                .ToListAsync(ct);
-
-            var messages = messageEntities.Select(m => new CommunicationMessageListItemViewModel
+            return new ComposeOptionsViewModel
             {
-                Id = m.Id,
-                Subject = m.Subject,
-                ViaEmail = m.ViaEmail,
-                ViaSms = m.ViaSms,
-                RecipientBadges = BuildRecipientBadges(m),
-                RecipientCount = m.RecipientCount,
-                Status = CommunicationMessageStatuses.GetUILabel(m.Status),
-                StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(m.Status),
-                IsDraft = m.Status == CommunicationMessageStatus.Draft,
-                SentAtUtc = m.SentAtUtc,
-                CreatedAtUtc = m.CreatedAtUtc
-            }).ToList();
-
-            return new CommunicationIndexViewModel
-            {
-                IsAdmin = isAdmin,
-                Messages = messages,
                 GroupOptions = groups,
                 PersonOptions = people,
                 FormOptions = formOptions,
                 ArrangementOptions = arrangementOptions
             };
         }
+
+        public async Task<List<CommunicationMessageListItemViewModel>> GetMessagesForActivityAsync(int activityId, CancellationToken ct = default)
+        {
+            var messageEntities = await _context.CommunicationMessages
+                .AsNoTracking()
+                .Where(m => m.ActivityId == activityId)
+                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
+                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
+                .OrderByDescending(m => m.CreatedAtUtc)
+                .ToListAsync(ct);
+
+            return messageEntities.Select(MapMessageListItem).ToList();
+        }
+
+        private static CommunicationMessageListItemViewModel MapMessageListItem(CommunicationMessage m) => new()
+        {
+            Id = m.Id,
+            Subject = m.Subject,
+            ViaEmail = m.ViaEmail,
+            ViaSms = m.ViaSms,
+            RecipientBadges = BuildRecipientBadges(m),
+            RecipientCount = m.RecipientCount,
+            Status = CommunicationMessageStatuses.GetUILabel(m.Status),
+            StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(m.Status),
+            IsDraft = m.Status == CommunicationMessageStatus.Draft,
+            SentAtUtc = m.SentAtUtc,
+            CreatedAtUtc = m.CreatedAtUtc
+        };
 
         public async Task<CommunicationMessageDetailViewModel?> GetDetailsAsync(int id, CancellationToken ct = default)
         {
@@ -384,6 +410,7 @@ namespace web.Repositories.Communication
             message.FormId = dto.FormId;
             message.LinkType = dto.FormId.HasValue ? (dto.LinkType == "personal" ? "personal" : "shared") : null;
             message.ArrangementId = dto.ArrangementId;
+            message.ActivityId = dto.ActivityId;
             message.Status = CommunicationMessageStatus.Draft;
 
             foreach (var groupId in groupIds)

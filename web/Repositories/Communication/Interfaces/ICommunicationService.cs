@@ -7,6 +7,12 @@ namespace web.Repositories.Communication.Interfaces
     {
         Task<CommunicationIndexViewModel> GetIndexDataAsync(bool isAdmin, CancellationToken ct = default);
 
+        /// <summary>The recipient/attachment picker options for the shared compose modal, without the message list — used to feed the modal from Activities/Details.</summary>
+        Task<ComposeOptionsViewModel> GetComposeOptionsAsync(CancellationToken ct = default);
+
+        /// <summary>Messages sent/drafted from a given Activity (CommunicationMessage.ActivityId), newest first — for the Activity detail page's Kommunikation tab.</summary>
+        Task<List<CommunicationMessageListItemViewModel>> GetMessagesForActivityAsync(int activityId, CancellationToken ct = default);
+
         Task<CommunicationMessageDetailViewModel?> GetDetailsAsync(int id, CancellationToken ct = default);
 
         /// <summary>The full target audience (Id + name) for a message's selected groups/persons, used to populate the "Send igen" recipient picker.</summary>

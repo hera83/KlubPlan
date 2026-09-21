@@ -1,6 +1,46 @@
+@model web.ViewModels.ActivityFilterViewModel
+@{
+    ViewData["Title"] = "Aktiviteter";
+    var isAdmin = User.IsInRole(web.Constants.AppRoles.Administrator) || User.IsInRole(web.Constants.AppRoles.Developer);
+}
+
 <div>
-    <div class="page-header">
-        <h1><i class="bi bi-calendar-event me-2"></i>Aktiviteter</h1>
-        <p>Indhold kommer snart.</p>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-calendar-event me-2"></i>Aktiviteter</h1>
+            <p>Planlæg arrangementer med målgruppe, arbejdsgruppe, opgaver og kommunikation samlet ét sted</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="activitiesTableRoot" data-table-endpoint="@Url.Action("ActivitiesTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg i aktiviteter..." data-table-search autocomplete="off" />
+                        </div>
+                    </div>
+                    @if (isAdmin)
+                    {
+                        <div class="table-toolbar-end">
+                            <a class="btn btn-primary" asp-action="Create" title="Opret aktivitet" aria-label="Opret aktivitet">
+                                <i class="bi bi-plus-lg me-1"></i> Opret
+                            </a>
+                        </div>
+                    }
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_ActivitiesTableBody", Model)
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+@if (isAdmin)
+{
+    @await Html.PartialAsync("_ActivityDeleteModal")
+}

@@ -1,5 +1,12 @@
-@model web.ViewModels.CommunicationIndexViewModel
+@model web.ViewModels.ComposeOptionsViewModel
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
+@{
+    // Optional — only set when this partial is embedded on an Activity's detail page, so the
+    // message gets logged against that activity and its målgruppe is pre-selected. Unused (and
+    // absent) from Communication/Index's own use of this partial.
+    var activityId = ViewData["ActivityId"] as int?;
+    var selectedGroupIds = ViewData["SelectedGroupIds"] as IEnumerable<int> ?? Enumerable.Empty<int>();
+}
 
 <!-- Ny besked -->
 <div class="modal fade" id="composeMessageModal" tabindex="-1" aria-labelledby="composeMessageModalLabel" aria-hidden="true">
@@ -8,6 +15,10 @@
             <form id="composeMessageForm" asp-controller="Communication" asp-action="Save" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Id" value="0" />
+                @if (activityId.HasValue)
+                {
+                    <input type="hidden" name="ActivityId" value="@activityId" />
+                }
                 <div class="modal-header">
                     <h5 class="modal-title" id="composeMessageModalLabel"><i class="bi bi-envelope-plus me-2"></i>Ny besked</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
@@ -38,7 +49,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Grupper</label>
                             <div class="border rounded p-2" id="composeGroupsWrap" style="max-height:180px;overflow-y:auto;">
-                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "composeGroup" })
+                                @await Html.PartialAsync("~/Views/People/_PersonGroupCheckboxes.cshtml", Model.GroupOptions, new ViewDataDictionary(ViewData) { ["IdPrefix"] = "composeGroup", ["SelectedIds"] = selectedGroupIds })
                             </div>
                         </div>
                         <div class="col-md-6">

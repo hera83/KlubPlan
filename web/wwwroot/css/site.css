@@ -763,6 +763,57 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .badge-alarm { background: var(--clr-alarm-bg); color: var(--clr-alarm); padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 .badge-info  { background: var(--clr-info-bg);  color: var(--clr-info);  padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
+/* ── Stat-tiles (mini-dashboard, fx Aktivitet → Oversigt): ikon + stort tal + label i et kort.
+   Farven på ikon-cirklen sættes pr. brug via en af --clr-ok/-warn/-alarm/-info (inline style),
+   så samme klasse genbruges på tværs af moduler. ── */
+.stat-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  height: 100%;
+  padding: 0.75rem 0.85rem;
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: 10px;
+}
+.stat-tile-icon {
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.95rem;
+}
+/* min-width: 0 lader flex-barnet krympe under sit indholds naturlige bredde, så
+   text-overflow: ellipsis nedenfor faktisk får lov at klippe i stedet for at presse
+   kortet bredere eller falde til to linjer. */
+.stat-tile-body { min-width: 0; flex: 1 1 auto; }
+.stat-tile-value,
+.stat-tile-label,
+.stat-tile-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-tile-value { font-size: 1.05rem; font-weight: 700; line-height: 1.25; }
+.stat-tile-label { font-size: 0.7rem; color: var(--clr-text-muted); }
+.stat-tile-sub { font-size: 0.68rem; color: var(--clr-text-muted); }
+
+/* ── Detail-list (fx Aktivitet → Oversigt "Detaljer"-kortet): kompakt nøgle/værdi-liste med en
+   tynd bundstreg mellem rækkerne, i stedet for en rå, ustylet <dl>. ── */
+.detail-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+.detail-row:last-child { padding-bottom: 0; border-bottom: none; }
+
 /* ── Gruppe-badges (Personer): viser første ord, udvides ved hover/klik uden at flytte layoutet ── */
 .group-badge {
   position: relative;

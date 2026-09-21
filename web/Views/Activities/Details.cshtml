@@ -1,0 +1,694 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using web.Infrastructure
+@model web.ViewModels.ActivityDetailsViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    var activeTab = ViewData["ActiveTab"] as string ?? "oversigt";
+    var isAdmin = User.IsInRole(web.Constants.AppRoles.Administrator) || User.IsInRole(web.Constants.AppRoles.Developer);
+    string TabPaneClass(string tab) => activeTab == tab ? "tab-pane fade show active" : "tab-pane fade";
+    string TabButtonClass(string tab) => activeTab == tab ? "nav-link active" : "nav-link";
+    var taskCompleted = Model.Tasks.Count(t => t.IsCompleted);
+    var overdueTasks = Model.Tasks.Count(t => !t.IsCompleted && t.DeadlineAtUtc.HasValue && DateTime.SpecifyKind(t.DeadlineAtUtc.Value, DateTimeKind.Utc) < DateTime.UtcNow);
+    var linkedAdminCount = Model.WorkgroupMembers.Count(m => m.ApplicationUserId is not null);
+    var lastMessage = Model.Messages.FirstOrDefault();
+    var status = GetActivityStatusInfo(Model.StartAtUtc, Model.EndAtUtc, Model.IsCancelled);
+}
+
+@functions {
+    (string Label, string BadgeClass) GetTaskDeadlineBadge(DateTime? deadlineAtUtc, bool isCompleted)
+    {
+        if (!deadlineAtUtc.HasValue)
+        {
+            return ("Ingen deadline", "text-muted");
+        }
+
+        var local = DateTime.SpecifyKind(deadlineAtUtc.Value, DateTimeKind.Utc).ToLocalTime();
+        if (!isCompleted && local < DateTime.Now)
+        {
+            return (local.ToDanishDate(), "badge-alarm");
+        }
+
+        return (local.ToDanishDate(), "badge-info");
+    }
+
+    /// <summary>Label, evt. undertekst (fx "Om 3 dage") og hvilken --clr-* farvetoken statustile'en skal bruge.</summary>
+    (string Label, string Sub, string ColorKey) GetActivityStatusInfo(DateTime? startAtUtc, DateTime? endAtUtc, bool isCancelled)
+    {
+        if (isCancelled)
+        {
+            return ("Aflyst", string.Empty, "alarm");
+        }
+
+        if (!startAtUtc.HasValue)
+        {
+            return ("Ingen dato", string.Empty, "info");
+        }
+
+        var now = DateTime.UtcNow;
+
+        if (now < startAtUtc.Value)
+        {
+            var days = (int)Math.Ceiling((startAtUtc.Value - now).TotalHours / 24);
+            var sub = days <= 0 ? "I dag" : $"Om {days} dag{(days == 1 ? "" : "e")}";
+            return ("Kommende", sub, "ok");
+        }
+
+        if (endAtUtc.HasValue && now > endAtUtc.Value)
+        {
+            var days = (int)Math.Floor((now - endAtUtc.Value).TotalDays);
+            var sub = days <= 0 ? "I dag" : $"For {days} dag{(days == 1 ? "" : "e")} siden";
+            return ("Afsluttet", sub, "info");
+        }
+
+        return ("I gang", string.Empty, "ok");
+    }
+}
+
+<div>
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <p class="mb-1"><a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til aktiviteter</a></p>
+            <h1><i class="bi bi-calendar-event me-2"></i>@Model.Title @if (Model.IsCancelled) { <span class="badge-alarm ms-2">Aflyst</span> }</h1>
+            <p class="d-flex flex-wrap align-items-center gap-3 mb-0 text-muted">
+                @if (Model.StartAtUtc.HasValue)
+                {
+                    <span><i class="bi bi-clock me-1"></i>@Model.StartAtUtc.Value.ToLocalTime().ToDanishWeekdayDateTimeWithKl()</span>
+                }
+                else
+                {
+                    <span>Ingen dato angivet</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Location))
+                {
+                    <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>
+                }
+                @if (Model.TargetGroups.Count > 0)
+                {
+                    <span class="groups-inline">
+                        <i class="bi bi-people me-1"></i>
+                        @for (var i = 0; i < Model.TargetGroups.Count; i++)
+                        {
+                            var group = Model.TargetGroups[i];
+                            var firstWord = group.Name.Split(' ', 2)[0];
+                            var hasMore = group.Name.Length > firstWord.Length;
+                            if (hasMore)
+                            {
+                                <span class="group-badge" data-group-badge tabindex="0">
+                                    <span class="group-badge-short">@firstWord…</span>
+                                    <span class="badge-info group-badge-full">@group.Name</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span>@group.Name</span>
+                            }
+                            if (i < Model.TargetGroups.Count - 1)
+                            {
+                                <text>, </text>
+                            }
+                        }
+                    </span>
+                }
+            </p>
+        </div>
+        @if (isAdmin)
+        {
+            <div class="d-inline-flex gap-1">
+                <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id" title="Rediger" aria-label="Rediger">
+                    <i class="bi bi-pencil me-1"></i> Rediger
+                </a>
+                <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteActivityModal"
+                        data-id="@Model.Id" data-title="@Model.Title" title="Slet" aria-label="Slet">
+                    <i class="bi bi-trash me-1"></i> Slet
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-transparent">
+            <ul class="nav nav-tabs card-header-tabs" id="activityTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("oversigt")" data-bs-toggle="tab" data-bs-target="#oversigt-pane" type="button" role="tab">Oversigt</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("arbejdsgruppe")" data-bs-toggle="tab" data-bs-target="#arbejdsgruppe-pane" type="button" role="tab">Arbejdsgruppe</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("opgaver")" data-bs-toggle="tab" data-bs-target="#opgaver-pane" type="button" role="tab">
+                        Opgaver
+                        @if (Model.Tasks.Count > 0)
+                        {
+                            <span class="badge-info ms-1">@taskCompleted/@Model.Tasks.Count</span>
+                        }
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("formular")" data-bs-toggle="tab" data-bs-target="#formular-pane" type="button" role="tab">Formular</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("svar")" data-bs-toggle="tab" data-bs-target="#svar-pane" type="button" role="tab">
+                        Svar
+                        @if (Model.FormResponses is not null)
+                        {
+                            <span class="badge-info ms-1">@Model.FormResponses.TotalCount</span>
+                        }
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="@TabButtonClass("kommunikation")" data-bs-toggle="tab" data-bs-target="#kommunikation-pane" type="button" role="tab">Kommunikation</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="activityTabsContent">
+
+                <!-- Oversigt -->
+                <div class="@TabPaneClass("oversigt")" id="oversigt-pane" role="tabpanel">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-4 col-xl-2">
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-@(status.ColorKey)-bg);color:var(--clr-@(status.ColorKey));"><i class="bi bi-calendar-event"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value" title="@status.Label">@status.Label</div>
+                                    <div class="stat-tile-label">Status</div>
+                                    @if (!string.IsNullOrEmpty(status.Sub))
+                                    {
+                                        <div class="stat-tile-sub" title="@status.Sub">@status.Sub</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl-2">
+                            @{
+                                var audienceSub = Model.TargetGroups.Count == 0
+                                    ? "Ingen grupper valgt"
+                                    : $"{Model.TargetGroups.Count} gruppe{(Model.TargetGroups.Count == 1 ? "" : "r")}";
+                            }
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-people"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value">@(Model.TargetGroups.Count == 0 ? "–" : Model.TargetAudienceCount.ToString())</div>
+                                    <div class="stat-tile-label">Målgruppe</div>
+                                    <div class="stat-tile-sub" title="@audienceSub">@audienceSub</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl-2">
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-person-badge"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value">@Model.WorkgroupMembers.Count</div>
+                                    <div class="stat-tile-label">Arbejdsgruppe</div>
+                                    @if (linkedAdminCount > 0)
+                                    {
+                                        <div class="stat-tile-sub">@linkedAdminCount administrator@(linkedAdminCount == 1 ? "" : "er")</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl-2">
+                            @{
+                                var taskSub = overdueTasks > 0
+                                    ? $"{overdueTasks} overskredet"
+                                    : (Model.Tasks.Count > 0 ? "Alle til tiden" : "Ingen oprettet");
+                            }
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-@(overdueTasks > 0 ? "alarm" : "ok")-bg);color:var(--clr-@(overdueTasks > 0 ? "alarm" : "ok"));"><i class="bi bi-list-check"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value">@taskCompleted/@Model.Tasks.Count</div>
+                                    <div class="stat-tile-label">Opgaver</div>
+                                    <div class="stat-tile-sub" title="@taskSub">@taskSub</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl-2">
+                            @{
+                                var svarSub = Model.FormId.HasValue ? Model.FormTitle : "Ingen formular linket";
+                            }
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-file-earmark-text"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value">@(Model.FormId.HasValue ? (Model.FormResponses?.TotalCount ?? 0).ToString() : "–")</div>
+                                    <div class="stat-tile-label">Svar</div>
+                                    <div class="stat-tile-sub" title="@svarSub">@svarSub</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl-2">
+                            @{
+                                var comSub = lastMessage is not null
+                                    ? $"Seneste {(lastMessage.SentAtUtc ?? lastMessage.CreatedAtUtc).ToLocalTime().ToDanishDate()}"
+                                    : "Ingen sendt endnu";
+                            }
+                            <div class="stat-tile">
+                                <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-envelope"></i></div>
+                                <div class="stat-tile-body">
+                                    <div class="stat-tile-value">@Model.Messages.Count</div>
+                                    <div class="stat-tile-label">Beskeder sendt</div>
+                                    <div class="stat-tile-sub" title="@comSub">@comSub</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2"><i class="bi bi-card-text me-1"></i>Beskrivelse</h6>
+                                    <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Ingen beskrivelse." : Model.Description)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Detaljer</h6>
+                                    <div class="detail-list">
+                                        <div class="detail-row">
+                                            <span class="text-muted small"><i class="bi bi-tag me-1"></i>Kategori</span>
+                                            <span class="fw-semibold text-end">@(string.IsNullOrWhiteSpace(Model.Category) ? "–" : Model.Category)</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="text-muted small"><i class="bi bi-clock me-1"></i>Start</span>
+                                            <span class="fw-semibold text-end">@(Model.StartAtUtc.HasValue ? Model.StartAtUtc.Value.ToLocalTime().ToDanishDateTimeWithKl() : "–")</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="text-muted small"><i class="bi bi-flag me-1"></i>Slut</span>
+                                            <span class="fw-semibold text-end">@(Model.EndAtUtc.HasValue ? Model.EndAtUtc.Value.ToLocalTime().ToDanishDateTimeWithKl() : "–")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Arbejdsgruppe -->
+                <div class="@TabPaneClass("arbejdsgruppe")" id="arbejdsgruppe-pane" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">Rene kontaktregistreringer — arbejdsgruppens medlemmer får ikke adgang til systemet eller til tilmeldinger/formularer.</p>
+                        @if (isAdmin)
+                        {
+                            <button type="button" class="btn btn-primary text-nowrap ms-2" data-bs-toggle="modal" data-bs-target="#workgroupMemberModal" title="Tilføj medlem" aria-label="Tilføj medlem">
+                                <i class="bi bi-plus-lg me-1"></i> Tilføj medlem
+                            </button>
+                        }
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Navn</th>
+                                    <th>Rolle</th>
+                                    <th>E-mail</th>
+                                    <th>Mobil</th>
+                                    @if (isAdmin)
+                                    {
+                                        <th class="text-end">Handlinger</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody id="workgroupMembersTableBody">
+                                @if (Model.WorkgroupMembers.Count == 0)
+                                {
+                                    <tr><td colspan="5" class="text-muted">Ingen medlemmer tilføjet endnu.</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var member in Model.WorkgroupMembers)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">
+                                                @if (member.ApplicationUserId is not null)
+                                                {
+                                                    <i class="bi bi-person-badge-fill text-primary me-1" title="Registreret administrator"></i>
+                                                }
+                                                @member.Name
+                                            </td>
+                                            <td>@(string.IsNullOrWhiteSpace(member.Role) ? "–" : member.Role)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(member.Email) ? "–" : member.Email)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(member.Mobile) ? "–" : member.Mobile)</td>
+                                            @if (isAdmin)
+                                            {
+                                                <td class="text-end">
+                                                    <div class="d-inline-flex gap-1">
+                                                        <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#workgroupMemberModal"
+                                                                data-edit-id="@member.Id" data-user-id="@member.ApplicationUserId" data-name="@member.Name" data-role="@member.Role" data-email="@member.Email" data-mobile="@member.Mobile"
+                                                                title="Rediger" aria-label="Rediger">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteWorkgroupMemberModal"
+                                                                data-id="@member.Id" data-name="@member.Name" title="Fjern" aria-label="Fjern">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Opgaver -->
+                <div class="@TabPaneClass("opgaver")" id="opgaver-pane" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">Deadline og ansvarlig pr. opgave, med mulighed for en note.</p>
+                        @if (isAdmin)
+                        {
+                            <button type="button" class="btn btn-primary text-nowrap ms-2" data-bs-toggle="modal" data-bs-target="#taskModal" title="Tilføj opgave" aria-label="Tilføj opgave">
+                                <i class="bi bi-plus-lg me-1"></i> Tilføj opgave
+                            </button>
+                        }
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Opgave</th>
+                                    <th>Ansvarlig</th>
+                                    <th>Deadline</th>
+                                    <th>Note</th>
+                                    @if (isAdmin)
+                                    {
+                                        <th class="text-end">Handlinger</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody id="tasksTableBody">
+                                @if (Model.Tasks.Count == 0)
+                                {
+                                    <tr><td colspan="6" class="text-muted">Ingen opgaver oprettet endnu.</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var task in Model.Tasks)
+                                    {
+                                        var deadlineBadge = GetTaskDeadlineBadge(task.DeadlineAtUtc, task.IsCompleted);
+                                        <tr class="@(task.IsCompleted ? "text-muted" : "")">
+                                            <td>
+                                                @if (isAdmin)
+                                                {
+                                                    <form asp-action="ToggleTaskCompleted" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@task.Id" />
+                                                        <input type="hidden" name="activityId" value="@Model.Id" />
+                                                        <input type="checkbox" class="form-check-input" checked="@task.IsCompleted" onchange="this.form.submit()" title="Afkryds som udført" aria-label="Afkryds som udført" />
+                                                    </form>
+                                                }
+                                                else if (task.IsCompleted)
+                                                {
+                                                    <i class="bi bi-check-lg"></i>
+                                                }
+                                            </td>
+                                            <td class="@(task.IsCompleted ? "text-decoration-line-through" : "fw-semibold")">@task.Title</td>
+                                            <td>@(string.IsNullOrWhiteSpace(task.AssignedToName) ? "–" : task.AssignedToName)</td>
+                                            <td><span class="@deadlineBadge.BadgeClass">@deadlineBadge.Label</span></td>
+                                            <td>@(string.IsNullOrWhiteSpace(task.Note) ? "–" : task.Note)</td>
+                                            @if (isAdmin)
+                                            {
+                                                <td class="text-end">
+                                                    <div class="d-inline-flex gap-1">
+                                                        <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#taskModal"
+                                                                data-edit-id="@task.Id" data-title="@task.Title" data-note="@task.Note"
+                                                                data-assigned="@task.AssignedToWorkgroupMemberId"
+                                                                data-deadline="@(task.DeadlineAtUtc.HasValue ? DateTime.SpecifyKind(task.DeadlineAtUtc.Value, DateTimeKind.Utc).ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : "")"
+                                                                title="Rediger" aria-label="Rediger">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteTaskModal"
+                                                                data-id="@task.Id" data-title="@task.Title" title="Slet" aria-label="Slet">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Formular -->
+                <div class="@TabPaneClass("formular")" id="formular-pane" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            @if (Model.FormId.HasValue)
+                            {
+                                <h5 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i>@Model.FormTitle</h5>
+                                <p class="text-muted">Linket til denne aktivitet — se svarene under fanen "Svar".</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">Ingen formular linket til denne aktivitet endnu.</p>
+                            }
+
+                            @if (isAdmin)
+                            {
+                                <form id="activityFormLinkForm" asp-action="LinkForm" method="post" class="d-none">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@Model.Id" />
+                                    <input type="hidden" name="formId" id="activityFormLinkFormId" />
+                                    <input type="hidden" name="createNewVersion" id="activityFormLinkCreateNewVersion" value="false" />
+                                </form>
+
+                                <div class="row g-3 align-items-end mt-2">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Link formular</label>
+                                        <select class="form-select" id="activityFormSelect">
+                                            <option value="">Ingen</option>
+                                            @foreach (var opt in Model.FormOptions)
+                                            {
+                                                <option value="@opt.Id" selected="@(opt.Id == Model.FormId)">@opt.Title</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" id="activityFormLinkSaveBtn" class="btn btn-primary w-100">
+                                            <i class="bi bi-floppy me-1"></i> Gem
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-text mt-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Opret en ny formular under <a asp-controller="Forms" asp-action="Index">Formularer</a>, og link den her bagefter.
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Svar -->
+                <div class="@TabPaneClass("svar")" id="svar-pane" role="tabpanel">
+                    @if (Model.FormResponses is null)
+                    {
+                        <p class="text-muted mb-0">Ingen formular linket til denne aktivitet — link en formular under fanen "Formular" for at se svar her.</p>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <p class="mb-0">@Model.FormResponses.TotalCount @(Model.FormResponses.TotalCount == 1 ? "svar" : "svar") indkommet</p>
+                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Forms" asp-action="ExportResponses" asp-route-id="@Model.FormId" title="Eksporter til CSV" aria-label="Eksporter til CSV">
+                                <i class="bi bi-download me-1"></i> Eksporter CSV
+                            </a>
+                        </div>
+                        <div data-table-root id="activityResponsesTableRoot" data-table-endpoint="@Url.Action("ResponsesTable", "Forms", new { id = Model.FormId })">
+                            <div data-table-region>
+                                @await Html.PartialAsync("~/Views/Forms/_ResponsesTableBody.cshtml", Model.FormResponses)
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Kommunikation -->
+                <div class="@TabPaneClass("kommunikation")" id="kommunikation-pane" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted mb-0">Beskeder sendt herfra logges automatisk under Kommunikation.</p>
+                        @if (isAdmin)
+                        {
+                            <button type="button" class="btn btn-primary text-nowrap ms-2" data-bs-toggle="modal" data-bs-target="#composeMessageModal" title="Send besked" aria-label="Send besked">
+                                <i class="bi bi-envelope-plus me-1"></i> Send besked
+                            </button>
+                        }
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Emne</th>
+                                    <th>Modtagere</th>
+                                    <th>Kanal</th>
+                                    <th>Status</th>
+                                    <th>Sendt</th>
+                                    <th class="text-end">Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Messages.Count == 0)
+                                {
+                                    <tr><td colspan="6" class="text-muted">Ingen beskeder sendt endnu.</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var message in Model.Messages)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@message.Subject</td>
+                                            <td>
+                                                @await Html.PartialAsync("~/Views/Communication/_RecipientBadges.cshtml", message.RecipientBadges)
+                                                <span class="text-muted small">(@message.RecipientCount)</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-inline-flex gap-1">
+                                                    @if (message.ViaEmail)
+                                                    {
+                                                        <span class="badge-info"><i class="bi bi-envelope me-1"></i>E-mail</span>
+                                                    }
+                                                    @if (message.ViaSms)
+                                                    {
+                                                        <span class="badge-info"><i class="bi bi-chat-text me-1"></i>SMS</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td><span class="@message.StatusBadgeClass">@message.Status</span></td>
+                                            <td>@(message.SentAtUtc?.ToLocalTime().ToDanishDateTime() ?? "-")</td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-secondary btn-icon" asp-controller="Communication" asp-action="Details" asp-route-id="@message.Id" title="Vis besked" aria-label="Vis besked">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isAdmin)
+{
+    @await Html.PartialAsync("_ActivityDeleteModal")
+    @await Html.PartialAsync("_WorkgroupMemberModal", Model)
+    @await Html.PartialAsync("_TaskModal", Model)
+
+    var composeViewData = new ViewDataDictionary(ViewData)
+    {
+        ["ActivityId"] = Model.Id,
+        ["SelectedGroupIds"] = Model.TargetGroups.Select(g => g.Id)
+    };
+    @await Html.PartialAsync("~/Views/Communication/_ComposeMessageModal.cshtml", Model.ComposeOptions, composeViewData)
+
+    <!-- Formularen har allerede svar — vælg ny version eller eksisterende -->
+    <div class="modal fade" id="formLinkConfirmModal" tabindex="-1" aria-labelledby="formLinkConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="formLinkConfirmModalLabel"><i class="bi bi-exclamation-triangle me-2"></i>Formularen har allerede svar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Denne formular har allerede <strong id="formLinkConfirmCount">0</strong> svar. Vælg hvordan aktiviteten skal linkes:</p>
+                    <ul class="mb-0">
+                        <li><strong>Opret ny version</strong> — de nuværende svar bliver på den gamle version (som lukkes for svar hvis den stadig er åben), og aktiviteten linkes til en ny, tom version.</li>
+                        <li><strong>Brug eksisterende</strong> — aktiviteten linkes til formularen som den er, inklusiv de nuværende svar.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="formLinkUseExistingBtn">
+                        <i class="bi bi-link-45deg me-1"></i> Brug eksisterende
+                    </button>
+                    <button type="button" class="btn btn-primary" id="formLinkNewVersionBtn">
+                        <i class="bi bi-files me-1"></i> Opret ny version
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            document.getElementById('composeMessageModal')?.addEventListener('show.bs.modal', () => {
+                const formToggle = document.getElementById('composeAttachForm');
+                const formSelect = document.getElementById('composeFormSelect');
+
+                @if (Model.FormId.HasValue)
+                {
+                    <text>
+                    if (formToggle && !formToggle.checked) {
+                        formToggle.checked = true;
+                        formToggle.dispatchEvent(new Event('change'));
+                    }
+                    if (formSelect) {
+                        formSelect.value = '@Model.FormId';
+                        formSelect.dispatchEvent(new Event('change'));
+                    }
+                    </text>
+                }
+            });
+
+            const linkForm = document.getElementById('activityFormLinkForm');
+            const formSelect = document.getElementById('activityFormSelect');
+            const saveBtn = document.getElementById('activityFormLinkSaveBtn');
+            const formIdField = document.getElementById('activityFormLinkFormId');
+            const createNewVersionField = document.getElementById('activityFormLinkCreateNewVersion');
+            const confirmModalEl = document.getElementById('formLinkConfirmModal');
+            const confirmCount = document.getElementById('formLinkConfirmCount');
+
+            const submitLink = (formId, createNewVersion) => {
+                formIdField.value = formId;
+                createNewVersionField.value = createNewVersion ? 'true' : 'false';
+                linkForm.submit();
+            };
+
+            saveBtn?.addEventListener('click', async () => {
+                const formId = formSelect.value;
+                if (!formId) {
+                    submitLink('', false);
+                    return;
+                }
+
+                saveBtn.disabled = true;
+                try {
+                    const res = await fetch(`@Url.Action("CheckFormResponses")?formId=${formId}`, { headers: { 'X-Requested-With': 'fetch' } });
+                    if (!res.ok) throw new Error('check failed');
+                    const data = await res.json();
+                    if (!data.hasResponses) {
+                        submitLink(formId, false);
+                        return;
+                    }
+                    confirmCount.textContent = data.responseCount;
+                    confirmModalEl.dataset.pendingFormId = formId;
+                    if (confirmModalEl) {
+                        bootstrap.Modal.getOrCreateInstance(confirmModalEl).show();
+                    }
+                } catch {
+                    window.FvToast?.show('error', 'Kunne ikke tjekke formularen for svar. Prøv igen.');
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+
+            document.getElementById('formLinkUseExistingBtn')?.addEventListener('click', () => {
+                submitLink(confirmModalEl.dataset.pendingFormId, false);
+            });
+            document.getElementById('formLinkNewVersionBtn')?.addEventListener('click', () => {
+                submitLink(confirmModalEl.dataset.pendingFormId, true);
+            });
+        })();
+    </script>
+}

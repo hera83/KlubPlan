@@ -1,0 +1,191 @@
+@model web.ViewModels.ActivityDetailsViewModel
+
+<!-- Opret/rediger arbejdsgruppe-medlem -->
+<div class="modal fade" id="workgroupMemberModal" tabindex="-1" aria-labelledby="workgroupMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveWorkgroupMember" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="workgroupMemberId" value="0" />
+                <input type="hidden" name="ActivityId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="workgroupMemberModalLabel"><i class="bi bi-person-plus me-2"></i>Tilføj medlem</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="Type medlem">
+                        <input type="radio" class="btn-check" name="workgroupMode" id="workgroupModeAdmin" autocomplete="off" checked />
+                        <label class="btn btn-outline-secondary" for="workgroupModeAdmin"><i class="bi bi-person-badge me-1"></i>Administrator</label>
+                        <input type="radio" class="btn-check" name="workgroupMode" id="workgroupModeExternal" autocomplete="off" />
+                        <label class="btn btn-outline-secondary" for="workgroupModeExternal"><i class="bi bi-person me-1"></i>Ekstern kontakt</label>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-12" id="workgroupAdminFields">
+                            <label class="form-label">Administrator</label>
+                            <select name="ApplicationUserId" id="workgroupMemberUserSelect" class="form-select">
+                                <option value="">Vælg administrator...</option>
+                                @foreach (var admin in Model.AdminOptions)
+                                {
+                                    <option value="@admin.Id">@admin.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 d-none" id="workgroupExternalFields">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Navn</label>
+                                    <input name="Name" id="workgroupMemberName" class="form-control" maxlength="200" placeholder="Fx Anne Hansen" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">E-mail</label>
+                                    <input name="Email" id="workgroupMemberEmail" type="email" class="form-control" maxlength="200" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Mobil</label>
+                                    <input name="Mobile" id="workgroupMemberMobile" class="form-control" maxlength="30" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Rolle</label>
+                            <input name="Role" id="workgroupMemberRole" class="form-control" maxlength="100" placeholder="Fx Tovholder, Bager..." />
+                        </div>
+                    </div>
+                    <div class="form-text mt-2" id="workgroupModeHint"><i class="bi bi-info-circle me-1"></i>En administrator ses med navn/e-mail fra sin brugerkonto. En ekstern kontakt får ikke adgang til systemet.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Fjern arbejdsgruppe-medlem -->
+<div class="modal fade" id="deleteWorkgroupMemberModal" tabindex="-1" aria-labelledby="deleteWorkgroupMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteWorkgroupMemberModalLabel"><i class="bi bi-trash me-2"></i>Fjern medlem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil fjerne <strong id="deleteWorkgroupMemberName"></strong> fra arbejdsgruppen? Opgaver tildelt til
+                dette medlem beholdes, men bliver uden ansvarlig.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="DeleteWorkgroupMember" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteWorkgroupMemberId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Fjern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const workgroupModal = document.getElementById('workgroupMemberModal');
+        const modeAdmin = document.getElementById('workgroupModeAdmin');
+        const modeExternal = document.getElementById('workgroupModeExternal');
+        const adminFields = document.getElementById('workgroupAdminFields');
+        const externalFields = document.getElementById('workgroupExternalFields');
+        const userSelect = document.getElementById('workgroupMemberUserSelect');
+        const nameField = document.getElementById('workgroupMemberName');
+        const emailField = document.getElementById('workgroupMemberEmail');
+        const mobileField = document.getElementById('workgroupMemberMobile');
+
+        const applyMode = () => {
+            const isAdminMode = modeAdmin.checked;
+            adminFields.classList.toggle('d-none', !isAdminMode);
+            externalFields.classList.toggle('d-none', isAdminMode);
+        };
+
+        modeAdmin?.addEventListener('change', () => {
+            nameField.value = '';
+            emailField.value = '';
+            mobileField.value = '';
+            applyMode();
+        });
+        modeExternal?.addEventListener('change', () => {
+            userSelect.value = '';
+            applyMode();
+        });
+
+        workgroupModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            const idField = document.getElementById('workgroupMemberId');
+            const roleField = document.getElementById('workgroupMemberRole');
+            const label = document.getElementById('workgroupMemberModalLabel');
+
+            if (btn?.dataset.editId) {
+                idField.value = btn.dataset.editId;
+                roleField.value = btn.dataset.role || '';
+
+                if (btn.dataset.userId) {
+                    modeAdmin.checked = true;
+                    userSelect.value = btn.dataset.userId;
+                    nameField.value = '';
+                    emailField.value = '';
+                    mobileField.value = '';
+                } else {
+                    modeExternal.checked = true;
+                    userSelect.value = '';
+                    nameField.value = btn.dataset.name || '';
+                    emailField.value = btn.dataset.email || '';
+                    mobileField.value = btn.dataset.mobile || '';
+                }
+
+                label.innerHTML = '<i class="bi bi-pencil me-2"></i>Rediger medlem';
+            } else {
+                idField.value = '0';
+                roleField.value = '';
+                modeAdmin.checked = true;
+                userSelect.value = '';
+                nameField.value = '';
+                emailField.value = '';
+                mobileField.value = '';
+                label.innerHTML = '<i class="bi bi-person-plus me-2"></i>Tilføj medlem';
+            }
+
+            applyMode();
+        });
+
+        const deleteModal = document.getElementById('deleteWorkgroupMemberModal');
+        let deleteTargetRow = null;
+        deleteModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            deleteTargetRow = btn.closest('tr');
+            document.getElementById('deleteWorkgroupMemberName').textContent = btn.dataset.name;
+            document.getElementById('deleteWorkgroupMemberId').value = btn.dataset.id;
+        });
+
+        const deleteForm = deleteModal?.querySelector('form');
+        deleteForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = deleteForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(deleteForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(deleteModal)?.hide();
+                deleteTargetRow?.remove();
+            }
+        });
+    })();
+</script>

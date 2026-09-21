@@ -26,6 +26,9 @@ namespace web.Repositories.Communication.Dtos
         /// <summary>Attached arrangement (Tilmelding), if any. Its link is always personal — Tilmelding has no anonymous mode.</summary>
         public int? ArrangementId { get; set; }
 
+        /// <summary>Set when composing from an Activity's detail page — the message is then logged against that activity and the Save action redirects back there instead of Communication/Index.</summary>
+        public int? ActivityId { get; set; }
+
         /// <summary>"draft" or "send".</summary>
         public string Action { get; set; } = "draft";
     }

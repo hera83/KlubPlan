@@ -1,0 +1,133 @@
+@model web.ViewModels.ActivityDetailsViewModel
+
+<!-- Opret/rediger opgave -->
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveTask" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="taskId" value="0" />
+                <input type="hidden" name="ActivityId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalLabel"><i class="bi bi-plus-lg me-2"></i>Tilføj opgave</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Opgave</label>
+                            <input name="Title" id="taskTitle" class="form-control" required maxlength="200" placeholder="Fx Bestil kager" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Deadline</label>
+                            <input type="datetime-local" name="DeadlineAt" id="taskDeadline" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ansvarlig</label>
+                            <select name="AssignedToWorkgroupMemberId" id="taskAssignedTo" class="form-select">
+                                <option value="">Ingen</option>
+                                @foreach (var member in Model.WorkgroupMembers)
+                                {
+                                    <option value="@member.Id">@member.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Note</label>
+                            <textarea name="Note" id="taskNote" class="form-control" rows="2" maxlength="1000"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy me-1"></i> Gem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Slet opgave -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel"><i class="bi bi-trash me-2"></i>Slet opgave</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette opgaven <strong id="deleteTaskName"></strong>? Denne handling kan ikke fortrydes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-action="DeleteTask" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteTaskId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const taskModal = document.getElementById('taskModal');
+        taskModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            const idField = document.getElementById('taskId');
+            const titleField = document.getElementById('taskTitle');
+            const deadlineField = document.getElementById('taskDeadline');
+            const assignedField = document.getElementById('taskAssignedTo');
+            const noteField = document.getElementById('taskNote');
+            const label = document.getElementById('taskModalLabel');
+
+            if (btn?.dataset.editId) {
+                idField.value = btn.dataset.editId;
+                titleField.value = btn.dataset.title || '';
+                deadlineField.value = btn.dataset.deadline || '';
+                assignedField.value = btn.dataset.assigned || '';
+                noteField.value = btn.dataset.note || '';
+                label.innerHTML = '<i class="bi bi-pencil me-2"></i>Rediger opgave';
+            } else {
+                idField.value = '0';
+                titleField.value = '';
+                deadlineField.value = '';
+                assignedField.value = '';
+                noteField.value = '';
+                label.innerHTML = '<i class="bi bi-plus-lg me-2"></i>Tilføj opgave';
+            }
+        });
+
+        const deleteModal = document.getElementById('deleteTaskModal');
+        let deleteTargetRow = null;
+        deleteModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            deleteTargetRow = btn.closest('tr');
+            document.getElementById('deleteTaskName').textContent = btn.dataset.title;
+            document.getElementById('deleteTaskId').value = btn.dataset.id;
+        });
+
+        const deleteForm = deleteModal?.querySelector('form');
+        deleteForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = deleteForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            const data = await window.FvForm.submit(deleteForm);
+            if (submitBtn) submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(deleteModal)?.hide();
+                deleteTargetRow?.remove();
+            }
+        });
+    })();
+</script>

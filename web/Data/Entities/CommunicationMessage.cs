@@ -33,6 +33,9 @@ namespace web.Data.Entities
         /// <summary>Attached arrangement (Tilmelding), if any. Kept even if the arrangement is later deleted (FK is SetNull). Its link is always personal — Tilmelding has no anonymous mode.</summary>
         public int? ArrangementId { get; set; }
 
+        /// <summary>Activity this message was sent from, if any. Kept even if the activity is later deleted (FK is SetNull).</summary>
+        public int? ActivityId { get; set; }
+
         /// <summary>Snapshot of the target groups/persons' names at last send, for display without re-resolving.</summary>
         public string RecipientSummary { get; set; } = string.Empty;
 
@@ -50,6 +53,8 @@ namespace web.Data.Entities
         public virtual Form? Form { get; set; }
 
         public virtual Arrangement? Arrangement { get; set; }
+
+        public virtual Activity? Activity { get; set; }
 
         public virtual ICollection<CommunicationMessageGroup> Groups { get; set; } = new List<CommunicationMessageGroup>();
 

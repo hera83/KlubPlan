@@ -1,13 +1,22 @@
 namespace web.ViewModels
 {
-    public class CommunicationIndexViewModel
+    /// <summary>
+    /// The recipient/attachment picker options for the shared "Ny besked" compose modal
+    /// (_ComposeMessageModal.cshtml) — used both by CommunicationIndexViewModel (via Communication/
+    /// Index) and standalone when composing a message from an Activity's detail page.
+    /// </summary>
+    public class ComposeOptionsViewModel
     {
-        public bool IsAdmin { get; set; }
-        public List<CommunicationMessageListItemViewModel> Messages { get; set; } = new();
         public List<PersonGroupOptionViewModel> GroupOptions { get; set; } = new();
         public List<ArrangementPersonOptionViewModel> PersonOptions { get; set; } = new();
         public List<CommunicationFormOptionViewModel> FormOptions { get; set; } = new();
         public List<CommunicationArrangementOptionViewModel> ArrangementOptions { get; set; } = new();
+    }
+
+    public class CommunicationIndexViewModel : ComposeOptionsViewModel
+    {
+        public bool IsAdmin { get; set; }
+        public List<CommunicationMessageListItemViewModel> Messages { get; set; } = new();
     }
 
     public class CommunicationMessageListItemViewModel

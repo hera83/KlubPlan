@@ -1,0 +1,157 @@
+@using web.Infrastructure
+@model web.ViewModels.ActivityFilterViewModel
+@{
+    var isAdmin = User.IsInRole(web.Constants.AppRoles.Administrator) || User.IsInRole(web.Constants.AppRoles.Developer);
+}
+
+@functions {
+    (string Label, string BadgeClass) GetActivityStatus(DateTime? startAtUtc, DateTime? endAtUtc, bool isCancelled)
+    {
+        if (isCancelled)
+        {
+            return ("Aflyst", "badge-alarm");
+        }
+
+        var now = DateTime.UtcNow;
+
+        if (endAtUtc.HasValue && now > endAtUtc.Value)
+        {
+            return ("Afsluttet", "badge-info");
+        }
+
+        if (startAtUtc.HasValue && now >= startAtUtc.Value)
+        {
+            return ("I gang", "badge-ok");
+        }
+
+        return ("Kommende", "badge-ok");
+    }
+}
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Titel</th>
+                <th>Dato</th>
+                <th>Målgruppe</th>
+                <th>Opgaver</th>
+                <th>Status</th>
+                <th class="text-end">Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Aktiviteter.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="text-muted">Ingen aktiviteter fundet.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var activity in Model.Aktiviteter)
+                {
+                    <tr>
+                        <td class="fw-semibold">@activity.Title</td>
+                        <td>
+                            @if (activity.StartAtUtc.HasValue)
+                            {
+                                @activity.StartAtUtc.Value.ToLocalTime().ToDanishDate()
+                            }
+                            else
+                            {
+                                <span class="text-muted">Ingen dato</span>
+                            }
+                        </td>
+                        <td>
+                            @if (activity.TargetGroupNames.Count == 0)
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    @foreach (var name in activity.TargetGroupNames)
+                                    {
+                                        var firstWord = name.Split(' ', 2)[0];
+                                        var hasMore = name.Length > firstWord.Length;
+                                        if (hasMore)
+                                        {
+                                            <span class="group-badge" data-group-badge tabindex="0">
+                                                <span class="badge-info group-badge-short">@firstWord…</span>
+                                                <span class="badge-info group-badge-full">@name</span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-info">@name</span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            @if (activity.TaskTotalCount == 0)
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                            else
+                            {
+                                <span>@activity.TaskCompletedCount / @activity.TaskTotalCount</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var status = GetActivityStatus(activity.StartAtUtc, activity.EndAtUtc, activity.IsCancelled);
+                            }
+                            <span class="@status.BadgeClass">@status.Label</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@activity.Id" title="Vis" aria-label="Vis">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if (isAdmin)
+                                {
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Edit" asp-route-id="@activity.Id" title="Rediger" aria-label="Rediger">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#deleteActivityModal"
+                                            data-id="@activity.Id" data-title="@activity.Title" title="Slet" aria-label="Slet">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel
+        {
+            Page = Model.Page,
+            TotalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)
+        })
+    </div>
+</div>

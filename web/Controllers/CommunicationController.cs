@@ -55,11 +55,15 @@ namespace web.Controllers
             if (!result.Success)
             {
                 this.ToastError(result.ErrorMessage ?? "Beskeden kunne ikke gemmes.");
-                return RedirectToAction(nameof(Index));
+                return dto.ActivityId.HasValue
+                    ? RedirectToAction("Details", "Activities", new { id = dto.ActivityId, tab = "kommunikation" })
+                    : RedirectToAction(nameof(Index));
             }
 
             this.ToastSuccess(dto.Action == "send" ? "Beskeden er sendt." : "Beskeden er gemt som kladde.");
-            return RedirectToAction(nameof(Index));
+            return dto.ActivityId.HasValue
+                ? RedirectToAction("Details", "Activities", new { id = dto.ActivityId, tab = "kommunikation" })
+                : RedirectToAction(nameof(Index));
         }
 
         [Authorize(Policy = "AdminOrDeveloper")]

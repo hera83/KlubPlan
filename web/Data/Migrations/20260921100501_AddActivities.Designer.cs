@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Data;
 
@@ -10,9 +11,11 @@ using web.Data;
 namespace web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921100501_AddActivities")]
+    partial class AddActivities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -151,6 +154,9 @@ namespace web.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ArrangementId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Category")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
@@ -190,6 +196,8 @@ namespace web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ArrangementId");
 
                     b.HasIndex("CreatedAtUtc");
 
@@ -274,9 +282,6 @@ namespace web.Data.Migrations
                     b.Property<int>("ActivityId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -289,6 +294,7 @@ namespace web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
@@ -300,8 +306,6 @@ namespace web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("ActivityId", "Order");
 
@@ -1570,10 +1574,17 @@ namespace web.Data.Migrations
 
             modelBuilder.Entity("web.Data.Entities.Activity", b =>
                 {
+                    b.HasOne("web.Data.Entities.Arrangement", "Arrangement")
+                        .WithMany()
+                        .HasForeignKey("ArrangementId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("web.Data.Entities.Form", "Form")
                         .WithMany()
                         .HasForeignKey("FormId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Arrangement");
 
                     b.Navigation("Form");
                 });
@@ -1623,14 +1634,7 @@ namespace web.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("web.Data.Entities.ApplicationUser", "ApplicationUser")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Activity");
-
-                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementAllowedGroup", b =>

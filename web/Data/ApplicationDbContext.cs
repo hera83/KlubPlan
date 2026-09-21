@@ -57,6 +57,13 @@ namespace web.Data
         public DbSet<ArrangementRegistrationAnswer> ArrangementRegistrationAnswers { get; set; } = null!;
         public DbSet<ArrangementRegistrationShift> ArrangementRegistrationShifts { get; set; } = null!;
 
+        // Aktiviteter: planned club activities/events with a target audience (grupper), a workgroup
+        // (plain contact registrations), a task list, and optional links to an Arrangement/Form
+        public DbSet<Activity> Activities { get; set; } = null!;
+        public DbSet<ActivityTargetGroup> ActivityTargetGroups { get; set; } = null!;
+        public DbSet<ActivityWorkgroupMember> ActivityWorkgroupMembers { get; set; } = null!;
+        public DbSet<ActivityTask> ActivityTasks { get; set; } = null!;
+
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
         public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
@@ -682,6 +689,111 @@ namespace web.Data
                 entity.HasIndex(e => e.ArrangementShiftId);
             });
 
+            // Configure Activity
+            builder.Entity<Activity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Category)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Form)
+                    .WithMany()
+                    .HasForeignKey(e => e.FormId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => e.StartAtUtc);
+            });
+
+            // Configure ActivityTargetGroup (join entity for Activity <-> PersonGroup many-to-many)
+            builder.Entity<ActivityTargetGroup>(entity =>
+            {
+                entity.HasKey(e => new { e.ActivityId, e.PersonGroupId });
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany(a => a.TargetGroups)
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PersonGroup)
+                    .WithMany()
+                    .HasForeignKey(e => e.PersonGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PersonGroupId);
+            });
+
+            // Configure ActivityWorkgroupMember (either a linked administrator or an external contact)
+            builder.Entity<ActivityWorkgroupMember>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Role)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Email)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Mobile)
+                    .HasMaxLength(30);
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany(a => a.WorkgroupMembers)
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ApplicationUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApplicationUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => new { e.ActivityId, e.Order });
+                entity.HasIndex(e => e.ApplicationUserId);
+            });
+
+            // Configure ActivityTask
+            builder.Entity<ActivityTask>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Note)
+                    .HasMaxLength(1000);
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany(a => a.Tasks)
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.AssignedToWorkgroupMember)
+                    .WithMany(m => m.AssignedTasks)
+                    .HasForeignKey(e => e.AssignedToWorkgroupMemberId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => new { e.ActivityId, e.Order });
+                entity.HasIndex(e => e.DeadlineAtUtc);
+            });
+
             // Configure CommunicationMessage
             builder.Entity<CommunicationMessage>(entity =>
             {
@@ -716,6 +828,11 @@ namespace web.Data
                 entity.HasOne(e => e.Arrangement)
                     .WithMany()
                     .HasForeignKey(e => e.ArrangementId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany()
+                    .HasForeignKey(e => e.ActivityId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => e.CreatedAtUtc);
