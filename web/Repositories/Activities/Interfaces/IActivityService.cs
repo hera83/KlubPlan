@@ -32,10 +32,14 @@ namespace web.Repositories.Activities.Interfaces
         Task<FormResponseCheckDto> CheckFormResponsesAsync(int formId, CancellationToken ct = default);
 
         /// <summary>
-        /// Sets/clears the activity's linked Form (formId null = fjern link). When createNewVersion
-        /// is true, a fresh blank version of the form is created first (closing the source version
-        /// for responses if it's still open) and the activity is linked to that new version instead.
+        /// Links en Form til aktiviteten (i tillæg til evt. allerede linkede formularer). Når
+        /// createNewVersion er true oprettes først en frisk, tom version af formularen (og
+        /// kilde-versionen lukkes for svar hvis den stadig er åben), og aktiviteten linkes til
+        /// den nye version i stedet.
         /// </summary>
-        Task<ActivityActionResultDto> LinkFormAsync(int activityId, int? formId, bool createNewVersion, string? userId, CancellationToken ct = default);
+        Task<ActivityActionResultDto> LinkFormAsync(int activityId, int formId, bool createNewVersion, string? userId, CancellationToken ct = default);
+
+        /// <summary>Fjerner ét bestemt formular-link fra aktiviteten (formularen selv slettes ikke).</summary>
+        Task<ActivityActionResultDto> UnlinkFormAsync(int activityId, int formId, CancellationToken ct = default);
     }
 }

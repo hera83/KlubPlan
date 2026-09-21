@@ -121,6 +121,14 @@ namespace web.ViewModels
         public string Title { get; set; } = string.Empty;
     }
 
+    /// <summary>One Form linked to an Activity, with its own page of responses for the "Svar" tab.</summary>
+    public class ActivityLinkedFormViewModel
+    {
+        public int FormId { get; set; }
+        public string FormTitle { get; set; } = string.Empty;
+        public FormResponsesViewModel? FormResponses { get; set; }
+    }
+
     // ── Detaljer ─────────────────────────────────────────────────────────
 
     public class ActivityDetailsViewModel
@@ -149,13 +157,11 @@ namespace web.ViewModels
 
         public List<ActivityTaskViewModel> Tasks { get; set; } = new();
 
-        public int? FormId { get; set; }
-        public string? FormTitle { get; set; }
+        /// <summary>Former linket til aktiviteten, hver med sin egen første side af svar til "Svar"-fanen.</summary>
+        public List<ActivityLinkedFormViewModel> LinkedForms { get; set; } = new();
 
+        /// <summary>Formularer der endnu ikke er linket — kandidater til "Link formular"-selecten.</summary>
         public List<ActivityFormOptionViewModel> FormOptions { get; set; } = new();
-
-        /// <summary>Populated when FormId is set — first page of responses for the "Svar" tab, same shape as Forms → Vis svar.</summary>
-        public FormResponsesViewModel? FormResponses { get; set; }
 
         public List<CommunicationMessageListItemViewModel> Messages { get; set; } = new();
 

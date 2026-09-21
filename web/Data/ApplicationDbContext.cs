@@ -60,6 +60,7 @@ namespace web.Data
         // Aktiviteter: planned club activities/events with a target audience (grupper), a workgroup
         // (plain contact registrations), a task list, and optional links to an Arrangement/Form
         public DbSet<Activity> Activities { get; set; } = null!;
+        public DbSet<ActivityForm> ActivityForms { get; set; } = null!;
         public DbSet<ActivityTargetGroup> ActivityTargetGroups { get; set; } = null!;
         public DbSet<ActivityWorkgroupMember> ActivityWorkgroupMembers { get; set; } = null!;
         public DbSet<ActivityTask> ActivityTasks { get; set; } = null!;
@@ -710,13 +711,26 @@ namespace web.Data
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
 
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => e.StartAtUtc);
+            });
+
+            // Configure ActivityForm (join entity for Activity <-> Form many-to-many)
+            builder.Entity<ActivityForm>(entity =>
+            {
+                entity.HasKey(e => new { e.ActivityId, e.FormId });
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany(a => a.LinkedForms)
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasOne(e => e.Form)
                     .WithMany()
                     .HasForeignKey(e => e.FormId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(e => e.CreatedAtUtc);
-                entity.HasIndex(e => e.StartAtUtc);
+                entity.HasIndex(e => e.FormId);
             });
 
             // Configure ActivityTargetGroup (join entity for Activity <-> PersonGroup many-to-many)

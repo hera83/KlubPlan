@@ -153,9 +153,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="@TabButtonClass("svar")" data-bs-toggle="tab" data-bs-target="#svar-pane" type="button" role="tab">
                         Svar
-                        @if (Model.FormResponses is not null)
+                        @if (Model.LinkedForms.Count > 0)
                         {
-                            <span class="badge-info ms-1">@Model.FormResponses.TotalCount</span>
+                            <span class="badge-info ms-1">@Model.LinkedForms.Sum(f => f.FormResponses?.TotalCount ?? 0)</span>
                         }
                     </button>
                 </li>
@@ -230,12 +230,18 @@
                         </div>
                         <div class="col-6 col-md-4 col-xl-2">
                             @{
-                                var svarSub = Model.FormId.HasValue ? Model.FormTitle : "Ingen formular linket";
+                                var linkedFormCount = Model.LinkedForms.Count;
+                                var totalSvar = Model.LinkedForms.Sum(f => f.FormResponses?.TotalCount ?? 0);
+                                var svarSub = linkedFormCount == 0
+                                    ? "Ingen formular linket"
+                                    : linkedFormCount == 1
+                                        ? Model.LinkedForms[0].FormTitle
+                                        : $"{linkedFormCount} formularer";
                             }
                             <div class="stat-tile">
                                 <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-file-earmark-text"></i></div>
                                 <div class="stat-tile-body">
-                                    <div class="stat-tile-value">@(Model.FormId.HasValue ? (Model.FormResponses?.TotalCount ?? 0).ToString() : "–")</div>
+                                    <div class="stat-tile-value">@(linkedFormCount == 0 ? "–" : totalSvar.ToString())</div>
                                     <div class="stat-tile-label">Svar</div>
                                     <div class="stat-tile-sub" title="@svarSub">@svarSub</div>
                                 </div>
@@ -446,14 +452,33 @@
                 <div class="@TabPaneClass("formular")" id="formular-pane" role="tabpanel">
                     <div class="card">
                         <div class="card-body">
-                            @if (Model.FormId.HasValue)
+                            @if (Model.LinkedForms.Count == 0)
                             {
-                                <h5 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i>@Model.FormTitle</h5>
-                                <p class="text-muted">Linket til denne aktivitet — se svarene under fanen "Svar".</p>
+                                <p class="text-muted mb-0">Ingen formular linket til denne aktivitet endnu.</p>
                             }
                             else
                             {
-                                <p class="text-muted mb-0">Ingen formular linket til denne aktivitet endnu.</p>
+                                <h6 class="text-muted mb-2">Linkede formularer</h6>
+                                <ul class="list-group mb-0">
+                                    @foreach (var lf in Model.LinkedForms)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-file-earmark-text me-2"></i>@lf.FormTitle</span>
+                                            @if (isAdmin)
+                                            {
+                                                <form asp-action="UnlinkForm" method="post" class="m-0">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@Model.Id" />
+                                                    <input type="hidden" name="formId" value="@lf.FormId" />
+                                                    <button type="submit" class="btn btn-sm btn-secondary btn-icon" title="Fjern link" aria-label="Fjern link">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                                <p class="text-muted mt-2 mb-0">Se svarene under fanen "Svar".</p>
                             }
 
                             @if (isAdmin)
@@ -465,20 +490,20 @@
                                     <input type="hidden" name="createNewVersion" id="activityFormLinkCreateNewVersion" value="false" />
                                 </form>
 
-                                <div class="row g-3 align-items-end mt-2">
+                                <div class="row g-3 align-items-end mt-3">
                                     <div class="col-md-8">
-                                        <label class="form-label">Link formular</label>
+                                        <label class="form-label">Link endnu en formular</label>
                                         <select class="form-select" id="activityFormSelect">
-                                            <option value="">Ingen</option>
+                                            <option value="">Vælg formular</option>
                                             @foreach (var opt in Model.FormOptions)
                                             {
-                                                <option value="@opt.Id" selected="@(opt.Id == Model.FormId)">@opt.Title</option>
+                                                <option value="@opt.Id">@opt.Title</option>
                                             }
                                         </select>
                                     </div>
                                     <div class="col-md-4">
                                         <button type="button" id="activityFormLinkSaveBtn" class="btn btn-primary w-100">
-                                            <i class="bi bi-floppy me-1"></i> Gem
+                                            <i class="bi bi-floppy me-1"></i> Tilføj
                                         </button>
                                     </div>
                                 </div>
@@ -493,23 +518,33 @@
 
                 <!-- Svar -->
                 <div class="@TabPaneClass("svar")" id="svar-pane" role="tabpanel">
-                    @if (Model.FormResponses is null)
+                    @if (Model.LinkedForms.Count == 0)
                     {
                         <p class="text-muted mb-0">Ingen formular linket til denne aktivitet — link en formular under fanen "Formular" for at se svar her.</p>
                     }
                     else
                     {
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                            <p class="mb-0">@Model.FormResponses.TotalCount @(Model.FormResponses.TotalCount == 1 ? "svar" : "svar") indkommet</p>
-                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Forms" asp-action="ExportResponses" asp-route-id="@Model.FormId" title="Eksporter til CSV" aria-label="Eksporter til CSV">
-                                <i class="bi bi-download me-1"></i> Eksporter CSV
-                            </a>
-                        </div>
-                        <div data-table-root id="activityResponsesTableRoot" data-table-endpoint="@Url.Action("ResponsesTable", "Forms", new { id = Model.FormId })">
-                            <div data-table-region>
-                                @await Html.PartialAsync("~/Views/Forms/_ResponsesTableBody.cshtml", Model.FormResponses)
+                        @foreach (var lf in Model.LinkedForms)
+                        {
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                        <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>@lf.FormTitle</h6>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="text-muted">@lf.FormResponses!.TotalCount svar indkommet</span>
+                                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Forms" asp-action="ExportResponses" asp-route-id="@lf.FormId" title="Eksporter til CSV" aria-label="Eksporter til CSV">
+                                                <i class="bi bi-download me-1"></i> Eksporter CSV
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div data-table-root id="activityResponsesTableRoot-@lf.FormId" data-table-endpoint="@Url.Action("ResponsesTable", "Forms", new { id = lf.FormId })">
+                                        <div data-table-region>
+                                            @await Html.PartialAsync("~/Views/Forms/_ResponsesTableBody.cshtml", lf.FormResponses)
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
                 </div>
 
@@ -632,7 +667,7 @@
                 const formToggle = document.getElementById('composeAttachForm');
                 const formSelect = document.getElementById('composeFormSelect');
 
-                @if (Model.FormId.HasValue)
+                @if (Model.LinkedForms.Count == 1)
                 {
                     <text>
                     if (formToggle && !formToggle.checked) {
@@ -640,7 +675,7 @@
                         formToggle.dispatchEvent(new Event('change'));
                     }
                     if (formSelect) {
-                        formSelect.value = '@Model.FormId';
+                        formSelect.value = '@Model.LinkedForms[0].FormId';
                         formSelect.dispatchEvent(new Event('change'));
                     }
                     </text>
@@ -664,7 +699,7 @@
             saveBtn?.addEventListener('click', async () => {
                 const formId = formSelect.value;
                 if (!formId) {
-                    submitLink('', false);
+                    window.FvToast?.show('error', 'Vælg en formular der skal linkes.');
                     return;
                 }
 

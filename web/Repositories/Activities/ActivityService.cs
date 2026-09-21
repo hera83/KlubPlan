@@ -190,9 +190,10 @@ namespace web.Repositories.Activities
                 return false;
             }
 
-            // TargetGroups/WorkgroupMembers/Tasks cascade-delete with the activity; a linked
-            // Form/CommunicationMessage keeps existing — only their FK back to this activity is
-            // cleared (SetNull), same as when a Form itself is deleted.
+            // TargetGroups/WorkgroupMembers/Tasks/LinkedForms cascade-delete with the activity;
+            // the linked Forms themselves keep existing — only the join rows are removed. A
+            // linked CommunicationMessage keeps existing too; only its FK back to this activity
+            // is cleared (SetNull).
             _context.Activities.Remove(activity);
             await _context.SaveChangesAsync(ct);
             return true;
@@ -205,7 +206,7 @@ namespace web.Repositories.Activities
                 .Include(a => a.TargetGroups).ThenInclude(g => g.PersonGroup)
                 .Include(a => a.WorkgroupMembers).ThenInclude(m => m.ApplicationUser)
                 .Include(a => a.Tasks).ThenInclude(t => t.AssignedToWorkgroupMember).ThenInclude(m => m!.ApplicationUser)
-                .Include(a => a.Form)
+                .Include(a => a.LinkedForms).ThenInclude(l => l.Form)
                 .FirstOrDefaultAsync(a => a.Id == id, ct);
 
             if (activity is null)
@@ -213,9 +214,16 @@ namespace web.Repositories.Activities
                 return null;
             }
 
-            var formResponses = activity.FormId.HasValue
-                ? await _formService.GetResponsesAsync(activity.FormId.Value, page: 1, pageSize: 10, ct)
-                : null;
+            var linkedForms = new List<ActivityLinkedFormViewModel>();
+            foreach (var link in activity.LinkedForms.OrderBy(l => l.Form.Title))
+            {
+                linkedForms.Add(new ActivityLinkedFormViewModel
+                {
+                    FormId = link.FormId,
+                    FormTitle = link.Form.Title,
+                    FormResponses = await _formService.GetResponsesAsync(link.FormId, page: 1, pageSize: 10, ct)
+                });
+            }
 
             var targetGroupIds = activity.TargetGroups.Select(g => g.PersonGroupId).ToList();
             var targetAudienceCount = targetGroupIds.Count > 0
@@ -274,10 +282,8 @@ namespace web.Repositories.Activities
                         CompletedAtUtc = t.CompletedAtUtc
                     })
                     .ToList(),
-                FormId = activity.FormId,
-                FormTitle = activity.Form?.Title,
-                FormOptions = await GetFormOptionsAsync(ct),
-                FormResponses = formResponses,
+                LinkedForms = linkedForms,
+                FormOptions = await GetFormOptionsAsync(linkedForms.Select(l => l.FormId), ct),
                 Messages = messages,
                 ComposeOptions = composeOptions
             };
@@ -472,7 +478,7 @@ namespace web.Repositories.Activities
             return new FormResponseCheckDto { HasResponses = count > 0, ResponseCount = count };
         }
 
-        public async Task<ActivityActionResultDto> LinkFormAsync(int activityId, int? formId, bool createNewVersion, string? userId, CancellationToken ct = default)
+        public async Task<ActivityActionResultDto> LinkFormAsync(int activityId, int formId, bool createNewVersion, string? userId, CancellationToken ct = default)
         {
             var activity = await _context.Activities.FirstOrDefaultAsync(a => a.Id == activityId, ct);
             if (activity is null)
@@ -480,22 +486,14 @@ namespace web.Repositories.Activities
                 return new ActivityActionResultDto { Success = false, ErrorMessage = "Aktiviteten blev ikke fundet." };
             }
 
-            if (!formId.HasValue)
-            {
-                activity.FormId = null;
-                activity.UpdatedAtUtc = DateTime.UtcNow;
-                await _context.SaveChangesAsync(ct);
-                return new ActivityActionResultDto { Success = true };
-            }
-
-            var resolvedFormId = formId.Value;
+            var resolvedFormId = formId;
 
             if (createNewVersion)
             {
                 // CreateNewVersionAsync requires the source form to be closed for responses — the
-                // user has already confirmed "opret ny version" in the dialog, which makes this
-                // explicit, so close it here rather than blocking with an error.
-                var sourceForm = await _context.Forms.FirstOrDefaultAsync(f => f.Id == formId.Value, ct);
+                // user has already confirmed "opret ny version" i dialogen, hvilket gør dette
+                // explicit, så vi lukker den her i stedet for at blokere med en fejl.
+                var sourceForm = await _context.Forms.FirstOrDefaultAsync(f => f.Id == formId, ct);
                 if (sourceForm is null)
                 {
                     return new ActivityActionResultDto { Success = false, ErrorMessage = "Formularen blev ikke fundet." };
@@ -508,7 +506,7 @@ namespace web.Repositories.Activities
                     await _context.SaveChangesAsync(ct);
                 }
 
-                var versionResult = await _formService.CreateNewVersionAsync(formId.Value, userId, ct);
+                var versionResult = await _formService.CreateNewVersionAsync(formId, userId, ct);
                 if (!versionResult.Success)
                 {
                     return new ActivityActionResultDto { Success = false, ErrorMessage = versionResult.ErrorMessage ?? "Kunne ikke oprette ny version af formularen." };
@@ -521,8 +519,35 @@ namespace web.Repositories.Activities
                 return new ActivityActionResultDto { Success = false, ErrorMessage = "Formularen blev ikke fundet." };
             }
 
-            activity.FormId = resolvedFormId;
+            var alreadyLinked = await _context.ActivityForms
+                .AnyAsync(l => l.ActivityId == activityId && l.FormId == resolvedFormId, ct);
+            if (!alreadyLinked)
+            {
+                _context.ActivityForms.Add(new ActivityForm { ActivityId = activityId, FormId = resolvedFormId });
+            }
+
             activity.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(ct);
+            return new ActivityActionResultDto { Success = true };
+        }
+
+        public async Task<ActivityActionResultDto> UnlinkFormAsync(int activityId, int formId, CancellationToken ct = default)
+        {
+            var link = await _context.ActivityForms
+                .FirstOrDefaultAsync(l => l.ActivityId == activityId && l.FormId == formId, ct);
+            if (link is null)
+            {
+                return new ActivityActionResultDto { Success = false, ErrorMessage = "Formularen er ikke linket til denne aktivitet." };
+            }
+
+            _context.ActivityForms.Remove(link);
+
+            var activity = await _context.Activities.FirstOrDefaultAsync(a => a.Id == activityId, ct);
+            if (activity is not null)
+            {
+                activity.UpdatedAtUtc = DateTime.UtcNow;
+            }
 
             await _context.SaveChangesAsync(ct);
             return new ActivityActionResultDto { Success = true };
@@ -536,12 +561,14 @@ namespace web.Repositories.Activities
                 .ToListAsync(ct);
         }
 
-        private async Task<List<ActivityFormOptionViewModel>> GetFormOptionsAsync(CancellationToken ct)
+        private async Task<List<ActivityFormOptionViewModel>> GetFormOptionsAsync(IEnumerable<int> excludeFormIds, CancellationToken ct)
         {
+            var excludeSet = excludeFormIds.ToHashSet();
             var forms = await _context.Forms.AsNoTracking().ToListAsync(ct);
             return forms
                 .GroupBy(f => f.RootFormId ?? f.Id)
                 .Select(g => g.OrderByDescending(f => f.VersionNumber).First())
+                .Where(f => !excludeSet.Contains(f.Id))
                 .OrderBy(f => f.Title)
                 .Select(f => new ActivityFormOptionViewModel { Id = f.Id, Title = f.Title })
                 .ToList();

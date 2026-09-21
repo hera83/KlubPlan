@@ -198,19 +198,37 @@ namespace web.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "AdminOrDeveloper")]
-        public async Task<IActionResult> LinkForm(int id, int? formId, bool createNewVersion, CancellationToken ct)
+        public async Task<IActionResult> LinkForm(int id, int formId, bool createNewVersion, CancellationToken ct)
         {
             var result = await _activityService.LinkFormAsync(id, formId, createNewVersion, _userManager.GetUserId(User), ct);
             if (result.Success)
             {
-                this.ToastSuccess("Formular-kobling er opdateret.");
+                this.ToastSuccess("Formular er linket.");
             }
             else
             {
-                this.ToastError(result.ErrorMessage ?? "Koblingen kunne ikke opdateres.");
+                this.ToastError(result.ErrorMessage ?? "Formularen kunne ikke linkes.");
             }
 
             return RedirectToAction(nameof(Details), new { id, tab = "svar" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "AdminOrDeveloper")]
+        public async Task<IActionResult> UnlinkForm(int id, int formId, CancellationToken ct)
+        {
+            var result = await _activityService.UnlinkFormAsync(id, formId, ct);
+            if (result.Success)
+            {
+                this.ToastSuccess("Formular-link er fjernet.");
+            }
+            else
+            {
+                this.ToastError(result.ErrorMessage ?? "Linket kunne ikke fjernes.");
+            }
+
+            return RedirectToAction(nameof(Details), new { id, tab = "formular" });
         }
 
         private async Task<List<PersonGroupOptionViewModel>> GetGroupOptionsAsync(CancellationToken ct)

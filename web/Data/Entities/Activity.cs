@@ -3,9 +3,8 @@ namespace web.Data.Entities
     /// <summary>
     /// A planned club activity/event (e.g. julebanko, UV-stævne) — metadata plus a target audience
     /// (PersonGroups), a workgroup (plain name/contact records, no system access), a task list, and
-    /// an optional link to an existing Form so responses can be managed without duplicating that
-    /// logic here. Deleting a linked Form only clears the link (FK is SetNull), mirroring
-    /// CommunicationMessage.FormId.
+    /// links to zero or more existing Forms so responses can be managed without duplicating that
+    /// logic here. Deleting a linked Form only removes that link row (join entity FK is Cascade).
     /// </summary>
     public class Activity
     {
@@ -30,9 +29,6 @@ namespace web.Data.Entities
         /// </summary>
         public bool IsCancelled { get; set; }
 
-        /// <summary>Linked Formular, if any. Kept even if the form is later deleted (FK is SetNull).</summary>
-        public int? FormId { get; set; }
-
         /// <summary>User who created the activity. Nullable so it survives the user being deleted.</summary>
         public string? CreatedByUserId { get; set; }
 
@@ -40,7 +36,7 @@ namespace web.Data.Entities
 
         public DateTime? UpdatedAtUtc { get; set; }
 
-        public virtual Form? Form { get; set; }
+        public virtual ICollection<ActivityForm> LinkedForms { get; set; } = new List<ActivityForm>();
 
         public virtual ICollection<ActivityTargetGroup> TargetGroups { get; set; } = new List<ActivityTargetGroup>();
 
