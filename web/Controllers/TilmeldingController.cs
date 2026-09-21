@@ -32,7 +32,7 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Submit(Guid id, Guid? uId, List<ArrangementAnswerInputViewModel> answers, List<int> shiftIds, List<int> confirmedRequirementIds, CancellationToken ct)
+        public async Task<IActionResult> Submit(Guid id, Guid? uId, List<ArrangementAnswerInputViewModel> answers, List<int> shiftIds, List<int> confirmedRequirementIds, List<ArrangementShiftCompanionInputViewModel> companions, CancellationToken ct)
         {
             var dto = new SubmitPublicArrangementRequestDto
             {
@@ -45,7 +45,12 @@ namespace web.Controllers
                     Values = a.Values
                 }).ToList(),
                 SelectedShiftIds = shiftIds ?? new List<int>(),
-                ConfirmedRequirementIds = confirmedRequirementIds ?? new List<int>()
+                ConfirmedRequirementIds = confirmedRequirementIds ?? new List<int>(),
+                ShiftCompanions = (companions ?? new List<ArrangementShiftCompanionInputViewModel>()).Select(c => new SubmitArrangementShiftCompanionDto
+                {
+                    ShiftId = c.ShiftId,
+                    Name = c.Name
+                }).ToList()
             };
 
             var result = await _arrangementService.SubmitPublicArrangementAsync(dto, ct);
@@ -83,6 +88,10 @@ namespace web.Controllers
                 foreach (var shift in model.Arrangement.Shifts)
                 {
                     shift.IsSelected = dto.SelectedShiftIds.Contains(shift.Id);
+                    shift.SubmittedCompanionNames = dto.ShiftCompanions
+                        .Where(c => c.ShiftId == shift.Id)
+                        .Select(c => c.Name ?? string.Empty)
+                        .ToList();
                 }
             }
 

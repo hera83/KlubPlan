@@ -138,6 +138,7 @@ namespace web.Repositories.Registrations
                 AccessMode = arrangement.AccessMode,
                 AllowedPersonIds = arrangement.AllowedPersons.Select(p => p.PersonId).ToList(),
                 AllowedGroupIds = arrangement.AllowedGroups.Select(g => g.PersonGroupId).ToList(),
+                AllowMultipleNamesPerShift = arrangement.AllowMultipleNamesPerShift,
                 GroupOptions = await GetGroupOptionsAsync(ct),
                 PersonOptions = await GetPersonOptionsAsync(ct)
             };
@@ -185,6 +186,7 @@ namespace web.Repositories.Registrations
             arrangement.RegistrationOpensAtUtc = ToUtc(dto.RegistrationOpensAtUtc);
             arrangement.RegistrationClosesAtUtc = ToUtc(dto.RegistrationClosesAtUtc);
             arrangement.AccessMode = dto.AccessMode;
+            arrangement.AllowMultipleNamesPerShift = dto.AllowMultipleNamesPerShift;
 
             // a) Tilmeldingsformular — reconcile mod eksisterende felter ud fra Id.
             var existingFields = arrangement.FormFields.ToDictionary(f => f.Id);
@@ -371,8 +373,8 @@ namespace web.Repositories.Registrations
 
         public async Task<PublicArrangementAccessViewModel> GetPublicArrangementAsync(Guid arrangementPublicId, Guid? personPublicId, CancellationToken ct = default)
         {
-            var (status, arrangement, _) = await ResolvePublicArrangementAccessAsync(arrangementPublicId, personPublicId, ct);
-            return await BuildPublicArrangementAccessViewModelAsync(status, arrangement, personPublicId, ct);
+            var (status, arrangement, person) = await ResolvePublicArrangementAccessAsync(arrangementPublicId, personPublicId, ct);
+            return await BuildPublicArrangementAccessViewModelAsync(status, arrangement, person, personPublicId, ct);
         }
 
         public async Task<SubmitPublicArrangementResponseDto> SubmitPublicArrangementAsync(SubmitPublicArrangementRequestDto dto, CancellationToken ct = default)
@@ -405,17 +407,42 @@ namespace web.Repositories.Registrations
             {
                 var shift = shiftsById[shiftId];
 
+                // Companions are only honored when the arrangement allows it — ignore anything
+                // posted otherwise, regardless of what the client sent. Once the registrant has
+                // named anyone for a shift (the "+" flow), every named slot — including the one
+                // pre-filled with their own name — replaces the implicit self row, since they may
+                // have edited it to someone else entirely (e.g. a parent taking over the shift).
+                var companionNames = arrangement.AllowMultipleNamesPerShift
+                    ? dto.ShiftCompanions.Where(c => c.ShiftId == shiftId).Select(c => c.Name?.Trim()).ToList()
+                    : new List<string?>();
+
+                if (companionNames.Any(string.IsNullOrWhiteSpace))
+                    return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"Alle navne for '{shift.Title}' skal udfyldes." };
+
+                var slotsRequested = companionNames.Count > 0 ? companionNames.Count : 1;
+
                 // Re-check capacity and required confirmations here (not just client-side) — the
                 // gate above only validates identity/access, not per-shift state, which can have
                 // changed since the GET rendered the form.
                 var takenCount = await _context.ArrangementRegistrationShifts.CountAsync(rs => rs.ArrangementShiftId == shiftId, ct);
-                if (takenCount >= shift.NeededCount)
-                    return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"'{shift.Title}' har ikke flere ledige pladser." };
+                if (takenCount + slotsRequested > shift.NeededCount)
+                {
+                    var remaining = Math.Max(0, shift.NeededCount - takenCount);
+                    return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"'{shift.Title}' har kun {remaining} ledig(e) plads(er) tilbage." };
+                }
 
                 if (shift.Requirements.Count > 0 && shift.Requirements.Any(r => !dto.ConfirmedRequirementIds.Contains(r.Id)))
                     return new SubmitPublicArrangementResponseDto { Status = PublicArrangementStatus.Ok, Success = false, ShiftError = $"Du skal bekræfte alle krav for at tilmelde dig '{shift.Title}'." };
 
-                registration.Shifts.Add(new ArrangementRegistrationShift { ArrangementShiftId = shiftId });
+                if (companionNames.Count > 0)
+                {
+                    foreach (var name in companionNames)
+                        registration.Shifts.Add(new ArrangementRegistrationShift { ArrangementShiftId = shiftId, CompanionName = name!.Trim() });
+                }
+                else
+                {
+                    registration.Shifts.Add(new ArrangementRegistrationShift { ArrangementShiftId = shiftId });
+                }
             }
 
             foreach (var answer in answers)
@@ -519,7 +546,7 @@ namespace web.Repositories.Registrations
                 : (PublicArrangementStatus.Ok, arrangement, person);
         }
 
-        private async Task<PublicArrangementAccessViewModel> BuildPublicArrangementAccessViewModelAsync(PublicArrangementStatus status, Arrangement? arrangement, Guid? personPublicId, CancellationToken ct)
+        private async Task<PublicArrangementAccessViewModel> BuildPublicArrangementAccessViewModelAsync(PublicArrangementStatus status, Arrangement? arrangement, Person? person, Guid? personPublicId, CancellationToken ct)
         {
             var vm = new PublicArrangementAccessViewModel { Status = status };
             if (arrangement is null) return vm;
@@ -551,6 +578,8 @@ namespace web.Repositories.Registrations
                 Title = arrangement.Title,
                 Description = arrangement.Description,
                 PersonPublicId = personPublicId,
+                PersonName = person?.Name,
+                AllowMultipleNamesPerShift = arrangement.AllowMultipleNamesPerShift,
                 Fields = arrangement.FormFields
                     .OrderBy(f => f.Order)
                     .Select(f => new ArrangementFieldFillViewModel
@@ -654,9 +683,22 @@ namespace web.Repositories.Registrations
                 RegisteredAtUtc = r.RegisteredAtUtc,
                 Answers = r.Answers.ToDictionary(a => a.ArrangementFormFieldId, a => a.ValueText ?? string.Empty),
                 ShiftLabels = r.Shifts
-                    .Select(rs => rs.ArrangementShift)
-                    .OrderBy(s => s.StartUtc)
-                    .Select(s => $"{s.Title} ({ToLocal(s.StartUtc):dd/MM HH:mm}–{ToLocal(s.EndUtc):HH:mm})")
+                    .GroupBy(rs => rs.ArrangementShiftId)
+                    .OrderBy(g => g.First().ArrangementShift.StartUtc)
+                    .Select(g =>
+                    {
+                        var shift = g.First().ArrangementShift;
+                        var label = $"{shift.Title} ({ToLocal(shift.StartUtc):dd/MM HH:mm}–{ToLocal(shift.EndUtc):HH:mm})";
+                        var companionNames = g.Select(rs => rs.CompanionName).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                        if (companionNames.Count == 0) return label;
+
+                        // A null CompanionName row means the implicit registrant is still one of the
+                        // slots — "+" reads as "plus these". Once every slot has been explicitly
+                        // named (the registrant's own field was used or edited too), there's no
+                        // implicit self left, so list the names as-is instead of "plus".
+                        var hasImplicitSelf = g.Any(rs => rs.CompanionName is null);
+                        return hasImplicitSelf ? $"{label} — + {string.Join(", ", companionNames)}" : $"{label} — {string.Join(", ", companionNames)}";
+                    })
                     .ToList()
             }).ToList();
         }

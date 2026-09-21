@@ -660,10 +660,14 @@ namespace web.Data
                 entity.HasIndex(e => e.ArrangementFormFieldId);
             });
 
-            // Configure ArrangementRegistrationShift (join entity: which shifts a registration covers)
+            // Configure ArrangementRegistrationShift (join entity: which shifts a registration covers
+            // — possibly several rows per shift when the arrangement allows named companions)
             builder.Entity<ArrangementRegistrationShift>(entity =>
             {
-                entity.HasKey(e => new { e.ArrangementRegistrationId, e.ArrangementShiftId });
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CompanionName)
+                    .HasMaxLength(200);
 
                 entity.HasOne(e => e.ArrangementRegistration)
                     .WithMany(r => r.Shifts)

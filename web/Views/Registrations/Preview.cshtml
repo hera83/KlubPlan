@@ -30,7 +30,7 @@
     </div>
 
     <div class="card shadow-sm">
-        <div class="card-body">
+        <div class="card-body" id="arrangementPreviewBody" data-person-name="Dit navn">
             <h1>@Model.Title</h1>
             @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
@@ -159,7 +159,7 @@
                                     {
                                         <div class="arrangement-shift-preview">
                                             <label class="arrangement-shift-preview-row" for="shiftSelect_@shift.Id">
-                                                <input class="form-check-input" type="checkbox" id="shiftSelect_@shift.Id" />
+                                                <input class="form-check-input arrangement-shift-checkbox" type="checkbox" id="shiftSelect_@shift.Id" value="@shift.Id" />
                                                 <span class="arrangement-shift-preview-info">
                                                     <span class="fw-semibold d-block">@shift.Title</span>
                                                     <span class="text-muted small">
@@ -172,6 +172,16 @@
                                                 </span>
                                                 <span class="badge-info">@shift.NeededCount ledig@(shift.NeededCount == 1 ? "" : "e") plads@(shift.NeededCount == 1 ? "" : "er")</span>
                                             </label>
+
+                                            @if (Model.AllowMultipleNamesPerShift && shift.NeededCount > 1)
+                                            {
+                                                <div class="arrangement-shift-companions-wrap">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary arrangement-shift-add-companion-btn" data-shift-id="@shift.Id" disabled>
+                                                        <i class="bi bi-plus-lg me-1"></i> Tilføj navn
+                                                    </button>
+                                                    <div class="arrangement-shift-companions" data-shift-id="@shift.Id" data-max="@shift.NeededCount"></div>
+                                                </div>
+                                            }
 
                                             @if (shift.Requirements.Count > 0)
                                             {
@@ -207,8 +217,11 @@
     </div>
 </div>
 
+<script src="~/js/arrangement-shift-companions.js" asp-append-version="true"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        window.FvArrangementShiftCompanions?.init({ formEl: document.getElementById('arrangementPreviewBody') });
+
         var submitBtn = document.getElementById('previewSubmitBtn');
         var shiftCheckboxes = document.querySelectorAll('.arrangement-shift-preview-row input[type="checkbox"]');
 

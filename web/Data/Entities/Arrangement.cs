@@ -37,6 +37,12 @@ namespace web.Data.Entities
 
         public ArrangementAccessMode AccessMode { get; set; } = ArrangementAccessMode.Open;
 
+        /// <summary>
+        /// When true, a registrant may add extra, freely-named companions (e.g. a parent/guardian)
+        /// to a shift they select, up to that shift's NeededCount. Default false.
+        /// </summary>
+        public bool AllowMultipleNamesPerShift { get; set; } = false;
+
         /// <summary>User who created the arrangement. Nullable so it survives the user being deleted.</summary>
         public string? CreatedByUserId { get; set; }
 

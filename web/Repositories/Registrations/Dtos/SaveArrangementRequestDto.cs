@@ -48,5 +48,6 @@ namespace web.Repositories.Registrations.Dtos
         public ArrangementAccessMode AccessMode { get; set; } = ArrangementAccessMode.Open;
         public List<int> AllowedPersonIds { get; set; } = new();
         public List<int> AllowedGroupIds { get; set; } = new();
+        public bool AllowMultipleNamesPerShift { get; set; }
     }
 }

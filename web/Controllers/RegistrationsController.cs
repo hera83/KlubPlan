@@ -178,7 +178,8 @@ namespace web.Controllers
                 RegistrationClosesAtUtc = model.RegistrationClosesAt,
                 AccessMode = model.AccessMode,
                 AllowedPersonIds = model.AllowedPersonIds,
-                AllowedGroupIds = model.AllowedGroupIds
+                AllowedGroupIds = model.AllowedGroupIds,
+                AllowMultipleNamesPerShift = model.AllowMultipleNamesPerShift
             };
 
             var result = await _arrangementService.SaveArrangementAsync(dto, ct);

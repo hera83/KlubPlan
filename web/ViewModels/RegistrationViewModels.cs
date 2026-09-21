@@ -128,6 +128,7 @@ namespace web.ViewModels
         public ArrangementAccessMode AccessMode { get; set; } = ArrangementAccessMode.Open;
         public List<int> AllowedPersonIds { get; set; } = new();
         public List<int> AllowedGroupIds { get; set; } = new();
+        public bool AllowMultipleNamesPerShift { get; set; }
 
         /// <summary>Server-populerede options til Adgang-fanen — postes ikke tilbage fra klienten.</summary>
         public List<PersonGroupOptionViewModel> GroupOptions { get; set; } = new();
@@ -173,6 +174,9 @@ namespace web.ViewModels
 
         /// <summary>Re-populated from a failed POST so the respondent doesn't lose their selection.</summary>
         public bool IsSelected { get; set; }
+
+        /// <summary>Re-populated from a failed POST so the respondent doesn't lose their companion names.</summary>
+        public List<string> SubmittedCompanionNames { get; set; } = new();
     }
 
     public class ArrangementFillViewModel
@@ -186,11 +190,17 @@ namespace web.ViewModels
         /// <summary>Round-tripped from the UId query parameter on the public /Tilmelding link.</summary>
         public Guid? PersonPublicId { get; set; }
 
+        /// <summary>The registrant's own name — used to pre-fill the first companion field for a shift.</summary>
+        public string? PersonName { get; set; }
+
         /// <summary>Arrangement.PublicId — used as the Id route value when posting back from the public /Tilmelding link.</summary>
         public Guid ArrangementPublicId { get; set; }
 
         /// <summary>Set when Status is NotYetOpen, so the view can show a live countdown to this date.</summary>
         public DateTime? RegistrationOpensAtUtc { get; set; }
+
+        /// <summary>When true, the shift picker offers a "+" to add extra, freely-named companions per shift.</summary>
+        public bool AllowMultipleNamesPerShift { get; set; }
     }
 
     /// <summary>
@@ -217,6 +227,13 @@ namespace web.ViewModels
         public int ArrangementFormFieldId { get; set; }
         public string? Value { get; set; }
         public List<string> Values { get; set; } = new();
+    }
+
+    /// <summary>One extra, freely-named companion posted for a given shift (only meaningful when the arrangement allows it).</summary>
+    public class ArrangementShiftCompanionInputViewModel
+    {
+        public int ShiftId { get; set; }
+        public string? Name { get; set; }
     }
 
     // ── Svar (Tilmeldte) ────────────────────────────────────────────────────

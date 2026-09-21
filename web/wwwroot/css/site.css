@@ -1724,6 +1724,26 @@ input[type="file"]::-webkit-file-upload-button:hover {
   padding-left: 2.1rem;
 }
 
+.arrangement-shift-companions-wrap {
+  margin-top: 0.6rem;
+  padding-left: 2.1rem;
+}
+
+.arrangement-shift-companions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.arrangement-shift-companion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.arrangement-shift-companion-row .form-control { flex: 1 1 auto; }
+
 .chat-bubble ul,
 .chat-bubble ol { margin: 0 0 .5rem; padding-left: 1.25rem; }
 

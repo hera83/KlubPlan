@@ -132,6 +132,17 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" asp-for="AllowMultipleNamesPerShift" role="switch" />
+                            <label class="form-check-label" asp-for="AllowMultipleNamesPerShift">Tillad multi-tilmelding</label>
+                        </div>
+                        <div class="form-text">
+                            Når aktiveret kan den, der tilmelder sig en vagt, tilføje flere navngivne personer til
+                            samme vagt (fx en forælder eller værge) — op til vagtens antal ledige pladser.
+                        </div>
+                    </div>
+
                     <div id="arrangementAccessRestrictedPanel" class="row g-3 @(Model.AccessMode == ArrangementAccessMode.Restricted ? "" : "d-none")">
                         <div class="col-md-6">
                             <label class="form-label">Grupper</label>

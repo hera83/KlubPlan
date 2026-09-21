@@ -152,7 +152,7 @@
                             <div class="alert alert-danger">@Model.ShiftError</div>
                         }
 
-                        <form asp-controller="Tilmelding" asp-action="Submit" asp-route-id="@arrangement.ArrangementPublicId" asp-route-uId="@arrangement.PersonPublicId" method="post" class="mt-3">
+                        <form id="tilmeldingForm" data-person-name="@arrangement.PersonName" asp-controller="Tilmelding" asp-action="Submit" asp-route-id="@arrangement.ArrangementPublicId" asp-route-uId="@arrangement.PersonPublicId" method="post" class="mt-3">
                             @Html.AntiForgeryToken()
                             @{ var i = 0; }
                             @foreach (var field in arrangement.Fields)
@@ -291,6 +291,25 @@
                                                                 <span class="badge-info">@shift.RemainingCount ledig@(shift.RemainingCount == 1 ? "" : "e") plads@(shift.RemainingCount == 1 ? "" : "er")</span>
                                                             </label>
 
+                                                            @if (arrangement.AllowMultipleNamesPerShift && shift.RemainingCount > 1)
+                                                            {
+                                                                <div class="arrangement-shift-companions-wrap">
+                                                                    <button type="button" class="btn btn-sm btn-outline-secondary arrangement-shift-add-companion-btn" data-shift-id="@shift.Id" disabled="@(!shift.IsSelected)">
+                                                                        <i class="bi bi-plus-lg me-1"></i> Tilføj navn
+                                                                    </button>
+                                                                    <div class="arrangement-shift-companions" data-shift-id="@shift.Id" data-max="@shift.RemainingCount">
+                                                                        @foreach (var companionName in shift.SubmittedCompanionNames)
+                                                                        {
+                                                                            <div class="arrangement-shift-companion-row">
+                                                                                <input type="text" class="form-control form-control-sm arrangement-shift-companion-name" placeholder="Navn på den, der tager vagten" value="@companionName" />
+                                                                                <input type="hidden" class="arrangement-shift-companion-shiftid" value="@shift.Id" />
+                                                                                <button type="button" class="btn btn-sm btn-outline-danger btn-icon arrangement-shift-companion-remove" title="Fjern" aria-label="Fjern"><i class="bi bi-trash"></i></button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            }
+
                                                             @if (shift.Requirements.Count > 0)
                                                             {
                                                                 <div class="arrangement-shift-preview-requirements">
@@ -327,8 +346,11 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/arrangement-shift-companions.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            window.FvArrangementShiftCompanions?.init({ formEl: document.getElementById('tilmeldingForm') });
+
             document.querySelectorAll('.arrangement-shift-checkbox').forEach((cb) => {
                 cb.addEventListener('change', () => {
                     var block = cb.closest('.arrangement-shift-preview');

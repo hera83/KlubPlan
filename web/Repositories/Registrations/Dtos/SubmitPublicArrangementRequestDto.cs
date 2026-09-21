@@ -15,5 +15,8 @@ namespace web.Repositories.Registrations.Dtos
 
         /// <summary>ArrangementShiftRequirement ids the registrant ticked to self-declare they meet them.</summary>
         public List<int> ConfirmedRequirementIds { get; set; } = new();
+
+        /// <summary>Extra, freely-named companions per shift — only honored when the arrangement allows it.</summary>
+        public List<SubmitArrangementShiftCompanionDto> ShiftCompanions { get; set; } = new();
     }
 }
