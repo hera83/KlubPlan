@@ -81,7 +81,8 @@
                                                     <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@message.Id" title="Vis besked" aria-label="Vis besked">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-send-id="@message.Id"
+                                                    <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#resendMessageModal"
+                                                            data-send-id="@message.Id" data-subject="@message.Subject"
                                                             title="@(message.IsDraft ? "Send" : "Send igen")" aria-label="@(message.IsDraft ? "Send" : "Send igen")">
                                                         <i class="bi @(message.IsDraft ? "bi-send" : "bi-arrow-repeat")"></i>
                                                     </button>
@@ -113,6 +114,7 @@
 {
     @await Html.PartialAsync("_ComposeMessageModal", Model)
     @await Html.PartialAsync("_CommunicationDeleteModal")
+    @await Html.PartialAsync("_ResendMessageModal")
 }
 
 <script>
@@ -125,28 +127,6 @@
                 const text = row.textContent.toLowerCase();
                 row.classList.toggle('d-none', term.length > 0 && !text.includes(term));
             });
-        });
-
-        table?.addEventListener('click', async (e) => {
-            const sendBtn = e.target.closest('[data-send-id]');
-            if (!sendBtn) return;
-
-            sendBtn.disabled = true;
-            try {
-                const res = await fetch('@Url.Action("SendExisting")', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'fetch',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                    },
-                    body: new URLSearchParams({ id: sendBtn.dataset.sendId })
-                });
-                const data = await res.json();
-                window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
-                if (data.success) location.reload();
-            } finally {
-                sendBtn.disabled = false;
-            }
         });
     })();
 </script>

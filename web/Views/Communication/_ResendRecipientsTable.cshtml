@@ -1,0 +1,36 @@
+@model List<web.ViewModels.CommunicationResendTargetViewModel>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted mb-0">Ingen modtagere fundet.</p>
+}
+else
+{
+    <div class="table-responsive" style="max-height:320px;overflow-y:auto;">
+        <table class="table table-sm table-striped align-middle mb-0" id="resendRecipientsTable">
+            <thead>
+                <tr>
+                    <th style="width:2.5rem;">
+                        <input type="checkbox" class="form-check-input" id="resendSelectAll" checked aria-label="Vælg alle" />
+                    </th>
+                    <th>Navn</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var target in Model)
+                {
+                    <tr data-received="@(target.ReceivedBefore ? "true" : "false")">
+                        <td><input type="checkbox" class="form-check-input resend-recipient-checkbox" name="personIds" value="@target.PersonId" checked /></td>
+                        <td>
+                            @target.Name
+                            @if (!target.ReceivedBefore)
+                            {
+                                <span class="badge-info ms-1">Ny</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -101,4 +101,14 @@ namespace web.ViewModels
         public string Address { get; set; } = string.Empty;
         public string DeliveryStatus { get; set; } = string.Empty;
     }
+
+    /// <summary>One selectable row in the "Send igen" recipient picker — the full target audience (every person covered by the message's selected groups/persons), independent of whether they ended up with a resolvable address.</summary>
+    public class CommunicationResendTargetViewModel
+    {
+        public int PersonId { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>True if this person has at least one queued send attempt on record for this message (from any previous send/resend) — false means they've never actually been reached, e.g. because they had no contact info at send time. Drives the "Ny" quick-select in the picker.</summary>
+        public bool ReceivedBefore { get; set; }
+    }
 }

@@ -1,0 +1,142 @@
+<!-- Send / send igen modal -->
+<div class="modal fade" id="resendMessageModal" tabindex="-1" aria-labelledby="resendMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resendMessageModalLabel"><i class="bi bi-send me-2"></i>Send besked</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">"<strong id="resendMessageSubject"></strong>" sendes til de markerede modtagere nedenfor.</p>
+                <div class="d-flex gap-2 mb-2">
+                    <input type="search" class="form-control form-control-sm" id="resendSearchInput" placeholder="Søg efter navn..." autocomplete="off" />
+                    <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" id="resendSelectNewBtn"
+                            title="Vælg automatisk dem, der ikke har modtaget beskeden før (fx pga. manglende kontaktoplysninger)">
+                        <i class="bi bi-stars me-1"></i> Ny
+                    </button>
+                </div>
+                <div id="resendRecipientsBody">
+                    <p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Henter modtagere...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="button" class="btn btn-primary" id="resendConfirmBtn">
+                    <i class="bi bi-send me-1"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modalEl = document.getElementById('resendMessageModal');
+        if (!modalEl) return;
+
+        const subjectEl = document.getElementById('resendMessageSubject');
+        const bodyEl = document.getElementById('resendRecipientsBody');
+        const searchInput = document.getElementById('resendSearchInput');
+        const selectNewBtn = document.getElementById('resendSelectNewBtn');
+        const confirmBtn = document.getElementById('resendConfirmBtn');
+        let currentMessageId = null;
+
+        const getRows = () => Array.from(bodyEl.querySelectorAll('#resendRecipientsTable tbody tr'));
+        const getCheckboxes = () => Array.from(bodyEl.querySelectorAll('.resend-recipient-checkbox'));
+
+        const syncSelectAll = () => {
+            const selectAll = bodyEl.querySelector('#resendSelectAll');
+            if (!selectAll) return;
+            const checkboxes = getCheckboxes();
+            const checkedCount = checkboxes.filter((cb) => cb.checked).length;
+            selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+        };
+
+        searchInput?.addEventListener('input', () => {
+            const term = searchInput.value.trim().toLowerCase();
+            getRows().forEach((row) => {
+                row.classList.toggle('d-none', term.length > 0 && !row.textContent.toLowerCase().includes(term));
+            });
+        });
+
+        // Doesn't send anything — just replaces the current selection with everyone who has no
+        // recorded send attempt for this message yet (never reached, typically due to missing
+        // contact info), so an admin can review them before hitting Send themselves.
+        selectNewBtn?.addEventListener('click', () => {
+            const rows = getRows();
+            if (rows.length === 0) return;
+            rows.forEach((row) => {
+                const checkbox = row.querySelector('.resend-recipient-checkbox');
+                if (checkbox) checkbox.checked = row.dataset.received === 'false';
+            });
+            syncSelectAll();
+        });
+
+        bodyEl.addEventListener('change', (e) => {
+            if (e.target.id === 'resendSelectAll') {
+                getCheckboxes().forEach((cb) => { cb.checked = e.target.checked; });
+            } else if (e.target.classList.contains('resend-recipient-checkbox')) {
+                syncSelectAll();
+            }
+        });
+
+        modalEl.addEventListener('show.bs.modal', async (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+
+            currentMessageId = btn.dataset.sendId;
+            subjectEl.textContent = btn.dataset.subject || '';
+            searchInput.value = '';
+            bodyEl.innerHTML = '<p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Henter modtagere...</p>';
+
+            try {
+                const res = await fetch(`@Url.Action("GetResendRecipients")?id=${encodeURIComponent(currentMessageId)}`, {
+                    headers: { 'X-Requested-With': 'fetch' }
+                });
+                bodyEl.innerHTML = await res.text();
+            } catch {
+                bodyEl.innerHTML = '<p class="text-danger mb-0">Modtagere kunne ikke hentes.</p>';
+            }
+        });
+
+        confirmBtn?.addEventListener('click', async () => {
+            const checkboxes = getCheckboxes();
+            const total = checkboxes.length;
+            const selected = checkboxes.filter((cb) => cb.checked).map((cb) => cb.value);
+
+            if (total > 0 && selected.length === 0) {
+                window.FvToast?.show('error', 'Vælg mindst én modtager.');
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            try {
+                const params = new URLSearchParams();
+                params.append('id', currentMessageId);
+                if (selected.length > 0 && selected.length < total) {
+                    selected.forEach((id) => params.append('personIds', id));
+                }
+
+                const res = await fetch('@Url.Action("SendExisting")', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'fetch',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: params
+                });
+                const data = await res.json();
+                window.FvToast?.show(data.type || (data.success ? 'success' : 'error'), data.message);
+                if (data.success) {
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                    location.reload();
+                }
+            } finally {
+                confirmBtn.disabled = false;
+            }
+        });
+    })();
+</script>

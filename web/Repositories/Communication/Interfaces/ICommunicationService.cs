@@ -9,6 +9,9 @@ namespace web.Repositories.Communication.Interfaces
 
         Task<CommunicationMessageDetailViewModel?> GetDetailsAsync(int id, CancellationToken ct = default);
 
+        /// <summary>The full target audience (Id + name) for a message's selected groups/persons, used to populate the "Send igen" recipient picker.</summary>
+        Task<List<CommunicationResendTargetViewModel>> GetResendTargetsAsync(int id, CancellationToken ct = default);
+
         /// <summary>
         /// Resolves the deduped set of (Channel, Address) send targets for a group/person selection:
         /// each target Person's own contact info plus every one of their guardians' contact info,
@@ -25,8 +28,15 @@ namespace web.Repositories.Communication.Interfaces
         /// <summary>Creates or updates a Draft message, optionally sending it immediately (dto.Action == "send").</summary>
         Task<SaveMessageResponseDto> SaveMessageAsync(ComposeMessageRequestDto dto, string? userId, string baseUrl, CancellationToken ct = default);
 
-        /// <summary>(Re-)resolves recipients and sends an existing message — used for sending a saved draft and for "Send igen".</summary>
-        Task<SaveMessageResponseDto> SendExistingAsync(int id, string baseUrl, CancellationToken ct = default);
+        /// <summary>
+        /// (Re-)resolves recipients and sends an existing message — used for sending a saved draft
+        /// and for "Send igen". When <paramref name="recipientPersonIds"/> is null/empty, sends to
+        /// the message's full configured audience (groups + directly-selected persons), same as
+        /// before. When it has entries, only those persons are messaged — filtered server-side down
+        /// to the message's own target audience, so the picker can't be used to reach anyone outside
+        /// the originally configured groups/persons.
+        /// </summary>
+        Task<SaveMessageResponseDto> SendExistingAsync(int id, string baseUrl, IReadOnlyCollection<int>? recipientPersonIds = null, CancellationToken ct = default);
 
         /// <summary>Deletes a message and its group/person selections and recipient audit trail. Queued SmsMessage/CommunicationEmailMessage rows are kept (they're the delivery record, not owned by the message).</summary>
         Task<bool> DeleteMessageAsync(int id, CancellationToken ct = default);

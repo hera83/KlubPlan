@@ -52,6 +52,7 @@
                         <div class="col-md-12">
                             <label class="form-label">Indhold</label>
                             <textarea name="Body" id="composeBody" class="form-control" rows="5" placeholder="Skriv besked..."></textarea>
+                            <div class="invalid-feedback">Skriv et indhold, før beskeden sendes.</div>
                             <div class="form-text"><i class="bi bi-info-circle me-1"></i>Brug {{Navn}} i teksten, så indsættes modtagerens navn automatisk.</div>
                         </div>
 
@@ -147,6 +148,20 @@
         const personFilter = document.getElementById('composePersonFilter');
         const personsWrap = document.getElementById('composePersonsWrap');
         const groupsWrap = document.getElementById('composeGroupsWrap');
+        const composeBody = document.getElementById('composeBody');
+
+        // Drafts may stay empty for later editing — only block the actual "Send" button, so a
+        // blank message can never go out to a whole group/audience.
+        document.getElementById('composeMessageForm')?.addEventListener('submit', (e) => {
+            if (e.submitter?.value !== 'send') return;
+            const isEmpty = !composeBody.value.trim();
+            composeBody.classList.toggle('is-invalid', isEmpty);
+            if (isEmpty) {
+                e.preventDefault();
+                composeBody.focus();
+            }
+        });
+        composeBody?.addEventListener('input', () => composeBody.classList.remove('is-invalid'));
         personFilter?.addEventListener('input', () => {
             const term = personFilter.value.trim().toLowerCase();
             personsWrap.querySelectorAll('.form-check').forEach((row) => {
@@ -192,7 +207,6 @@
         const arrangementWrap = document.getElementById('composeArrangementWrap');
         const arrangementSelect = document.getElementById('composeArrangementSelect');
         const arrangementRestrictedHint = document.getElementById('composeArrangementRestrictedHint');
-        const composeBody = document.getElementById('composeBody');
 
         // Drops (or swaps out) a default sentence about when registration opens/is open into the
         // body, so recipients know upfront when they can pick shifts. Tracks the last inserted

@@ -195,6 +195,45 @@ namespace web.Repositories.Communication
             };
         }
 
+        public async Task<List<CommunicationResendTargetViewModel>> GetResendTargetsAsync(int id, CancellationToken ct = default)
+        {
+            var message = await _context.CommunicationMessages
+                .AsNoTracking()
+                .Include(m => m.Groups)
+                .Include(m => m.DirectPersons)
+                .FirstOrDefaultAsync(m => m.Id == id, ct);
+
+            if (message is null)
+            {
+                return new List<CommunicationResendTargetViewModel>();
+            }
+
+            var groupIds = message.Groups.Select(g => g.PersonGroupId).ToList();
+            var personIds = message.DirectPersons.Select(p => p.PersonId).ToList();
+
+            var receivedBeforePersonIds = await _context.CommunicationMessageRecipients
+                .Where(r => r.CommunicationMessageId == id)
+                .Select(r => r.PersonId)
+                .Distinct()
+                .ToListAsync(ct);
+            var receivedBeforeSet = receivedBeforePersonIds.ToHashSet();
+
+            var targets = await _context.People
+                .Where(p => personIds.Contains(p.Id) || p.Memberships.Any(m => groupIds.Contains(m.GroupId)))
+                .OrderBy(p => p.Name)
+                .Select(p => new { p.Id, p.Name })
+                .ToListAsync(ct);
+
+            return targets
+                .Select(p => new CommunicationResendTargetViewModel
+                {
+                    PersonId = p.Id,
+                    Name = p.Name,
+                    ReceivedBefore = receivedBeforeSet.Contains(p.Id)
+                })
+                .ToList();
+        }
+
         public async Task<List<ResolvedRecipientDto>> ResolveRecipientsAsync(
             IReadOnlyCollection<int> groupIds,
             IReadOnlyCollection<int> personIds,
@@ -364,13 +403,13 @@ namespace web.Repositories.Communication
 
             if (dto.Action == "send")
             {
-                return await SendMessageInternalAsync(message, baseUrl, ct);
+                return await SendMessageInternalAsync(message, baseUrl, null, ct);
             }
 
             return new SaveMessageResponseDto { Success = true, MessageId = message.Id };
         }
 
-        public async Task<SaveMessageResponseDto> SendExistingAsync(int id, string baseUrl, CancellationToken ct = default)
+        public async Task<SaveMessageResponseDto> SendExistingAsync(int id, string baseUrl, IReadOnlyCollection<int>? recipientPersonIds = null, CancellationToken ct = default)
         {
             var message = await _context.CommunicationMessages
                 .Include(m => m.Groups)
@@ -382,7 +421,7 @@ namespace web.Repositories.Communication
                 return new SaveMessageResponseDto { Success = false, ErrorMessage = "Beskeden blev ikke fundet." };
             }
 
-            return await SendMessageInternalAsync(message, baseUrl, ct);
+            return await SendMessageInternalAsync(message, baseUrl, recipientPersonIds, ct);
         }
 
         public async Task<bool> DeleteMessageAsync(int id, CancellationToken ct = default)
@@ -401,12 +440,47 @@ namespace web.Repositories.Communication
             return true;
         }
 
-        private async Task<SaveMessageResponseDto> SendMessageInternalAsync(CommunicationMessage message, string baseUrl, CancellationToken ct)
+        private async Task<SaveMessageResponseDto> SendMessageInternalAsync(CommunicationMessage message, string baseUrl, IReadOnlyCollection<int>? recipientPersonIdsOverride, CancellationToken ct)
         {
+            // Covers every path that actually dispatches a message — first send, sending a saved
+            // draft, and "Send igen" (full or partial) — so an empty body can never go out to a
+            // whole group/audience regardless of which button triggered it.
+            if (string.IsNullOrWhiteSpace(message.Body))
+            {
+                return new SaveMessageResponseDto
+                {
+                    Success = false,
+                    ErrorMessage = "Beskeden kan ikke sendes uden indhold.",
+                    MessageId = message.Id
+                };
+            }
+
             var groupIds = message.Groups.Select(g => g.PersonGroupId).ToList();
             var personIds = message.DirectPersons.Select(p => p.PersonId).ToList();
 
-            var resolved = await ResolveRecipientsAsync(groupIds, personIds, message.ViaEmail, message.ViaSms, ct);
+            // A picked subset from the "Send igen" modal narrows the send down to specific persons
+            // instead of the whole configured audience — but only ones actually within that
+            // audience, re-checked here server-side so the picker can't be used to reach anyone else.
+            var isPartialSend = recipientPersonIdsOverride is { Count: > 0 };
+            List<int> resolveGroupIds;
+            List<int> resolvePersonIds;
+            if (isPartialSend)
+            {
+                var audiencePersonIds = await _context.People
+                    .Where(p => personIds.Contains(p.Id) || p.Memberships.Any(m => groupIds.Contains(m.GroupId)))
+                    .Select(p => p.Id)
+                    .ToListAsync(ct);
+                var allowedIds = audiencePersonIds.ToHashSet();
+                resolveGroupIds = new List<int>();
+                resolvePersonIds = recipientPersonIdsOverride!.Where(allowedIds.Contains).Distinct().ToList();
+            }
+            else
+            {
+                resolveGroupIds = groupIds;
+                resolvePersonIds = personIds;
+            }
+
+            var resolved = await ResolveRecipientsAsync(resolveGroupIds, resolvePersonIds, message.ViaEmail, message.ViaSms, ct);
             if (resolved.Count == 0)
             {
                 _logger.LogWarning("CommunicationMessage {Id} resolved to zero recipients", message.Id);
@@ -525,8 +599,15 @@ namespace web.Repositories.Communication
             message.Status = CommunicationMessageStatus.Sent;
             message.SentAtUtc = DateTime.UtcNow;
             message.UpdatedAtUtc = DateTime.UtcNow;
-            message.RecipientCount = resolved.Select(r => r.PersonId).Distinct().Count();
-            message.RecipientSummary = await BuildRecipientSummaryAsync(groupIds, personIds, ct);
+
+            // A partial "Send igen" targets a subset of the configured audience for this one send —
+            // it doesn't redefine the message's audience, so the stats keep describing the full
+            // groups/persons selection instead of shrinking to whoever this particular send reached.
+            if (!isPartialSend)
+            {
+                message.RecipientCount = resolved.Select(r => r.PersonId).Distinct().Count();
+                message.RecipientSummary = await BuildRecipientSummaryAsync(groupIds, personIds, ct);
+            }
 
             await _context.SaveChangesAsync(ct);
 

@@ -62,12 +62,19 @@ namespace web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = "AdminOrDeveloper")]
+        public async Task<IActionResult> GetResendRecipients(int id, CancellationToken ct)
+        {
+            var recipients = await _communicationService.GetResendTargetsAsync(id, ct);
+            return PartialView("_ResendRecipientsTable", recipients);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "AdminOrDeveloper")]
-        public async Task<IActionResult> SendExisting(int id, CancellationToken ct)
+        public async Task<IActionResult> SendExisting(int id, List<int>? personIds, CancellationToken ct)
         {
-            var result = await _communicationService.SendExistingAsync(id, BaseUrl, ct);
+            var result = await _communicationService.SendExistingAsync(id, BaseUrl, personIds, ct);
             return result.Success
                 ? this.ToastSuccessJson("Beskeden er sendt.")
                 : this.ToastErrorJson(result.ErrorMessage ?? "Beskeden kunne ikke sendes.");
