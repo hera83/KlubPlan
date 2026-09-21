@@ -15,6 +15,9 @@ namespace web.Repositories.Communication.Interfaces
 
         Task<CommunicationMessageDetailViewModel?> GetDetailsAsync(int id, CancellationToken ct = default);
 
+        /// <summary>Filtered/paged "Modtagere" table for a message — the data-table endpoint backing Communication/Details' recipients table.</summary>
+        Task<CommunicationRecipientFilterViewModel?> GetRecipientsAsync(int id, CommunicationRecipientFilterViewModel filter, CancellationToken ct = default);
+
         /// <summary>The full target audience (Id + name) for a message's selected groups/persons, used to populate the "Send igen" recipient picker.</summary>
         Task<List<CommunicationResendTargetViewModel>> GetResendTargetsAsync(int id, CancellationToken ct = default);
 

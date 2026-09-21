@@ -88,8 +88,27 @@ namespace web.ViewModels
         /// <summary>Name of the attached arrangement, if a Tilmelding link was sent with the message. Informational only.</summary>
         public string? ArrangementTitle { get; set; }
 
+        /// <summary>Page 1 of the full target audience, plus the filter state — feeds the paged/searchable "Modtagere" table (data-table pattern).</summary>
+        public CommunicationRecipientFilterViewModel RecipientsTable { get; set; } = new();
+    }
+
+    /// <summary>Filter/paging state for the "Modtagere" table on Communication/Details — mirrors the UserFilterViewModel data-table pattern (holds both the request filter and the resulting page).</summary>
+    public class CommunicationRecipientFilterViewModel
+    {
+        public string? SearchText { get; set; }
+
+        /// <summary>"MissingEmail" | "MissingSms" | null (Alle).</summary>
+        public string? ContactStatus { get; set; }
+
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+
         /// <summary>The full target audience (every person covered by the selected groups/persons), not just those who ended up with a resolvable address.</summary>
         public List<CommunicationRecipientDetailViewModel> Recipients { get; set; } = new();
+        public int TotalCount { get; set; }
+        public bool ViaEmail { get; set; }
+        public bool ViaSms { get; set; }
+        public bool IsSent { get; set; }
     }
 
     public class CommunicationRecipientDetailViewModel

@@ -145,8 +145,41 @@ namespace web.Repositories.Communication
                 .AsNoTracking()
                 .Include(m => m.Form)
                 .Include(m => m.Arrangement)
-                .Include(m => m.Groups).ThenInclude(g => g.PersonGroup)
-                .Include(m => m.DirectPersons).ThenInclude(dp => dp.Person)
+                .FirstOrDefaultAsync(m => m.Id == id, ct);
+
+            if (message is null)
+            {
+                return null;
+            }
+
+            var recipientsTable = await GetRecipientsAsync(id, new CommunicationRecipientFilterViewModel(), ct);
+
+            return new CommunicationMessageDetailViewModel
+            {
+                Id = message.Id,
+                Subject = message.Subject,
+                Body = message.Body,
+                Status = CommunicationMessageStatuses.GetUILabel(message.Status),
+                StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(message.Status),
+                RecipientSummary = message.RecipientSummary,
+                RecipientBadges = BuildRecipientBadges(message),
+                IsSent = message.SentAtUtc.HasValue,
+                ViaEmail = message.ViaEmail,
+                ViaSms = message.ViaSms,
+                CreatedAtUtc = message.CreatedAtUtc,
+                SentAtUtc = message.SentAtUtc,
+                FormTitle = message.Form?.Title,
+                ArrangementTitle = message.Arrangement?.Title,
+                RecipientsTable = recipientsTable ?? new CommunicationRecipientFilterViewModel()
+            };
+        }
+
+        public async Task<CommunicationRecipientFilterViewModel?> GetRecipientsAsync(int id, CommunicationRecipientFilterViewModel filter, CancellationToken ct = default)
+        {
+            var message = await _context.CommunicationMessages
+                .AsNoTracking()
+                .Include(m => m.Groups)
+                .Include(m => m.DirectPersons)
                 .Include(m => m.Recipients).ThenInclude(r => r.SmsMessage)
                 .Include(m => m.Recipients).ThenInclude(r => r.CommunicationEmailMessage)
                 .FirstOrDefaultAsync(m => m.Id == id, ct);
@@ -199,26 +232,34 @@ namespace web.Repositories.Communication
                         .ToList(),
                     HasSmsContact = !string.IsNullOrWhiteSpace(person.Mobile) || person.Guardians.Any(g => !string.IsNullOrWhiteSpace(g.Mobile))
                 };
-            }).ToList();
+            }).AsEnumerable();
 
-            return new CommunicationMessageDetailViewModel
+            if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
-                Id = message.Id,
-                Subject = message.Subject,
-                Body = message.Body,
-                Status = CommunicationMessageStatuses.GetUILabel(message.Status),
-                StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(message.Status),
-                RecipientSummary = message.RecipientSummary,
-                RecipientBadges = BuildRecipientBadges(message),
-                IsSent = message.SentAtUtc.HasValue,
-                ViaEmail = message.ViaEmail,
-                ViaSms = message.ViaSms,
-                CreatedAtUtc = message.CreatedAtUtc,
-                SentAtUtc = message.SentAtUtc,
-                FormTitle = message.Form?.Title,
-                ArrangementTitle = message.Arrangement?.Title,
-                Recipients = recipients
-            };
+                var term = filter.SearchText.Trim();
+                recipients = recipients.Where(r => r.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (filter.ContactStatus == "MissingEmail")
+            {
+                recipients = recipients.Where(r => !r.HasEmailContact);
+            }
+            else if (filter.ContactStatus == "MissingSms")
+            {
+                recipients = recipients.Where(r => !r.HasSmsContact);
+            }
+
+            var filtered = recipients.ToList();
+
+            filter.ViaEmail = message.ViaEmail;
+            filter.ViaSms = message.ViaSms;
+            filter.IsSent = message.SentAtUtc.HasValue;
+            filter.TotalCount = filtered.Count;
+            filter.Page = filter.Page < 1 ? 1 : filter.Page;
+            filter.PageSize = filter.PageSize is < 5 or > 200 ? 10 : filter.PageSize;
+            filter.Recipients = filtered.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize).ToList();
+
+            return filter;
         }
 
         public async Task<List<CommunicationResendTargetViewModel>> GetResendTargetsAsync(int id, CancellationToken ct = default)

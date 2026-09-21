@@ -1,0 +1,98 @@
+@model web.ViewModels.CommunicationRecipientFilterViewModel
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>E-mail</th>
+                <th>SMS</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Recipients.Count == 0)
+            {
+                <tr>
+                    <td colspan="3" class="text-muted">Ingen modtagere fundet.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var recipient in Model.Recipients)
+                {
+                    <tr>
+                        <td>@recipient.DisplayName</td>
+                        <td>
+                            @if (!Model.ViaEmail)
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                            else if (recipient.EmailAddresses.Count > 0)
+                            {
+                                @foreach (var address in recipient.EmailAddresses)
+                                {
+                                    <div>@address.Address <span class="text-muted small">(@address.DeliveryStatus)</span></div>
+                                }
+                            }
+                            else if (recipient.HasEmailContact)
+                            {
+                                <span class="text-muted small">@(Model.IsSent ? "Nået via delt kontakt" : "Afventer afsendelse")</span>
+                            }
+                            else
+                            {
+                                <span class="badge-alarm">Mangler e-mail</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!Model.ViaSms)
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                            else if (recipient.SmsAddresses.Count > 0)
+                            {
+                                @foreach (var address in recipient.SmsAddresses)
+                                {
+                                    <div>@address.Address <span class="text-muted small">(@address.DeliveryStatus)</span></div>
+                                }
+                            }
+                            else if (recipient.HasSmsContact)
+                            {
+                                <span class="text-muted small">@(Model.IsSent ? "Nået via delt kontakt" : "Afventer afsendelse")</span>
+                            }
+                            else
+                            {
+                                <span class="badge-alarm">Mangler mobilnummer</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel
+        {
+            Page = Model.Page,
+            TotalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)
+        })
+    </div>
+</div>

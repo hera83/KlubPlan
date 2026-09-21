@@ -6,6 +6,7 @@ using web.Data.Entities;
 using web.Infrastructure;
 using web.Repositories.Communication.Dtos;
 using web.Repositories.Communication.Interfaces;
+using web.ViewModels;
 
 namespace web.Controllers
 {
@@ -42,6 +43,16 @@ namespace web.Controllers
             }
 
             return View(model);
+        }
+
+        [Authorize(Policy = "AdminOrDeveloper")]
+        [HttpGet]
+        public async Task<IActionResult> RecipientsTable(int id, CommunicationRecipientFilterViewModel filter, CancellationToken ct)
+        {
+            var model = await _communicationService.GetRecipientsAsync(id, filter, ct);
+            if (model is null) return NotFound();
+
+            return PartialView("_RecipientsTableBody", model);
         }
 
         [HttpPost]

@@ -37,77 +37,54 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h2 class="h6">Modtagere (@Model.Recipients.Count)</h2>
+            <h2 class="h6">Modtagere (@Model.RecipientsTable.TotalCount)</h2>
             <p class="text-muted small">Alle personer omfattet af de valgte grupper/personer — også dem uden kontaktoplysninger.</p>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Navn</th>
-                            <th>E-mail</th>
-                            <th>SMS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Recipients.Count == 0)
-                        {
-                            <tr>
-                                <td colspan="3" class="text-muted">Ingen modtagere.</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var recipient in Model.Recipients)
-                            {
-                                <tr>
-                                    <td>@recipient.DisplayName</td>
-                                    <td>
-                                        @if (!Model.ViaEmail)
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                        else if (recipient.EmailAddresses.Count > 0)
-                                        {
-                                            @foreach (var address in recipient.EmailAddresses)
-                                            {
-                                                <div>@address.Address <span class="text-muted small">(@address.DeliveryStatus)</span></div>
-                                            }
-                                        }
-                                        else if (recipient.HasEmailContact)
-                                        {
-                                            <span class="text-muted small">@(Model.IsSent ? "Nået via delt kontakt" : "Afventer afsendelse")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-alarm">Mangler e-mail</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (!Model.ViaSms)
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                        else if (recipient.SmsAddresses.Count > 0)
-                                        {
-                                            @foreach (var address in recipient.SmsAddresses)
-                                            {
-                                                <div>@address.Address <span class="text-muted small">(@address.DeliveryStatus)</span></div>
-                                            }
-                                        }
-                                        else if (recipient.HasSmsContact)
-                                        {
-                                            <span class="text-muted small">@(Model.IsSent ? "Nået via delt kontakt" : "Afventer afsendelse")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-alarm">Mangler mobilnummer</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+
+            <div data-table-root id="messageRecipientsTableRoot" data-table-endpoint="@Url.Action("RecipientsTable", new { id = Model.Id })">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <button class="btn btn-icon btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#recipientsFilterPanel" title="Filtre" aria-label="Filtre">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg navn..." data-table-search autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="collapse mb-3" id="recipientsFilterPanel">
+                    <div class="table-filter-panel" data-table-filter-panel>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Kontaktoplysninger</label>
+                                <select class="form-select" name="ContactStatus">
+                                    <option value="">Alle</option>
+                                    @if (Model.ViaEmail)
+                                    {
+                                        <option value="MissingEmail">Mangler e-mail</option>
+                                    }
+                                    @if (Model.ViaSms)
+                                    {
+                                        <option value="MissingSms">Mangler mobilnummer</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end gap-2">
+                                <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
+                                    <i class="bi bi-floppy2"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-icon" data-table-filter-reset title="Nulstil filtre" aria-label="Nulstil filtre">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_RecipientsTableBody", Model.RecipientsTable)
+                </div>
             </div>
         </div>
     </div>
