@@ -45,6 +45,7 @@ namespace web.Repositories.Activities
             }
 
             var totalCount = await query.CountAsync(ct);
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             var rows = await query
                 .OrderByDescending(a => a.StartAtUtc ?? a.CreatedAtUtc)
@@ -80,6 +81,7 @@ namespace web.Repositories.Activities
                     EndAtUtc = r.EndAtUtc,
                     IsCancelled = r.IsCancelled,
                     TargetGroupNames = r.GroupNames.OrderBy(n => n).ToList(),
+                    IsAllGroups = totalGroupCount > 0 && r.GroupNames.Count == totalGroupCount,
                     TaskTotalCount = r.TaskTotalCount,
                     TaskCompletedCount = r.TaskCompletedCount,
                     CreatedAtUtc = r.CreatedAtUtc
@@ -219,6 +221,7 @@ namespace web.Repositories.Activities
             var targetAudienceCount = targetGroupIds.Count > 0
                 ? await _context.People.CountAsync(p => p.Memberships.Any(m => targetGroupIds.Contains(m.GroupId)), ct)
                 : 0;
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             var composeOptions = await _communicationService.GetComposeOptionsAsync(ct);
             var messages = await _communicationService.GetMessagesForActivityAsync(id, ct);
@@ -238,6 +241,7 @@ namespace web.Repositories.Activities
                     .Select(g => new PersonGroupOptionViewModel { Id = g.PersonGroupId, Name = g.PersonGroup.Name })
                     .OrderBy(g => g.Name)
                     .ToList(),
+                IsAllGroups = totalGroupCount > 0 && targetGroupIds.Count == totalGroupCount,
                 TargetAudienceCount = targetAudienceCount,
                 WorkgroupMembers = activity.WorkgroupMembers
                     .OrderBy(m => m.Order).ThenBy(m => EffectiveMemberName(m))

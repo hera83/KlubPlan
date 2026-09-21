@@ -13,6 +13,10 @@ namespace web.ViewModels
         public DateTime? EndAtUtc { get; set; }
         public bool IsCancelled { get; set; }
         public List<string> TargetGroupNames { get; set; } = new();
+
+        /// <summary>True when every group in the system is selected — the view shows a single "Alle"-badge instead of looping TargetGroupNames.</summary>
+        public bool IsAllGroups { get; set; }
+
         public int TaskTotalCount { get; set; }
         public int TaskCompletedCount { get; set; }
         public DateTime CreatedAtUtc { get; set; }
@@ -131,6 +135,9 @@ namespace web.ViewModels
         public bool IsCancelled { get; set; }
 
         public List<PersonGroupOptionViewModel> TargetGroups { get; set; } = new();
+
+        /// <summary>True when every group in the system is selected — shown as a single "Alle"-badge instead of the full list.</summary>
+        public bool IsAllGroups { get; set; }
 
         /// <summary>Distinct persons reachable via the target groups — for the Oversigt mini-dashboard's "Målgruppe"-tile.</summary>
         public int TargetAudienceCount { get; set; }

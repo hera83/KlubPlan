@@ -82,7 +82,11 @@
                 {
                     <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>
                 }
-                @if (Model.TargetGroups.Count > 0)
+                @if (Model.IsAllGroups)
+                {
+                    <span><i class="bi bi-people me-1"></i><span class="badge-ok"><i class="bi bi-people-fill me-1"></i>Alle</span></span>
+                }
+                else if (Model.TargetGroups.Count > 0)
                 {
                     <span class="groups-inline">
                         <i class="bi bi-people me-1"></i>
@@ -183,7 +187,9 @@
                             @{
                                 var audienceSub = Model.TargetGroups.Count == 0
                                     ? "Ingen grupper valgt"
-                                    : $"{Model.TargetGroups.Count} gruppe{(Model.TargetGroups.Count == 1 ? "" : "r")}";
+                                    : Model.IsAllGroups
+                                        ? "Alle grupper"
+                                        : $"{Model.TargetGroups.Count} gruppe{(Model.TargetGroups.Count == 1 ? "" : "r")}";
                             }
                             <div class="stat-tile">
                                 <div class="stat-tile-icon" style="background:var(--clr-info-bg);color:var(--clr-info);"><i class="bi bi-people"></i></div>
