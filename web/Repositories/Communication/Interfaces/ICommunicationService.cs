@@ -49,5 +49,8 @@ namespace web.Repositories.Communication.Interfaces
 
         /// <summary>Deletes a message and its group/person selections and recipient audit trail. Queued SmsMessage/CommunicationEmailMessage rows are kept (they're the delivery record, not owned by the message).</summary>
         Task<bool> DeleteMessageAsync(int id, CancellationToken ct = default);
+
+        /// <summary>Reads a message attachment's physical file for download — null if the attachment or its file no longer exists.</summary>
+        Task<(byte[] Data, string ContentType, string FileName)?> GetAttachmentFileAsync(int attachmentId, CancellationToken ct = default);
     }
 }

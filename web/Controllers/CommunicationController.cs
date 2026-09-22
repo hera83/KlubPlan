@@ -98,6 +98,16 @@ namespace web.Controllers
         }
 
         [Authorize(Policy = "AdminOrDeveloper")]
+        [HttpGet]
+        public async Task<IActionResult> DownloadAttachment(int id, CancellationToken ct)
+        {
+            var file = await _communicationService.GetAttachmentFileAsync(id, ct);
+            if (file is null) return NotFound();
+
+            return File(file.Value.Data, file.Value.ContentType, file.Value.FileName);
+        }
+
+        [Authorize(Policy = "AdminOrDeveloper")]
         public async Task<IActionResult> GetResendRecipients(int id, CancellationToken ct)
         {
             var recipients = await _communicationService.GetResendTargetsAsync(id, ct);

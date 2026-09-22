@@ -72,6 +72,7 @@ namespace web.Data
         public DbSet<CommunicationMessageRecipientPerson> CommunicationMessageRecipientPersons { get; set; } = null!;
         public DbSet<CommunicationMessageRecipient> CommunicationMessageRecipients { get; set; } = null!;
         public DbSet<CommunicationEmailMessage> CommunicationEmailMessages { get; set; } = null!;
+        public DbSet<CommunicationMessageAttachment> CommunicationMessageAttachments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -959,8 +960,35 @@ namespace web.Data
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
 
+                entity.HasOne(e => e.CommunicationMessage)
+                    .WithMany()
+                    .HasForeignKey(e => e.CommunicationMessageId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(e => e.CreatedAtUtc);
                 entity.HasIndex(e => e.ToAddress);
+                entity.HasIndex(e => e.CommunicationMessageId);
+            });
+
+            // Configure CommunicationMessageAttachment
+            builder.Entity<CommunicationMessageAttachment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.CommunicationMessage)
+                    .WithMany(m => m.Attachments)
+                    .HasForeignKey(e => e.CommunicationMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FileMetadata)
+                    .WithMany()
+                    .HasForeignKey(e => e.FileMetadataId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.CommunicationMessageId);
             });
         }
     }

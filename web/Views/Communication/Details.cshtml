@@ -35,6 +35,27 @@
         </div>
     </div>
 
+    @if (Model.Attachments.Count > 0)
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h6">Vedhæftede filer</h2>
+                <p class="text-muted small">Sendt med til modtagere via e-mail — SMS understøtter ikke vedhæftninger.</p>
+                <ul class="list-group list-group-flush">
+                    @foreach (var attachment in Model.Attachments)
+                    {
+                        <li class="list-group-item d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-paperclip me-2"></i>@attachment.OriginalFileName <span class="text-muted small">(@Math.Round(attachment.FileSizeBytes / 1024.0, 1) KB)</span></span>
+                            <a class="btn btn-icon btn-outline-secondary" asp-action="DownloadAttachment" asp-route-id="@attachment.Id" title="Download" aria-label="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
     <div class="card shadow-sm">
         <div class="card-body">
             <h2 class="h6">Modtagere (@Model.RecipientsTable.TotalCount)</h2>

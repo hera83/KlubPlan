@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace web.Repositories.Communication.Dtos
 {
     public class ComposeMessageRequestDto
@@ -31,5 +33,8 @@ namespace web.Repositories.Communication.Dtos
 
         /// <summary>"draft" or "send".</summary>
         public string Action { get; set; } = "draft";
+
+        /// <summary>Files to attach when sending via e-mail. Ignored (never persisted) unless ViaEmail is true — SMS has no concept of attachments.</summary>
+        public List<IFormFile>? Attachments { get; set; }
     }
 }

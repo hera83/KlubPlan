@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
@@ -47,7 +49,14 @@ public class MailService : IMailService
         };
         foreach (var attachment in request.Attachments)
         {
-            bodyBuilder.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.ContentType));
+            // MimeKit falls back to RFC 2231 "extended parameter" encoding (filename*=charset''...)
+            // for any non-ASCII filename (æ/ø/å included). Several mail clients/relays don't parse
+            // that form and silently drop the name, showing a generated placeholder like
+            // "Part-2-<mime-subtype>" instead — so attachment names are ASCII-transliterated here to
+            // guarantee the plain, universally-understood filename="..." header. The original name
+            // (with æ/ø/å) is preserved everywhere else — this only affects the outgoing MIME header.
+            var safeFileName = ToAsciiSafeAttachmentFileName(attachment.FileName);
+            bodyBuilder.Attachments.Add(safeFileName, attachment.Content, ContentType.Parse(attachment.ContentType));
         }
         message.Body = bodyBuilder.ToMessageBody();
 
@@ -290,5 +299,49 @@ public class MailService : IMailService
         return Enum.TryParse<SecureSocketOptions>(value, ignoreCase: true, out var result)
             ? result
             : SecureSocketOptions.Auto;
+    }
+
+    private static readonly Dictionary<char, string> DanishAsciiTransliterations = new()
+    {
+        ['æ'] = "ae", ['Æ'] = "Ae",
+        ['ø'] = "oe", ['Ø'] = "Oe",
+        ['å'] = "aa", ['Å'] = "Aa",
+    };
+
+    /// <summary>
+    /// Transliterates a filename to plain ASCII for use as a MIME attachment name: æ/ø/å become
+    /// ae/oe/aa, other accented Latin letters are stripped to their base letter (é → e), and any
+    /// character still left over is replaced with "_". See the comment at the call site for why —
+    /// this guarantees MimeKit emits the widely-compatible filename="..." header instead of the
+    /// RFC 2231 extended form that some mail clients fail to parse.
+    /// </summary>
+    private static string ToAsciiSafeAttachmentFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return "vedhaeftning";
+        }
+
+        var transliterated = new StringBuilder(fileName.Length);
+        foreach (var ch in fileName)
+        {
+            transliterated.Append(DanishAsciiTransliterations.TryGetValue(ch, out var replacement) ? replacement : ch.ToString());
+        }
+
+        var decomposed = transliterated.ToString().Normalize(NormalizationForm.FormD);
+        var withoutDiacritics = new StringBuilder(decomposed.Length);
+        foreach (var ch in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+            {
+                withoutDiacritics.Append(ch);
+            }
+        }
+
+        var asciiOnly = new string(withoutDiacritics.ToString().Normalize(NormalizationForm.FormC)
+            .Select(c => c < 128 ? c : '_')
+            .ToArray());
+
+        return string.IsNullOrWhiteSpace(asciiOnly) ? "vedhaeftning" : asciiOnly;
     }
 }

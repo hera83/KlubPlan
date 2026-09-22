@@ -12,7 +12,7 @@
 <div class="modal fade" id="composeMessageModal" tabindex="-1" aria-labelledby="composeMessageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form id="composeMessageForm" asp-controller="Communication" asp-action="Save" method="post">
+            <form id="composeMessageForm" asp-controller="Communication" asp-action="Save" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Id" value="0" />
                 @if (activityId.HasValue)
@@ -44,6 +44,13 @@
                                     <label class="form-check-label" for="composeViaSms"><i class="bi bi-chat-text me-1"></i>SMS</label>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="col-md-12 d-none" id="composeAttachmentsSection">
+                            <label class="form-label">Vedhæftede filer</label>
+                            <input type="file" class="form-control" id="composeAttachmentsInput" name="Attachments" multiple />
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Vedhæftninger sendes altid som en del af e-mailen.</div>
+                            <div class="form-text d-none" id="composeAttachmentsBothHint"><i class="bi bi-exclamation-triangle me-1"></i>Kun modtagere via e-mail får vedhæftningerne — SMS understøtter ikke filer.</div>
                         </div>
 
                         <div class="col-md-6">
@@ -173,6 +180,26 @@
             }
         });
         composeBody?.addEventListener('input', () => composeBody.classList.remove('is-invalid'));
+
+        // Attachments only ever go out over e-mail, so the picker is only reachable while E-mail
+        // is checked; when SMS is also checked, an extra hint clarifies that SMS recipients won't
+        // get the files, so an admin doesn't mistakenly think everyone receives them.
+        const viaEmailCb = document.getElementById('composeViaEmail');
+        const viaSmsCb = document.getElementById('composeViaSms');
+        const attachmentsSection = document.getElementById('composeAttachmentsSection');
+        const attachmentsInput = document.getElementById('composeAttachmentsInput');
+        const attachmentsBothHint = document.getElementById('composeAttachmentsBothHint');
+        const updateAttachmentsVisibility = () => {
+            const showSection = !!viaEmailCb?.checked;
+            attachmentsSection?.classList.toggle('d-none', !showSection);
+            if (!showSection && attachmentsInput) {
+                attachmentsInput.value = '';
+            }
+            attachmentsBothHint?.classList.toggle('d-none', !(showSection && viaSmsCb?.checked));
+        };
+        viaEmailCb?.addEventListener('change', updateAttachmentsVisibility);
+        viaSmsCb?.addEventListener('change', updateAttachmentsVisibility);
+        updateAttachmentsVisibility();
         personFilter?.addEventListener('input', () => {
             const term = personFilter.value.trim().toLowerCase();
             personsWrap.querySelectorAll('.form-check').forEach((row) => {

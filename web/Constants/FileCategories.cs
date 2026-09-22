@@ -20,5 +20,8 @@ namespace web.Constants
 
         /// <summary>Meeting attachments and recordings — App_files/meetings/</summary>
         public const string Meetings = "meetings";
+
+        /// <summary>Communication message attachments (email only) — App_files/communication/</summary>
+        public const string Communication = "communication";
     }
 }

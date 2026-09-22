@@ -10,6 +10,9 @@ namespace web.Data.Entities
     {
         public int Id { get; set; }
 
+        /// <summary>The CommunicationMessage this email was queued for — used at send time to look up its Attachments. Kept even if the message is later deleted (FK is SetNull); the queued email itself is the delivery record and isn't owned by the message.</summary>
+        public int? CommunicationMessageId { get; set; }
+
         public string ToAddress { get; set; } = string.Empty;
 
         public string Subject { get; set; } = string.Empty;
@@ -35,5 +38,7 @@ namespace web.Data.Entities
         public DateTime? SentAtUtc { get; set; }
 
         public DateTime? FailedAtUtc { get; set; }
+
+        public virtual CommunicationMessage? CommunicationMessage { get; set; }
     }
 }

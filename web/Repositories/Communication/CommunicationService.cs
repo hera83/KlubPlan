@@ -15,11 +15,15 @@ namespace web.Repositories.Communication
     public class CommunicationService : ICommunicationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _config;
         private readonly ILogger<CommunicationService> _logger;
 
-        public CommunicationService(ApplicationDbContext context, ILogger<CommunicationService> logger)
+        public CommunicationService(ApplicationDbContext context, IWebHostEnvironment env, IConfiguration config, ILogger<CommunicationService> logger)
         {
             _context = context;
+            _env = env;
+            _config = config;
             _logger = logger;
         }
 
@@ -148,6 +152,7 @@ namespace web.Repositories.Communication
                 .AsNoTracking()
                 .Include(m => m.Form)
                 .Include(m => m.Arrangement)
+                .Include(m => m.Attachments).ThenInclude(a => a.FileMetadata)
                 .FirstOrDefaultAsync(m => m.Id == id, ct);
 
             if (message is null)
@@ -175,7 +180,16 @@ namespace web.Repositories.Communication
                 FormTitle = message.Form?.Title,
                 ArrangementTitle = message.Arrangement?.Title,
                 ActivityId = message.ActivityId,
-                RecipientsTable = recipientsTable ?? new CommunicationRecipientFilterViewModel()
+                RecipientsTable = recipientsTable ?? new CommunicationRecipientFilterViewModel(),
+                Attachments = message.Attachments
+                    .OrderBy(a => a.FileMetadata.OriginalFileName)
+                    .Select(a => new CommunicationMessageAttachmentViewModel
+                    {
+                        Id = a.Id,
+                        OriginalFileName = a.FileMetadata.OriginalFileName,
+                        FileSizeBytes = a.FileMetadata.FileSizeBytes
+                    })
+                    .ToList()
             };
         }
 
@@ -480,6 +494,15 @@ namespace web.Repositories.Communication
 
             await _context.SaveChangesAsync(ct);
 
+            // Attachments only ever go out over e-mail, never SMS — ignored here (rather than
+            // rejected) if ViaEmail isn't set, since the compose modal's file input is only meant
+            // to be reachable while the E-mail channel is checked.
+            var uploadedFiles = dto.Attachments?.Where(f => f.Length > 0).ToList();
+            if (dto.ViaEmail && uploadedFiles is { Count: > 0 })
+            {
+                await AddAttachmentsAsync(message, uploadedFiles, userId, ct);
+            }
+
             if (dto.Action == "send")
             {
                 return await SendMessageInternalAsync(message, baseUrl, null, ct);
@@ -662,6 +685,7 @@ namespace web.Repositories.Communication
                 {
                     var email = new CommunicationEmailMessage
                     {
+                        CommunicationMessageId = message.Id,
                         ToAddress = recipient.Address,
                         Subject = message.Subject,
                         Body = body,
@@ -777,6 +801,69 @@ namespace web.Repositories.Communication
             }
 
             return parts.Count > 0 ? string.Join(", ", parts) : "Ingen modtagere";
+        }
+
+        /// <summary>Saves uploaded files to App_files/communication/ and links them to the message via FileMetadata + CommunicationMessageAttachment, mirroring MeetingsService.AddAttachmentAsync.</summary>
+        private async Task AddAttachmentsAsync(CommunicationMessage message, IReadOnlyCollection<IFormFile> files, string? uploaderId, CancellationToken ct)
+        {
+            var filesPath = _config["AppSettings:FilesPath"] ?? "App_files";
+            var communicationDir = Path.Combine(_env.ContentRootPath, filesPath, FileCategories.Communication);
+            Directory.CreateDirectory(communicationDir);
+
+            foreach (var file in files)
+            {
+                var ext = Path.GetExtension(file.FileName);
+                var storedFileName = $"{Guid.NewGuid()}{ext}";
+                var storedRelativePath = Path.Combine(filesPath, FileCategories.Communication, storedFileName);
+                var fullPath = Path.Combine(_env.ContentRootPath, storedRelativePath);
+
+                await using (var target = File.Create(fullPath))
+                {
+                    await using var source = file.OpenReadStream();
+                    await source.CopyToAsync(target, ct);
+                }
+
+                var metadata = new FileMetadata
+                {
+                    OriginalFileName = file.FileName,
+                    StoredFileName = storedFileName,
+                    StoredPath = storedRelativePath,
+                    ContentType = file.ContentType,
+                    FileSizeBytes = file.Length,
+                    OwnerId = uploaderId,
+                    Category = FileCategories.Communication,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                _context.FileMetadata.Add(metadata);
+                await _context.SaveChangesAsync(ct);
+
+                _context.CommunicationMessageAttachments.Add(new CommunicationMessageAttachment
+                {
+                    CommunicationMessageId = message.Id,
+                    FileMetadataId = metadata.Id,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync(ct);
+        }
+
+        public async Task<(byte[] Data, string ContentType, string FileName)?> GetAttachmentFileAsync(int attachmentId, CancellationToken ct = default)
+        {
+            var attachment = await _context.CommunicationMessageAttachments
+                .Include(a => a.FileMetadata)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == attachmentId, ct);
+
+            if (attachment is null || attachment.FileMetadata.IsDeleted)
+                return null;
+
+            var fullPath = Path.Combine(_env.ContentRootPath, attachment.FileMetadata.StoredPath);
+            if (!File.Exists(fullPath))
+                return null;
+
+            var data = await File.ReadAllBytesAsync(fullPath, ct);
+            return (data, attachment.FileMetadata.ContentType, attachment.FileMetadata.OriginalFileName);
         }
 
         /// <summary>

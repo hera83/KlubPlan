@@ -61,5 +61,8 @@ namespace web.Data.Entities
         public virtual ICollection<CommunicationMessageRecipientPerson> DirectPersons { get; set; } = new List<CommunicationMessageRecipientPerson>();
 
         public virtual ICollection<CommunicationMessageRecipient> Recipients { get; set; } = new List<CommunicationMessageRecipient>();
+
+        /// <summary>Files uploaded when composing the message — sent as mail attachments to every e-mail recipient. Never sent over SMS.</summary>
+        public virtual ICollection<CommunicationMessageAttachment> Attachments { get; set; } = new List<CommunicationMessageAttachment>();
     }
 }
