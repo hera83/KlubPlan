@@ -4,7 +4,16 @@
 <div>
     <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div>
-            <p class="mb-1"><a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til kommunikation</a></p>
+            <p class="mb-1">
+                @if (Model.ActivityId.HasValue)
+                {
+                    <a asp-controller="Activities" asp-action="Details" asp-route-id="@Model.ActivityId" asp-route-tab="kommunikation" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til aktiviteten</a>
+                }
+                else
+                {
+                    <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til kommunikation</a>
+                }
+            </p>
             <h1><i class="bi bi-chat-dots me-2"></i>@Model.Subject</h1>
             <p class="d-flex flex-wrap align-items-center gap-3 mb-0">
                 <span class="@Model.StatusBadgeClass">@Model.Status</span>
@@ -60,6 +69,10 @@
                                 <label class="form-label">Kontaktoplysninger</label>
                                 <select class="form-select" name="ContactStatus">
                                     <option value="">Alle</option>
+                                    @if (Model.IsSent)
+                                    {
+                                        <option value="Sent">Sendt</option>
+                                    }
                                     @if (Model.ViaEmail)
                                     {
                                         <option value="MissingEmail">Mangler e-mail</option>

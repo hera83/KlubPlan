@@ -92,6 +92,9 @@ namespace web.ViewModels
         /// <summary>Name of the attached arrangement, if a Tilmelding link was sent with the message. Informational only.</summary>
         public string? ArrangementTitle { get; set; }
 
+        /// <summary>Activity this message was sent from, if any — drives the back-link target on Communication/Details.</summary>
+        public int? ActivityId { get; set; }
+
         /// <summary>Page 1 of the full target audience, plus the filter state — feeds the paged/searchable "Modtagere" table (data-table pattern).</summary>
         public CommunicationRecipientFilterViewModel RecipientsTable { get; set; } = new();
     }
@@ -101,7 +104,7 @@ namespace web.ViewModels
     {
         public string? SearchText { get; set; }
 
-        /// <summary>"MissingEmail" | "MissingSms" | null (Alle).</summary>
+        /// <summary>"MissingEmail" | "MissingSms" | "Sent" | null (Alle).</summary>
         public string? ContactStatus { get; set; }
 
         public int Page { get; set; } = 1;

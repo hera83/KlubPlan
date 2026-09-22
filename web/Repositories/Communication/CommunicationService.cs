@@ -174,6 +174,7 @@ namespace web.Repositories.Communication
                 SentAtUtc = message.SentAtUtc,
                 FormTitle = message.Form?.Title,
                 ArrangementTitle = message.Arrangement?.Title,
+                ActivityId = message.ActivityId,
                 RecipientsTable = recipientsTable ?? new CommunicationRecipientFilterViewModel()
             };
         }
@@ -251,6 +252,12 @@ namespace web.Repositories.Communication
             else if (filter.ContactStatus == "MissingSms")
             {
                 recipients = recipients.Where(r => !r.HasSmsContact);
+            }
+            else if (filter.ContactStatus == "Sent")
+            {
+                recipients = recipients.Where(r =>
+                    r.EmailAddresses.Any(a => a.DeliveryStatus == CommunicationEmailMessageStatus.Sent.ToString())
+                    || r.SmsAddresses.Any(a => a.DeliveryStatus == SmsMessageStatus.Sent));
             }
 
             var filtered = recipients.ToList();
