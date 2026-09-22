@@ -1,0 +1,68 @@
+@model web.ViewModels.GroupBadgesViewModel
+
+@{
+    var maxVisible = Model.MaxVisible > 0 ? Model.MaxVisible : 4;
+}
+
+@if (Model.IsAll)
+{
+    <span class="badge-ok"><i class="bi bi-people-fill me-1"></i>Alle</span>
+}
+else if (Model.Items.Count == 0)
+{
+    <span class="text-muted">–</span>
+}
+else
+{
+    var visible = Model.Items.Take(maxVisible).ToList();
+    var hiddenNames = Model.Items.Skip(visible.Count).Select(i => i.Name).ToList();
+    var wrapperClass = Model.Inline ? "groups-inline" : "d-flex flex-wrap align-items-center gap-1";
+
+    // "Diskret" variant (header/titel-linjer): den korte tekst er almindelig tekst uden badge-baggrund,
+    // ligesom det oprindelige mønster i Activities/Details.cshtml og Meetings/Details.cshtml.
+    // I tabelceller er den korte tekst selv et badge-info-badge.
+    var shortClass = Model.Inline ? "group-badge-short" : "badge-info group-badge-short";
+    var plainClass = Model.Inline ? null : "badge-info";
+
+    <span class="@wrapperClass">
+        @for (var i = 0; i < visible.Count; i++)
+        {
+            var item = visible[i];
+            var firstWord = item.Name.Split(' ', 2)[0];
+            var hasMore = item.Name.Length > firstWord.Length;
+            if (hasMore)
+            {
+                <span class="group-badge" data-group-badge tabindex="0" title="@item.Title">
+                    <span class="@shortClass">
+                        @if (!string.IsNullOrEmpty(item.IconClass)) { <i class="bi @item.IconClass me-1"></i> }@firstWord…
+                    </span>
+                    <span class="badge-info group-badge-full">
+                        @if (!string.IsNullOrEmpty(item.IconClass)) { <i class="bi @item.IconClass me-1"></i> }@item.Name
+                    </span>
+                </span>
+            }
+            else
+            {
+                <span class="@plainClass" title="@item.Title">
+                    @if (!string.IsNullOrEmpty(item.IconClass)) { <i class="bi @item.IconClass me-1"></i> }@item.Name
+                </span>
+            }
+            @if (Model.Inline && (i < visible.Count - 1 || hiddenNames.Count > 0))
+            {
+                <text>, </text>
+            }
+        }
+        @if (hiddenNames.Count > 0)
+        {
+            <span class="group-badge group-badge-more" data-group-badge tabindex="0">
+                <span class="@shortClass">+@hiddenNames.Count</span>
+                <span class="badge-info group-badge-full group-badge-more-list">
+                    @foreach (var name in hiddenNames)
+                    {
+                        <div>@name</div>
+                    }
+                </span>
+            </span>
+        }
+    </span>
+}

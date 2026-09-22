@@ -29,37 +29,15 @@
                         <td>@(string.IsNullOrEmpty(person.Mobile) ? "–" : person.Mobile)</td>
                         <td>@(string.IsNullOrEmpty(person.Email) ? "–" : person.Email)</td>
                         <td>
-                            @if (person.Memberships.Count == 0)
+                            @await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
                             {
-                                <span class="text-muted">–</span>
-                            }
-                            else
-                            {
-                                <div class="d-flex flex-wrap align-items-center gap-1">
-                                    @foreach (var membership in person.Memberships)
-                                    {
-                                        var firstWord = membership.GroupName.Split(' ', 2)[0];
-                                        var hasMore = membership.GroupName.Length > firstWord.Length;
-                                        if (hasMore)
-                                        {
-                                            <span class="group-badge" data-group-badge tabindex="0" title="@PersonTypes.GetUILabel(membership.Type)">
-                                                <span class="badge-info group-badge-short">
-                                                    <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@firstWord…
-                                                </span>
-                                                <span class="badge-info group-badge-full">
-                                                    <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
-                                                </span>
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-info" title="@PersonTypes.GetUILabel(membership.Type)">
-                                                <i class="bi @PersonTypes.GetIcon(membership.Type) me-1"></i>@membership.GroupName
-                                            </span>
-                                        }
-                                    }
-                                </div>
-                            }
+                                Items = person.Memberships.Select(m => new web.ViewModels.GroupBadgeItemViewModel
+                                {
+                                    Name = m.GroupName,
+                                    IconClass = PersonTypes.GetIcon(m.Type),
+                                    Title = PersonTypes.GetUILabel(m.Type)
+                                }).ToList()
+                            })
                         </td>
                         <td>
                             @if (person.GuardianCount == 0)

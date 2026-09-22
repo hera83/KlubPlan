@@ -34,31 +34,11 @@
                         <td>@meeting.MeetingDateUtc.ToDanishDateTime()</td>
                         <td>@(string.IsNullOrEmpty(meeting.Location) ? "–" : meeting.Location)</td>
                         <td>
-                            @if (meeting.Groups.Count == 0)
+                            @await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
                             {
-                                <span class="text-muted">–</span>
-                            }
-                            else
-                            {
-                                <div class="d-flex flex-wrap align-items-center gap-1">
-                                    @foreach (var group in meeting.Groups)
-                                    {
-                                        var firstWord = group.GroupName.Split(' ', 2)[0];
-                                        var hasMore = group.GroupName.Length > firstWord.Length;
-                                        if (hasMore)
-                                        {
-                                            <span class="group-badge" data-group-badge tabindex="0">
-                                                <span class="badge-info group-badge-short">@firstWord…</span>
-                                                <span class="badge-info group-badge-full">@group.GroupName</span>
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-info">@group.GroupName</span>
-                                        }
-                                    }
-                                </div>
-                            }
+                                IsAll = meeting.IsAllGroups,
+                                Items = meeting.Groups.Select(g => new web.ViewModels.GroupBadgeItemViewModel { Name = g.GroupName }).ToList()
+                            })
                         </td>
                         <td><span class="@MeetingStatuses.GetBadgeClass(meeting.Status)">@MeetingStatuses.GetUILabel(meeting.Status)</span></td>
                         <td>

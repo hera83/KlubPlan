@@ -33,6 +33,10 @@ namespace web.ViewModels
         public string? Location { get; set; }
         public MeetingStatus Status { get; set; }
         public List<MeetingGroupItemViewModel> Groups { get; set; } = new();
+
+        /// <summary>True when every group in the system is selected — the view shows a single "Alle"-badge instead of looping Groups.</summary>
+        public bool IsAllGroups { get; set; }
+
         public int AttendeeCount { get; set; }
         public int AttendedCount { get; set; }
         public int VersionNumber { get; set; }
@@ -101,6 +105,10 @@ namespace web.ViewModels
         public string? Location { get; set; }
         public MeetingStatus Status { get; set; }
         public List<MeetingGroupItemViewModel> Groups { get; set; } = new();
+
+        /// <summary>True when every group in the system is selected — the view shows a single "Alle"-badge instead of looping Groups.</summary>
+        public bool IsAllGroups { get; set; }
+
         public string? AgendaNotes { get; set; }
         public string? MinutesNotes { get; set; }
 

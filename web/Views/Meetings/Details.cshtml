@@ -39,32 +39,17 @@
                 {
                     <span><i class="bi bi-geo-alt me-1"></i>@Model.Location</span>
                 }
-                @if (Model.Groups.Count > 0)
+                @if (Model.IsAllGroups)
                 {
-                    <span class="groups-inline">
-                        <i class="bi bi-people me-1"></i>
-                        @for (var i = 0; i < Model.Groups.Count; i++)
-                        {
-                            var group = Model.Groups[i];
-                            var firstWord = group.GroupName.Split(' ', 2)[0];
-                            var hasMore = group.GroupName.Length > firstWord.Length;
-                            if (hasMore)
-                            {
-                                <span class="group-badge" data-group-badge tabindex="0">
-                                    <span class="group-badge-short">@firstWord…</span>
-                                    <span class="badge-info group-badge-full">@group.GroupName</span>
-                                </span>
-                            }
-                            else
-                            {
-                                <span>@group.GroupName</span>
-                            }
-                            if (i < Model.Groups.Count - 1)
-                            {
-                                <text>, </text>
-                            }
-                        }
-                    </span>
+                    <span><i class="bi bi-people me-1"></i><span class="badge-ok"><i class="bi bi-people-fill me-1"></i>Alle</span></span>
+                }
+                else if (Model.Groups.Count > 0)
+                {
+                    <span><i class="bi bi-people me-1"></i>@await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
+                    {
+                        Inline = true,
+                        Items = Model.Groups.Select(g => new web.ViewModels.GroupBadgeItemViewModel { Name = g.GroupName }).ToList()
+                    })</span>
                 }
             </p>
         </div>

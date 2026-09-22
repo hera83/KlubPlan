@@ -1,5 +1,12 @@
 @model web.ViewModels.CommunicationRecipientBadgesViewModel
 
+@{
+    // "Alle" betyder at grupperne alene dækker hele målgruppen — så snart der også er tilføjet en
+    // eller flere direkte personer, er valget ikke længere "alle" (det er "alle grupper + en navngiven
+    // person mere"), så Alle-badget skal vige for den almindelige gruppe-liste (med max 4 + "+N").
+    var showGroupsAsAll = Model.IsAllGroups && Model.DirectPersonNames.Count == 0;
+}
+
 @if (Model.Groups.Count == 0 && Model.DirectPersonNames.Count == 0)
 {
     <span class="text-muted">–</span>
@@ -7,21 +14,13 @@
 else
 {
     <span class="d-inline-flex flex-wrap align-items-center gap-1">
-        @foreach (var group in Model.Groups)
+        @if (Model.Groups.Count > 0)
         {
-            var firstWord = group.Name.Split(' ', 2)[0];
-            var hasMore = group.Name.Length > firstWord.Length;
-            if (hasMore)
+            @await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
             {
-                <span class="group-badge" data-group-badge tabindex="0">
-                    <span class="badge-info group-badge-short">@firstWord…</span>
-                    <span class="badge-info group-badge-full">@group.Name</span>
-                </span>
-            }
-            else
-            {
-                <span class="badge-info">@group.Name</span>
-            }
+                IsAll = showGroupsAsAll,
+                Items = Model.Groups.Select(g => new web.ViewModels.GroupBadgeItemViewModel { Name = g.Name }).ToList()
+            })
         }
         @if (Model.DirectPersonNames.Count > 0 && Model.DirectPersonNames.Count <= 3)
         {

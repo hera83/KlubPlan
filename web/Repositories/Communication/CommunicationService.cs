@@ -26,6 +26,7 @@ namespace web.Repositories.Communication
         public async Task<CommunicationIndexViewModel> GetIndexDataAsync(bool isAdmin, CancellationToken ct = default)
         {
             var composeOptions = await GetComposeOptionsAsync(ct);
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             var messageEntities = await _context.CommunicationMessages
                 .AsNoTracking()
@@ -37,7 +38,7 @@ namespace web.Repositories.Communication
             return new CommunicationIndexViewModel
             {
                 IsAdmin = isAdmin,
-                Messages = messageEntities.Select(MapMessageListItem).ToList(),
+                Messages = messageEntities.Select(m => MapMessageListItem(m, totalGroupCount)).ToList(),
                 GroupOptions = composeOptions.GroupOptions,
                 PersonOptions = composeOptions.PersonOptions,
                 FormOptions = composeOptions.FormOptions,
@@ -113,6 +114,8 @@ namespace web.Repositories.Communication
 
         public async Task<List<CommunicationMessageListItemViewModel>> GetMessagesForActivityAsync(int activityId, CancellationToken ct = default)
         {
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
+
             var messageEntities = await _context.CommunicationMessages
                 .AsNoTracking()
                 .Where(m => m.ActivityId == activityId)
@@ -121,16 +124,16 @@ namespace web.Repositories.Communication
                 .OrderByDescending(m => m.CreatedAtUtc)
                 .ToListAsync(ct);
 
-            return messageEntities.Select(MapMessageListItem).ToList();
+            return messageEntities.Select(m => MapMessageListItem(m, totalGroupCount)).ToList();
         }
 
-        private static CommunicationMessageListItemViewModel MapMessageListItem(CommunicationMessage m) => new()
+        private static CommunicationMessageListItemViewModel MapMessageListItem(CommunicationMessage m, int totalGroupCount) => new()
         {
             Id = m.Id,
             Subject = m.Subject,
             ViaEmail = m.ViaEmail,
             ViaSms = m.ViaSms,
-            RecipientBadges = BuildRecipientBadges(m),
+            RecipientBadges = BuildRecipientBadges(m, totalGroupCount),
             RecipientCount = m.RecipientCount,
             Status = CommunicationMessageStatuses.GetUILabel(m.Status),
             StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(m.Status),
@@ -153,6 +156,7 @@ namespace web.Repositories.Communication
             }
 
             var recipientsTable = await GetRecipientsAsync(id, new CommunicationRecipientFilterViewModel(), ct);
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             return new CommunicationMessageDetailViewModel
             {
@@ -162,7 +166,7 @@ namespace web.Repositories.Communication
                 Status = CommunicationMessageStatuses.GetUILabel(message.Status),
                 StatusBadgeClass = CommunicationMessageStatuses.GetBadgeClass(message.Status),
                 RecipientSummary = message.RecipientSummary,
-                RecipientBadges = BuildRecipientBadges(message),
+                RecipientBadges = BuildRecipientBadges(message, totalGroupCount),
                 IsSent = message.SentAtUtc.HasValue,
                 ViaEmail = message.ViaEmail,
                 ViaSms = message.ViaSms,
@@ -682,14 +686,17 @@ namespace web.Repositories.Communication
             return new SaveMessageResponseDto { Success = true, MessageId = message.Id };
         }
 
-        private static CommunicationRecipientBadgesViewModel BuildRecipientBadges(CommunicationMessage message)
+        private static CommunicationRecipientBadgesViewModel BuildRecipientBadges(CommunicationMessage message, int totalGroupCount)
         {
+            var groups = message.Groups
+                .Select(g => new PersonGroupOptionViewModel { Id = g.PersonGroupId, Name = g.PersonGroup.Name })
+                .OrderBy(g => g.Name)
+                .ToList();
+
             return new CommunicationRecipientBadgesViewModel
             {
-                Groups = message.Groups
-                    .Select(g => new PersonGroupOptionViewModel { Id = g.PersonGroupId, Name = g.PersonGroup.Name })
-                    .OrderBy(g => g.Name)
-                    .ToList(),
+                Groups = groups,
+                IsAllGroups = GroupDisplayHelper.IsAllGroups(groups.Count, totalGroupCount),
                 DirectPersonNames = message.DirectPersons
                     .Select(dp => dp.Person.Name)
                     .OrderBy(n => n)

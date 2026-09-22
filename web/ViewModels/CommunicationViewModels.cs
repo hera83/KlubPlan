@@ -38,6 +38,10 @@ namespace web.ViewModels
     public class CommunicationRecipientBadgesViewModel
     {
         public List<PersonGroupOptionViewModel> Groups { get; set; } = new();
+
+        /// <summary>True when every group in the system is selected — shows a single "Alle"-badge instead of looping Groups.</summary>
+        public bool IsAllGroups { get; set; }
+
         public List<string> DirectPersonNames { get; set; } = new();
     }
 

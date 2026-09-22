@@ -4,6 +4,7 @@ using web.BgSerives;
 using web.Constants;
 using web.Data;
 using web.Data.Entities;
+using web.Infrastructure;
 using web.Repositories.Meetings.Dtos;
 using web.Repositories.Meetings.Interfaces;
 using web.ViewModels;
@@ -78,6 +79,7 @@ namespace web.Repositories.Meetings
                 select new { Meeting = m, lv.Count };
 
             filter.TotalCount = await query.CountAsync(ct);
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             var page = await query
                 .OrderByDescending(x => x.Meeting.MeetingDateUtc)
@@ -110,6 +112,7 @@ namespace web.Repositories.Meetings
                 Location = p.Location,
                 Status = p.Status,
                 Groups = p.Groups,
+                IsAllGroups = GroupDisplayHelper.IsAllGroups(p.Groups.Count, totalGroupCount),
                 AttendeeCount = p.AttendeeCount,
                 AttendedCount = p.AttendedCount,
                 VersionNumber = p.VersionNumber,
@@ -182,6 +185,7 @@ namespace web.Repositories.Meetings
             var latestInSeries = seriesVersions[0];
             var isLatestVersion = latestInSeries.Id == meeting.Id;
             var currentIndex = seriesVersions.FindIndex(v => v.Id == meeting.Id);
+            var totalGroupCount = await _context.PersonGroups.CountAsync(ct);
 
             return new MeetingDetailViewModel
             {
@@ -200,6 +204,7 @@ namespace web.Repositories.Meetings
                     .OrderBy(g => g.PersonGroup.Name)
                     .Select(g => new MeetingGroupItemViewModel { GroupId = g.PersonGroupId, GroupName = g.PersonGroup.Name })
                     .ToList(),
+                IsAllGroups = GroupDisplayHelper.IsAllGroups(meeting.Groups.Count, totalGroupCount),
                 AgendaNotes = meeting.AgendaNotes,
                 MinutesNotes = meeting.MinutesNotes,
                 Attendees = meeting.Attendees

@@ -88,30 +88,11 @@
                 }
                 else if (Model.TargetGroups.Count > 0)
                 {
-                    <span class="groups-inline">
-                        <i class="bi bi-people me-1"></i>
-                        @for (var i = 0; i < Model.TargetGroups.Count; i++)
-                        {
-                            var group = Model.TargetGroups[i];
-                            var firstWord = group.Name.Split(' ', 2)[0];
-                            var hasMore = group.Name.Length > firstWord.Length;
-                            if (hasMore)
-                            {
-                                <span class="group-badge" data-group-badge tabindex="0">
-                                    <span class="group-badge-short">@firstWord…</span>
-                                    <span class="badge-info group-badge-full">@group.Name</span>
-                                </span>
-                            }
-                            else
-                            {
-                                <span>@group.Name</span>
-                            }
-                            if (i < Model.TargetGroups.Count - 1)
-                            {
-                                <text>, </text>
-                            }
-                        }
-                    </span>
+                    <span><i class="bi bi-people me-1"></i>@await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
+                    {
+                        Inline = true,
+                        Items = Model.TargetGroups.Select(g => new web.ViewModels.GroupBadgeItemViewModel { Name = g.Name }).ToList()
+                    })</span>
                 }
             </p>
         </div>

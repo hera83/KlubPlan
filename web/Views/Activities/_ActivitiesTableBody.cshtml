@@ -64,35 +64,11 @@
                             }
                         </td>
                         <td>
-                            @if (activity.TargetGroupNames.Count == 0)
+                            @await Html.PartialAsync("~/Views/Shared/Partials/_GroupBadges.cshtml", new web.ViewModels.GroupBadgesViewModel
                             {
-                                <span class="text-muted">–</span>
-                            }
-                            else if (activity.IsAllGroups)
-                            {
-                                <span class="badge-ok"><i class="bi bi-people-fill me-1"></i>Alle</span>
-                            }
-                            else
-                            {
-                                <div class="d-flex flex-wrap align-items-center gap-1">
-                                    @foreach (var name in activity.TargetGroupNames)
-                                    {
-                                        var firstWord = name.Split(' ', 2)[0];
-                                        var hasMore = name.Length > firstWord.Length;
-                                        if (hasMore)
-                                        {
-                                            <span class="group-badge" data-group-badge tabindex="0">
-                                                <span class="badge-info group-badge-short">@firstWord…</span>
-                                                <span class="badge-info group-badge-full">@name</span>
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-info">@name</span>
-                                        }
-                                    }
-                                </div>
-                            }
+                                IsAll = activity.IsAllGroups,
+                                Items = activity.TargetGroupNames.Select(n => new web.ViewModels.GroupBadgeItemViewModel { Name = n }).ToList()
+                            })
                         </td>
                         <td>
                             @if (activity.TaskTotalCount == 0)

@@ -7,6 +7,7 @@ using web.Repositories.Activities.Dtos;
 using web.Repositories.Activities.Interfaces;
 using web.Repositories.Communication.Interfaces;
 using web.Repositories.Forms.Interfaces;
+using web.Infrastructure;
 using web.ViewModels;
 
 namespace web.Repositories.Activities
@@ -81,7 +82,7 @@ namespace web.Repositories.Activities
                     EndAtUtc = r.EndAtUtc,
                     IsCancelled = r.IsCancelled,
                     TargetGroupNames = r.GroupNames.OrderBy(n => n).ToList(),
-                    IsAllGroups = totalGroupCount > 0 && r.GroupNames.Count == totalGroupCount,
+                    IsAllGroups = GroupDisplayHelper.IsAllGroups(r.GroupNames.Count, totalGroupCount),
                     TaskTotalCount = r.TaskTotalCount,
                     TaskCompletedCount = r.TaskCompletedCount,
                     CreatedAtUtc = r.CreatedAtUtc
@@ -249,7 +250,7 @@ namespace web.Repositories.Activities
                     .Select(g => new PersonGroupOptionViewModel { Id = g.PersonGroupId, Name = g.PersonGroup.Name })
                     .OrderBy(g => g.Name)
                     .ToList(),
-                IsAllGroups = totalGroupCount > 0 && targetGroupIds.Count == totalGroupCount,
+                IsAllGroups = GroupDisplayHelper.IsAllGroups(targetGroupIds.Count, totalGroupCount),
                 TargetAudienceCount = targetAudienceCount,
                 WorkgroupMembers = activity.WorkgroupMembers
                     .OrderBy(m => m.Order).ThenBy(m => EffectiveMemberName(m))

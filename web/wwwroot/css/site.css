@@ -871,6 +871,15 @@ input[type="file"]::-webkit-file-upload-button:hover {
   text-decoration: underline;
 }
 
+/* ── Gruppe-badges, "+N" overflow: samme forkort/udvid-mekanik som ovenfor, men den udvidede
+   popup viser én skjult gruppe pr. linje i stedet for ét fuldt navn. Bruges når en gruppe-liste
+   (tabelceller og titel-linjer) har flere end GroupBadgesViewModel.MaxVisible (standard 4) grupper. ── */
+.group-badge-more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* ── Transskriptionsstatus (Filer og bilag): vises med ikon+tekst når rækken har plads til det;
    når pladsen bliver trang skifter den til kun ikon og udvides ved hover/klik ligesom
    gruppe-badges. Reagerer på selve rækkens bredde (container query), ikke vinduets bredde. ── */
