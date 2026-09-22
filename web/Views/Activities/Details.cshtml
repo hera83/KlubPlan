@@ -582,7 +582,9 @@
                                             <td><span class="@message.StatusBadgeClass">@message.Status</span></td>
                                             <td>@(message.SentAtUtc?.ToLocalTime().ToDanishDateTime() ?? "-")</td>
                                             <td class="text-end">
-                                                <a class="btn btn-sm btn-secondary btn-icon" asp-controller="Communication" asp-action="Details" asp-route-id="@message.Id" title="Vis besked" aria-label="Vis besked">
+                                                <a class="btn btn-sm btn-secondary btn-icon" asp-controller="Communication" asp-action="Details" asp-route-id="@message.Id"
+                                                   asp-route-returnUrl="@Url.Action("Details", "Activities", new { id = Model.Id, tab = "kommunikation" })" asp-route-returnLabel="Tilbage til aktiviteten"
+                                                   title="Vis besked" aria-label="Vis besked">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                             </td>

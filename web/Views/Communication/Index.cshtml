@@ -78,7 +78,9 @@
                                             @if (Model.IsAdmin)
                                             {
                                                 <div class="d-inline-flex gap-1">
-                                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@message.Id" title="Vis besked" aria-label="Vis besked">
+                                                    <a class="btn btn-sm btn-secondary btn-icon" asp-action="Details" asp-route-id="@message.Id"
+                                                       asp-route-returnUrl="@Url.Action("Index")" asp-route-returnLabel="Tilbage til kommunikation"
+                                                       title="Vis besked" aria-label="Vis besked">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
                                                     <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#resendMessageModal"

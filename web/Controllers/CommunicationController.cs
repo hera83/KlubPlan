@@ -33,13 +33,33 @@ namespace web.Controllers
         }
 
         [Authorize(Policy = "AdminOrDeveloper")]
-        public async Task<IActionResult> Details(int id, CancellationToken ct)
+        public async Task<IActionResult> Details(int id, string? returnUrl, string? returnLabel, CancellationToken ct)
         {
             var model = await _communicationService.GetDetailsAsync(id, ct);
             if (model is null)
             {
                 this.ToastError("Beskeden blev ikke fundet.");
                 return RedirectToAction(nameof(Index));
+            }
+
+            // The back-link goes to wherever the user actually opened this message from — the
+            // caller passes its own URL as returnUrl (e.g. the Kommunikation tab on an activity,
+            // or the Kommunikation index). Falls back to the message's own ActivityId (still
+            // correct when a message is opened directly, e.g. from a bookmark), then to the index.
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                model.ReturnUrl = returnUrl;
+                model.ReturnLabel = string.IsNullOrWhiteSpace(returnLabel) ? "Tilbage" : returnLabel;
+            }
+            else if (model.ActivityId.HasValue)
+            {
+                model.ReturnUrl = Url.Action("Details", "Activities", new { id = model.ActivityId, tab = "kommunikation" }) ?? Url.Action(nameof(Index))!;
+                model.ReturnLabel = "Tilbage til aktiviteten";
+            }
+            else
+            {
+                model.ReturnUrl = Url.Action(nameof(Index))!;
+                model.ReturnLabel = "Tilbage til kommunikation";
             }
 
             return View(model);

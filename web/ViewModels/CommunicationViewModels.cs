@@ -92,8 +92,14 @@ namespace web.ViewModels
         /// <summary>Name of the attached arrangement, if a Tilmelding link was sent with the message. Informational only.</summary>
         public string? ArrangementTitle { get; set; }
 
-        /// <summary>Activity this message was sent from, if any — drives the back-link target on Communication/Details.</summary>
+        /// <summary>Activity this message was sent from, if any — fallback back-link target on Communication/Details when no ReturnUrl was supplied by the caller.</summary>
         public int? ActivityId { get; set; }
+
+        /// <summary>Where the back-link on Communication/Details should go — the page the user actually came from (e.g. the Kommunikation tab on Activities/Details, or the Kommunikation index), set by the controller from the "returnUrl" query string with a fallback based on ActivityId.</summary>
+        public string ReturnUrl { get; set; } = string.Empty;
+
+        /// <summary>Label for the ReturnUrl back-link, e.g. "Tilbage til aktiviteten" or "Tilbage til kommunikation".</summary>
+        public string ReturnLabel { get; set; } = string.Empty;
 
         /// <summary>Page 1 of the full target audience, plus the filter state — feeds the paged/searchable "Modtagere" table (data-table pattern).</summary>
         public CommunicationRecipientFilterViewModel RecipientsTable { get; set; } = new();
