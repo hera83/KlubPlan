@@ -167,5 +167,8 @@ namespace web.ViewModels
 
         /// <summary>Options til den delte "Send besked"-modal (genbruger Kommunikations-modulets compose-UI).</summary>
         public ComposeOptionsViewModel ComposeOptions { get; set; } = new();
+
+        /// <summary>"Filer"-fanens første visning (rod eller ?folder=). Kun sat for administratorer.</summary>
+        public ActivityFilesViewModel? Files { get; set; }
     }
 }

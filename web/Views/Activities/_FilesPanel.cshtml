@@ -1,0 +1,188 @@
+@using web.Infrastructure
+@model web.ViewModels.ActivityFilesViewModel
+@{
+    var currentName = Model.Breadcrumbs.Last().Name;
+    var isEmpty = Model.Folders.Count == 0 && Model.Files.Count == 0;
+    string ItemCountText(int count) => count == 0 ? "Tom" : count == 1 ? "1 element" : $"{count} elementer";
+    string FileUrl(string action, int fileId) => Url.Action(action, "ActivityFiles", new { activityId = Model.ActivityId, fileId })!;
+}
+
+<div data-files-panel
+     data-folder-id="@Model.CurrentFolderId"
+     data-folder-name="@currentName"
+     data-total-files="@Model.TotalFileCount">
+
+    <nav aria-label="Mappesti">
+        <ol class="breadcrumb files-breadcrumb mb-2">
+            @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
+            {
+                var crumb = Model.Breadcrumbs[i];
+                var isLast = i == Model.Breadcrumbs.Count - 1 && !Model.IsSearch;
+                var icon = i == 0 ? "bi-folder2-open" : "bi-folder";
+                if (isLast)
+                {
+                    <li class="breadcrumb-item active" aria-current="page" data-files-drop-folder="@(crumb.Id?.ToString() ?? string.Empty)">
+                        <i class="bi @icon me-1"></i>@crumb.Name
+                    </li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item">
+                        <a href="#" data-files-open-folder="@(crumb.Id?.ToString() ?? string.Empty)" data-files-drop-folder="@(crumb.Id?.ToString() ?? string.Empty)" title="Gå til @crumb.Name">
+                            <i class="bi @icon me-1"></i>@crumb.Name
+                        </a>
+                    </li>
+                }
+            }
+            @if (Model.IsSearch)
+            {
+                <li class="breadcrumb-item active" aria-current="page"><i class="bi bi-search me-1"></i>Søgning: "@Model.SearchText"</li>
+            }
+        </ol>
+    </nav>
+
+    @if (isEmpty)
+    {
+        @if (Model.IsSearch)
+        {
+            <div class="files-empty">
+                <i class="bi bi-search files-empty-icon"></i>
+                <p class="fw-semibold mb-1">Ingen filer eller mapper matcher "@Model.SearchText"</p>
+                <p class="text-muted mb-0">Søgningen går på tværs af alle mapper i aktiviteten.</p>
+            </div>
+        }
+        else
+        {
+            <div class="files-empty" data-files-empty>
+                <i class="bi bi-cloud-arrow-up files-empty-icon"></i>
+                <p class="fw-semibold mb-1">@(Model.CurrentFolderId.HasValue ? "Mappen er tom" : "Der er ingen filer endnu")</p>
+                <p class="text-muted mb-3">Træk filer eller hele mapper hertil — eller vælg dem fra din computer.</p>
+                <div class="d-flex justify-content-center flex-wrap gap-2">
+                    <button type="button" class="btn btn-primary" data-files-action="upload-files">
+                        <i class="bi bi-upload me-1"></i> Vælg filer
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-files-action="new-folder">
+                        <i class="bi bi-folder-plus me-1"></i> Ny mappe
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle files-table mb-0" data-files-table>
+                <thead>
+                    <tr>
+                        <th class="files-col-check">
+                            <input type="checkbox" class="form-check-input" data-files-select-all title="Vælg alle" aria-label="Vælg alle" />
+                        </th>
+                        <th><button type="button" class="files-sort" data-files-sort="name">Navn<i class="bi ms-1"></i></button></th>
+                        <th class="d-none d-md-table-cell"><button type="button" class="files-sort" data-files-sort="modified">Ændret<i class="bi ms-1"></i></button></th>
+                        <th class="d-none d-lg-table-cell">Ændret af</th>
+                        <th class="d-none d-sm-table-cell text-end"><button type="button" class="files-sort" data-files-sort="size">Størrelse<i class="bi ms-1"></i></button></th>
+                        <th class="text-end">Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var folder in Model.Folders)
+                    {
+                        <tr data-files-item data-kind="folder" data-id="@folder.Id" data-name="@folder.Name"
+                            data-sort-modified="@folder.ModifiedAtUtc.Ticks" data-sort-size="-1"
+                            data-files-drop-folder="@folder.Id" draggable="true">
+                            <td class="files-col-check">
+                                <input type="checkbox" class="form-check-input" data-files-select aria-label="Vælg @folder.Name" />
+                            </td>
+                            <td class="files-col-name">
+                                <a href="#" class="files-name" data-files-open-folder="@folder.Id" draggable="false">
+                                    <i class="bi bi-folder-fill files-icon files-icon-folder"></i>
+                                    <span class="files-name-text">@folder.Name</span>
+                                </a>
+                                @if (Model.IsSearch)
+                                {
+                                    <div class="files-path"><i class="bi bi-folder2 me-1"></i>@(string.IsNullOrEmpty(folder.ParentPath) ? "Filer" : folder.ParentPath)</div>
+                                }
+                            </td>
+                            <td class="d-none d-md-table-cell text-muted">@folder.ModifiedAtUtc.ToLocalTime().ToDanishDateTime()</td>
+                            <td class="d-none d-lg-table-cell text-muted">–</td>
+                            <td class="d-none d-sm-table-cell text-end text-muted">@ItemCountText(folder.ItemCount)</td>
+                            <td class="text-end text-nowrap">
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-secondary btn-icon" data-files-row-action="download" title="Download som zip" aria-label="Download som zip">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-files-row-action="menu" title="Flere handlinger" aria-label="Flere handlinger">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var file in Model.Files)
+                    {
+                        var openUrl = file.CanPreview ? FileUrl("Open", file.Id) : FileUrl("Download", file.Id);
+                        <tr data-files-item data-kind="file" data-id="@file.Id" data-name="@file.FileName"
+                            data-sort-modified="@file.ModifiedAtUtc.Ticks" data-sort-size="@file.SizeBytes"
+                            data-preview="@(file.CanPreview ? "true" : "false")"
+                            data-open-url="@openUrl" data-download-url="@FileUrl("Download", file.Id)"
+                            data-version-count="@file.VersionCount" draggable="true">
+                            <td class="files-col-check">
+                                <input type="checkbox" class="form-check-input" data-files-select aria-label="Vælg @file.FileName" />
+                            </td>
+                            <td class="files-col-name">
+                                <a href="@openUrl" class="files-name" draggable="false"
+                                   target="@(file.CanPreview ? "_blank" : null)" rel="@(file.CanPreview ? "noopener" : null)"
+                                   title="@(file.CanPreview ? "Åbn i ny fane" : "Download")">
+                                    <i class="bi @file.IconClass files-icon"></i>
+                                    <span class="files-name-text">@file.FileName</span>
+                                </a>
+                                @if (file.VersionCount > 1)
+                                {
+                                    <button type="button" class="files-version-badge badge-info" data-files-row-action="versions" title="Vis tidligere versioner">
+                                        <i class="bi bi-clock-history me-1"></i>v@(file.CurrentVersionNumber)
+                                    </button>
+                                }
+                                @if (Model.IsSearch)
+                                {
+                                    <div class="files-path"><i class="bi bi-folder2 me-1"></i>@(string.IsNullOrEmpty(file.FolderPath) ? "Filer" : file.FolderPath)</div>
+                                }
+                            </td>
+                            <td class="d-none d-md-table-cell text-muted">@file.ModifiedAtUtc.ToLocalTime().ToDanishDateTime()</td>
+                            <td class="d-none d-lg-table-cell text-muted">@(string.IsNullOrEmpty(file.ModifiedByName) ? "–" : file.ModifiedByName)</td>
+                            <td class="d-none d-sm-table-cell text-end text-muted">@ByteSizeFormatter.FormatDanish(file.SizeBytes)</td>
+                            <td class="text-end text-nowrap">
+                                <div class="d-inline-flex gap-1">
+                                    <a class="btn btn-sm btn-secondary btn-icon" href="@FileUrl("Download", file.Id)" draggable="false" title="Download" aria-label="Download">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-files-row-action="versions" title="Versioner" aria-label="Versioner">
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-files-row-action="menu" title="Flere handlinger" aria-label="Flere handlinger">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="table-footer">
+        <p class="table-footer-count">
+            @if (Model.IsSearch)
+            {
+                @($"{Model.Folders.Count + Model.Files.Count} resultat{(Model.Folders.Count + Model.Files.Count == 1 ? "" : "er")}")
+            }
+            else
+            {
+                @($"{Model.Folders.Count} mappe{(Model.Folders.Count == 1 ? "" : "r")} · {Model.Files.Count} fil{(Model.Files.Count == 1 ? "" : "er")}")
+            }
+        </p>
+        <p class="table-footer-count">
+            <i class="bi bi-hdd me-1"></i>Aktiviteten i alt: @Model.TotalFileCount fil@(Model.TotalFileCount == 1 ? "" : "er") · @ByteSizeFormatter.FormatDanish(Model.TotalSizeBytes) inkl. tidligere versioner
+        </p>
+    </div>
+</div>

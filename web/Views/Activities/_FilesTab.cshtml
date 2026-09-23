@@ -1,0 +1,111 @@
+@using web.Constants
+@using web.Infrastructure
+@model web.ViewModels.ActivityFilesViewModel
+
+@*
+    "Filer"-fanen: dokumenthotel med mapper, versioner og drag & drop. Logikken ligger i
+    wwwroot/js/activity-files.js; modals i _FilesModals.cshtml; tabellen i _FilesPanel.cshtml.
+*@
+<div class="activity-files" data-activity-files
+     data-activity-id="@Model.ActivityId"
+     data-folder-id="@Model.CurrentFolderId"
+     data-max-bytes="@ActivityFileRules.MaxFileSizeBytes"
+     data-max-size-text="@ByteSizeFormatter.FormatDanish(ActivityFileRules.MaxFileSizeBytes)"
+     data-blocked-extensions="@string.Join(",", ActivityFileRules.BlockedExtensions)"
+     data-url-details="@Url.Action("Details", "Activities", new { id = Model.ActivityId })"
+     data-url-panel="@Url.Action("Panel", "ActivityFiles")"
+     data-url-upload="@Url.Action("Upload", "ActivityFiles")"
+     data-url-save-folder="@Url.Action("SaveFolder", "ActivityFiles")"
+     data-url-rename-file="@Url.Action("RenameFile", "ActivityFiles")"
+     data-url-move="@Url.Action("Move", "ActivityFiles")"
+     data-url-folder-tree="@Url.Action("FolderTree", "ActivityFiles")"
+     data-url-delete-summary="@Url.Action("DeleteSummary", "ActivityFiles")"
+     data-url-delete="@Url.Action("Delete", "ActivityFiles")"
+     data-url-versions="@Url.Action("Versions", "ActivityFiles")"
+     data-url-restore="@Url.Action("RestoreVersion", "ActivityFiles")"
+     data-url-zip="@Url.Action("DownloadZip", "ActivityFiles")">
+
+    @Html.AntiForgeryToken()
+
+    <div class="table-toolbar mb-3">
+        <div class="table-toolbar-start">
+            <div class="table-search">
+                <i class="bi bi-search"></i>
+                <input type="search" class="form-control" placeholder="Søg i alle filer og mapper..." data-files-search autocomplete="off" aria-label="Søg i filer" />
+            </div>
+        </div>
+        <div class="table-toolbar-end">
+            <button type="button" class="btn btn-outline-secondary" data-files-action="new-folder" title="Ny mappe" aria-label="Ny mappe">
+                <i class="bi bi-folder-plus me-1"></i> Ny mappe
+            </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" data-files-action="upload-files" title="Upload filer" aria-label="Upload filer">
+                    <i class="bi bi-upload me-1"></i> Upload
+                </button>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Flere uploadmuligheder" aria-label="Flere uploadmuligheder"></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button type="button" class="dropdown-item" data-files-action="upload-files"><i class="bi bi-file-earmark-arrow-up me-2"></i>Upload filer</button></li>
+                    <li><button type="button" class="dropdown-item" data-files-action="upload-folder"><i class="bi bi-folder-symlink me-2"></i>Upload mappe</button></li>
+                </ul>
+            </div>
+            <input type="file" multiple hidden data-files-input />
+            <input type="file" multiple hidden webkitdirectory data-files-folder-input />
+            <input type="file" hidden data-files-version-input />
+        </div>
+    </div>
+
+    <div class="files-selection-bar mb-3" data-files-selection-bar hidden>
+        <span class="files-selection-count"><i class="bi bi-check2-square me-1"></i><strong data-files-selection-count>0</strong> valgt</span>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-files-action="download-selection">
+                <i class="bi bi-download me-1"></i> Download
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-files-action="move-selection">
+                <i class="bi bi-folder-symlink me-1"></i> Flyt til…
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-files-action="delete-selection">
+                <i class="bi bi-trash me-1"></i> Slet
+            </button>
+            <button type="button" class="btn btn-sm btn-link text-decoration-none" data-files-action="clear-selection">
+                <i class="bi bi-x-lg me-1"></i> Ryd valg
+            </button>
+        </div>
+    </div>
+
+    <div class="files-dropzone" data-files-dropzone>
+        <div data-files-region>
+            @await Html.PartialAsync("_FilesPanel", Model)
+        </div>
+        <div class="files-drop-hint" aria-hidden="true">
+            <i class="bi bi-cloud-arrow-up me-2"></i>Slip for at uploade til <strong class="ms-1" data-files-drop-target-name>Filer</strong>
+        </div>
+    </div>
+
+    <p class="form-text mt-2 mb-0">
+        <i class="bi bi-info-circle me-1"></i>
+        Træk filer eller mapper ind på siden for at uploade — eller træk dem mellem mapperne for at flytte.
+        Filer med samme navn gemmes som en ny version. Maks. @ByteSizeFormatter.FormatDanish(ActivityFileRules.MaxFileSizeBytes) pr. fil — programfiler kan ikke uploades.
+    </p>
+
+    <!-- Upload-status (nederst til højre) -->
+    <div class="files-upload-panel" data-files-upload-panel hidden>
+        <div class="files-upload-header">
+            <span class="fw-semibold" data-files-upload-title>Uploader…</span>
+            <div class="d-inline-flex gap-1">
+                <button type="button" class="btn btn-sm btn-link btn-icon" data-files-upload-toggle title="Skjul/vis liste" aria-label="Skjul/vis liste">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-link btn-icon" data-files-upload-close title="Luk" aria-label="Luk">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div class="progress files-upload-total" role="progressbar" aria-label="Samlet upload">
+            <div class="progress-bar" data-files-upload-total style="width:0%"></div>
+        </div>
+        <ul class="files-upload-list" data-files-upload-list></ul>
+    </div>
+
+    <!-- Højreklik-/"Flere handlinger"-menu -->
+    <ul class="dropdown-menu files-context-menu" data-files-context-menu role="menu"></ul>
+</div>

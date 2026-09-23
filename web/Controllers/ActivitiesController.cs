@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using web.Constants;
 using web.Data.Entities;
 using web.Infrastructure;
 using web.Repositories.Activities.Dtos;
 using web.Repositories.Activities.Interfaces;
+using web.Repositories.ActivityFiles.Interfaces;
 using web.ViewModels;
 
 namespace web.Controllers
@@ -14,10 +16,12 @@ namespace web.Controllers
     {
         private readonly IActivityService _activityService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IActivityFileService _activityFileService;
 
-        public ActivitiesController(IActivityService activityService, UserManager<ApplicationUser> userManager)
+        public ActivitiesController(IActivityService activityService, UserManager<ApplicationUser> userManager, IActivityFileService activityFileService)
         {
             _activityService = activityService;
+            _activityFileService = activityFileService;
             _userManager = userManager;
         }
 
@@ -102,13 +106,18 @@ namespace web.Controllers
                 : this.ToastErrorJson("Aktiviteten blev ikke fundet.");
         }
 
-        public async Task<IActionResult> Details(int id, string? tab, CancellationToken ct)
+        public async Task<IActionResult> Details(int id, string? tab, int? folder, CancellationToken ct)
         {
             var model = await _activityService.GetActivityDetailsAsync(id, ct);
             if (model is null)
             {
                 this.ToastError("Aktiviteten blev ikke fundet.");
                 return RedirectToAction(nameof(Index));
+            }
+
+            if (User.IsInRole(AppRoles.Administrator) || User.IsInRole(AppRoles.Developer))
+            {
+                model.Files = await _activityFileService.GetFolderAsync(id, folder, null, ct);
             }
 
             ViewData["ActiveTab"] = string.IsNullOrWhiteSpace(tab) ? "oversigt" : tab;

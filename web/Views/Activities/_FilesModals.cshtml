@@ -1,0 +1,123 @@
+@*
+    Modals til "Filer"-fanen (ny mappe/omdøb, flyt, slet, versioner). Styres fra wwwroot/js/activity-files.js.
+*@
+
+<!-- Ny mappe / omdøb -->
+<div class="modal fade" id="filesNameModal" tabindex="-1" aria-labelledby="filesNameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" data-files-name-form novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesNameModalLabel"><i class="bi bi-folder-plus me-2" data-files-name-icon></i><span data-files-name-title>Ny mappe</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <label for="filesNameInput" class="form-label">Navn</label>
+                <input type="text" class="form-control" id="filesNameInput" maxlength="255" autocomplete="off" required data-files-name-input />
+                <div class="invalid-feedback" data-files-name-error></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Flyt til… -->
+<div class="modal fade" id="filesMoveModal" tabindex="-1" aria-labelledby="filesMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesMoveModalLabel"><i class="bi bi-folder-symlink me-2"></i>Flyt <span data-files-move-what></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-2">Vælg den mappe, der skal flyttes til:</p>
+                <div class="list-group files-folder-tree" data-files-move-tree role="listbox" aria-label="Mapper"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="button" class="btn btn-primary" data-files-move-confirm disabled>
+                    <i class="bi bi-folder-check me-1"></i> Flyt hertil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slet (permanent) -->
+<div class="modal fade" id="filesDeleteModal" tabindex="-1" aria-labelledby="filesDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesDeleteModalLabel"><i class="bi bi-trash me-2"></i>Slet <span data-files-delete-what></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center text-muted py-3" data-files-delete-loading>
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Beregner hvad der slettes…
+                </div>
+                <div data-files-delete-summary hidden>
+                    <p class="mb-2">Følgende slettes permanent:</p>
+                    <div class="files-delete-stats mb-3">
+                        <div class="files-delete-stat" data-files-delete-folders-wrap>
+                            <i class="bi bi-folder-fill files-icon-folder"></i>
+                            <div><div class="files-delete-stat-value" data-files-delete-folders>0</div><div class="files-delete-stat-label">Mapper</div></div>
+                        </div>
+                        <div class="files-delete-stat">
+                            <i class="bi bi-file-earmark"></i>
+                            <div><div class="files-delete-stat-value" data-files-delete-files>0</div><div class="files-delete-stat-label">Filer</div></div>
+                        </div>
+                        <div class="files-delete-stat">
+                            <i class="bi bi-hdd"></i>
+                            <div><div class="files-delete-stat-value" data-files-delete-size>0 B</div><div class="files-delete-stat-label">Fylder</div></div>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2" data-files-delete-versions></p>
+                    <div class="files-delete-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Der er ingen papirkurv — filerne og alle deres versioner kan ikke gendannes bagefter.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="button" class="btn btn-danger" data-files-delete-confirm disabled>
+                    <i class="bi bi-trash me-1"></i> Slet permanent
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Versioner -->
+<div class="modal fade" id="filesVersionsModal" tabindex="-1" aria-labelledby="filesVersionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesVersionsModalLabel"><i class="bi bi-clock-history me-2"></i>Versioner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" data-files-versions-body>
+                <div class="text-center text-muted py-3">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Henter versioner…
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary me-auto" data-files-upload-version>
+                    <i class="bi bi-upload me-1"></i> Upload ny version
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

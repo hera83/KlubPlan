@@ -23,6 +23,8 @@ using web.Repositories.Communication;
 using web.Repositories.Communication.Interfaces;
 using web.Repositories.Activities;
 using web.Repositories.Activities.Interfaces;
+using web.Repositories.ActivityFiles;
+using web.Repositories.ActivityFiles.Interfaces;
 using web.BgSerives;
 using web.Services.AiGateway;
 using web.Services.AiGateway.Interfaces;
@@ -135,6 +137,7 @@ try
     builder.Services.AddScoped<IArrangementService, ArrangementService>();
     builder.Services.AddScoped<ICommunicationService, CommunicationService>();
     builder.Services.AddScoped<IActivityService, ActivityService>();
+    builder.Services.AddScoped<IActivityFileService, ActivityFileService>();
     builder.Services.AddSingleton<ITranscriptionQueue, TranscriptionQueue>();
     builder.Services.AddHostedService<TranscriptionWorker>();
 

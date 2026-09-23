@@ -140,6 +140,15 @@
                         }
                     </button>
                 </li>
+                @if (isAdmin && Model.Files is not null)
+                {
+                    <li class="nav-item" role="presentation">
+                        <button class="@TabButtonClass("filer")" data-bs-toggle="tab" data-bs-target="#filer-pane" type="button" role="tab">
+                            Filer
+                            <span class="badge-info ms-1" data-files-tab-count hidden="@(Model.Files.TotalFileCount == 0)">@Model.Files.TotalFileCount</span>
+                        </button>
+                    </li>
+                }
                 <li class="nav-item" role="presentation">
                     <button class="@TabButtonClass("kommunikation")" data-bs-toggle="tab" data-bs-target="#kommunikation-pane" type="button" role="tab">Kommunikation</button>
                 </li>
@@ -529,6 +538,14 @@
                     }
                 </div>
 
+                <!-- Filer -->
+                @if (isAdmin && Model.Files is not null)
+                {
+                    <div class="@TabPaneClass("filer")" id="filer-pane" role="tabpanel">
+                        @await Html.PartialAsync("_FilesTab", Model.Files)
+                    </div>
+                }
+
                 <!-- Kommunikation -->
                 <div class="@TabPaneClass("kommunikation")" id="kommunikation-pane" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -606,6 +623,8 @@
     @await Html.PartialAsync("_ActivityDeleteModal")
     @await Html.PartialAsync("_WorkgroupMemberModal", Model)
     @await Html.PartialAsync("_TaskModal", Model)
+    @await Html.PartialAsync("_FilesModals")
+    <script src="~/js/activity-files.js" asp-append-version="true"></script>
 
     var composeViewData = new ViewDataDictionary(ViewData)
     {

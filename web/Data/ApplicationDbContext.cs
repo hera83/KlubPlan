@@ -65,6 +65,11 @@ namespace web.Data
         public DbSet<ActivityWorkgroupMember> ActivityWorkgroupMembers { get; set; } = null!;
         public DbSet<ActivityTask> ActivityTasks { get; set; } = null!;
 
+        // Aktivitet "Filer"-fane: mapper, logiske filer og deres versioner (fysiske filer i App_files/activities)
+        public DbSet<ActivityFolder> ActivityFolders { get; set; } = null!;
+        public DbSet<ActivityFile> ActivityFiles { get; set; } = null!;
+        public DbSet<ActivityFileVersion> ActivityFileVersions { get; set; } = null!;
+
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
         public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
@@ -807,6 +812,82 @@ namespace web.Data
 
                 entity.HasIndex(e => new { e.ActivityId, e.Order });
                 entity.HasIndex(e => e.DeadlineAtUtc);
+            });
+
+            // Configure ActivityFolder (self-referencing tree; deleting a folder deletes its sub tree)
+            builder.Entity<ActivityFolder>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany()
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ParentFolder)
+                    .WithMany(f => f.SubFolders)
+                    .HasForeignKey(e => e.ParentFolderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityId, e.ParentFolderId });
+            });
+
+            // Configure ActivityFile (name uniqueness per folder is enforced case-insensitively in ActivityFileService)
+            builder.Entity<ActivityFile>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.FileName)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany()
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Folder)
+                    .WithMany(f => f.Files)
+                    .HasForeignKey(e => e.FolderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityId, e.FolderId });
+            });
+
+            // Configure ActivityFileVersion
+            builder.Entity<ActivityFileVersion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.ActivityFile)
+                    .WithMany(f => f.Versions)
+                    .HasForeignKey(e => e.ActivityFileId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FileMetadata)
+                    .WithMany()
+                    .HasForeignKey(e => e.FileMetadataId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.UploadedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.UploadedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => new { e.ActivityFileId, e.VersionNumber }).IsUnique();
             });
 
             // Configure CommunicationMessage

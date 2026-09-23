@@ -5,6 +5,7 @@ using web.Data;
 using web.Data.Entities;
 using web.Repositories.Activities.Dtos;
 using web.Repositories.Activities.Interfaces;
+using web.Repositories.ActivityFiles.Interfaces;
 using web.Repositories.Communication.Interfaces;
 using web.Repositories.Forms.Interfaces;
 using web.Infrastructure;
@@ -20,9 +21,11 @@ namespace web.Repositories.Activities
         private readonly ICommunicationService _communicationService;
         private readonly IFormService _formService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IActivityFileService _activityFileService;
 
-        public ActivityService(ApplicationDbContext context, ICommunicationService communicationService, IFormService formService, UserManager<ApplicationUser> userManager)
+        public ActivityService(ApplicationDbContext context, ICommunicationService communicationService, IFormService formService, UserManager<ApplicationUser> userManager, IActivityFileService activityFileService)
         {
+            _activityFileService = activityFileService;
             _context = context;
             _communicationService = communicationService;
             _formService = formService;
@@ -190,6 +193,10 @@ namespace web.Repositories.Activities
             {
                 return false;
             }
+
+            // Files/folders are removed first so the physical files under App_files/activities go too
+            // (a DB cascade alone would leave them orphaned on disk).
+            await _activityFileService.DeleteAllForActivityAsync(id, ct);
 
             // TargetGroups/WorkgroupMembers/Tasks/LinkedForms cascade-delete with the activity;
             // the linked Forms themselves keep existing — only the join rows are removed. A

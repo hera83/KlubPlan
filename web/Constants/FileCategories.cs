@@ -23,5 +23,8 @@ namespace web.Constants
 
         /// <summary>Communication message attachments (email only) — App_files/communication/</summary>
         public const string Communication = "communication";
+
+        /// <summary>Activity document hotel (Filer-fanen på en aktivitet) — App_files/activities/</summary>
+        public const string Activities = "activities";
     }
 }
