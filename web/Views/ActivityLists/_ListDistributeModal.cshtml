@@ -1,0 +1,79 @@
+@model web.ViewModels.ActivityListDetailsViewModel
+
+<!-- Fordel linjer mellem personer i arbejdsgruppen -->
+<div class="modal fade" id="listDistributeModal" tabindex="-1" aria-labelledby="listDistributeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" asp-action="Distribute" method="post" data-list-distribute-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ListId" value="@Model.Id" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="listDistributeModalLabel"><i class="bi bi-people me-2"></i>Fordel linjer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.Schema.Members.Count == 0)
+                {
+                    <p class="mb-0 text-muted">
+                        Aktiviteten har ingen arbejdsgruppe endnu. Tilføj personer under
+                        <a asp-controller="Activities" asp-action="Details" asp-route-id="@Model.ActivityId" asp-route-tab="arbejdsgruppe">Arbejdsgruppe</a>
+                        først.
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted">Vælg hvem der skal dele listen. Linjerne fordeles i sammenhængende blokke i listens rækkefølge, så alle får (næsten) lige mange.</p>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="form-label mb-0">Personer</span>
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" data-list-distribute-all><i class="bi bi-check2-all me-1"></i>Vælg alle</button>
+                    </div>
+                    <div class="list-group mb-3">
+                        @foreach (var member in Model.Schema.Members)
+                        {
+                            <label class="list-group-item d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="checkbox" name="MemberIds" value="@member.Id" data-name="@member.Name" data-list-distribute-member />
+                                <span class="flex-grow-1">
+                                    @member.Name
+                                    @if (member.IsMe)
+                                    {
+                                        <span class="badge-info ms-1">Dig</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(member.Role))
+                                    {
+                                        <span class="text-muted small ms-1">@member.Role</span>
+                                    }
+                                </span>
+                                <span class="text-muted small text-nowrap"><span data-list-member-count="@member.Id">@member.AssignedCount</span> linjer</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="OnlyUnassigned" id="listDistributeUnassigned" value="true" checked data-list-distribute-mode />
+                        <label class="form-check-label" for="listDistributeUnassigned">
+                            Kun linjer uden tilknytning (<span data-list-unassigned>@Model.UnassignedCount</span>)
+                            <span class="d-block text-muted small">Eksisterende fordeling bevares og tæller med, så totalen bliver jævn.</span>
+                        </label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="OnlyUnassigned" id="listDistributeAll" value="false" data-list-distribute-mode />
+                        <label class="form-check-label" for="listDistributeAll">
+                            Alle linjer (<span data-list-total>@Model.TotalCount</span>)
+                            <span class="d-block text-muted small">Nuværende tilknytninger overskrives.</span>
+                        </label>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0 py-2" data-list-distribute-preview hidden></div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                @if (Model.Schema.Members.Count > 0)
+                {
+                    <button type="submit" class="btn btn-primary" data-list-distribute-submit disabled>
+                        <i class="bi bi-shuffle me-1"></i> Fordel
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>

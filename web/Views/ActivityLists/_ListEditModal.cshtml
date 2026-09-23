@@ -1,0 +1,35 @@
+@model web.ViewModels.ActivityListDetailsViewModel
+
+<!-- Rediger titel og beskrivelse -->
+<div class="modal fade" id="listEditModal" tabindex="-1" aria-labelledby="listEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" asp-action="Update" method="post" data-list-reload-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ListId" value="@Model.Id" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="listEditModalLabel"><i class="bi bi-pencil me-2"></i>Rediger liste</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="listEditTitle">Titel</label>
+                        <input name="Title" id="listEditTitle" class="form-control" required maxlength="200" value="@Model.Title" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="listEditDescription">Beskrivelse</label>
+                        <textarea name="Description" id="listEditDescription" class="form-control" rows="3" maxlength="2000">@Model.Description</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

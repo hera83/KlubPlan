@@ -1,0 +1,76 @@
+@using web.Data.Entities
+@model web.ViewModels.ActivityListSchemaViewModel
+
+<!-- Tilføj / rediger linje (alle kolonner, også dem fra Excel-arket) -->
+<div class="modal fade" id="listItemModal" tabindex="-1" aria-labelledby="listItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <form class="modal-content" asp-action="SaveItem" method="post" data-list-item-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ListId" value="@Model.ListId" />
+            <input type="hidden" name="ItemId" data-list-item-id />
+            <div class="modal-header">
+                <h5 class="modal-title" id="listItemModalLabel"><i class="bi bi-pencil me-2" data-list-item-icon></i><span data-list-item-title>Rediger linje</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    @foreach (var column in Model.Columns)
+                    {
+                        var inputId = $"listItemCol{column.Id}";
+                        <div class="col-md-6">
+                            @switch (column.Kind)
+                            {
+                                case ActivityListColumnKind.YesNo:
+                                    <div class="form-check mt-md-4">
+                                        <input type="checkbox" class="form-check-input" id="@inputId" name="Values[@column.Id]" value="true" data-list-item-value="@column.Id" />
+                                        <label class="form-check-label" for="@inputId">@column.Name</label>
+                                    </div>
+                                    break;
+                                case ActivityListColumnKind.Choice:
+                                    <label class="form-label" for="@inputId">@column.Name</label>
+                                    <select class="form-select" id="@inputId" name="Values[@column.Id]" data-list-item-value="@column.Id">
+                                        <option value="">–</option>
+                                        @foreach (var option in column.Options)
+                                        {
+                                            <option value="@option">@option</option>
+                                        }
+                                    </select>
+                                    break;
+                                default:
+                                    <label class="form-label" for="@inputId">
+                                        @column.Name
+                                        @if (column.IsImported)
+                                        {
+                                            <i class="bi bi-file-earmark-excel text-muted ms-1" title="Fra Excel-arket"></i>
+                                        }
+                                    </label>
+                                    <input type="text" class="form-control" id="@inputId" name="Values[@column.Id]" maxlength="4000" data-list-item-value="@column.Id" />
+                                    break;
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="files-delete-warning mt-3" data-list-item-delete-confirm hidden>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span><i class="bi bi-exclamation-triangle me-2"></i>Slet linjen permanent, inkl. status og note?</span>
+                        <span class="d-inline-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-secondary" data-list-item-delete-cancel><i class="bi bi-x-lg me-1"></i> Nej</button>
+                            <button type="button" class="btn btn-sm btn-danger" data-list-item-delete-yes><i class="bi bi-trash me-1"></i> Ja, slet linjen</button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger me-auto" data-list-item-delete>
+                    <i class="bi bi-trash me-1"></i> Slet linje
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

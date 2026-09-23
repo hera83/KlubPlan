@@ -1,0 +1,119 @@
+@using web.Constants
+@using web.Infrastructure
+@model web.ViewModels.ActivityDetailsViewModel
+
+<!-- Opret liste -->
+<div class="modal fade" id="listCreateModal" tabindex="-1" aria-labelledby="listCreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-controller="ActivityLists" asp-action="Create" method="post" enctype="multipart/form-data" data-list-create-form>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ActivityId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="listCreateModalLabel"><i class="bi bi-plus-lg me-2"></i>Opret liste</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label" for="listCreateTitle">Titel</label>
+                            <input name="Title" id="listCreateTitle" class="form-control" required maxlength="200" placeholder="Fx Uddeling af flyers" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="listCreateDescription">Beskrivelse</label>
+                            <textarea name="Description" id="listCreateDescription" class="form-control" rows="2" maxlength="2000" placeholder="Hvad går listen ud på?"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="listCreateFile">Excel-ark (.xlsx)</label>
+                            <input type="file" name="File" id="listCreateFile" class="form-control" required
+                                   accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>Første række bliver kolonneoverskrifter, og hver række derunder bliver en linje.
+                                Status, Note og Tilknyttet tilføjes automatisk. Maks. @ByteSizeFormatter.FormatDanish(ActivityListRules.MaxImportBytes).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Annuller
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-floppy me-1"></i> <span>Opret liste</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Slet liste -->
+<div class="modal fade" id="listDeleteModal" tabindex="-1" aria-labelledby="listDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="listDeleteModalLabel"><i class="bi bi-trash me-2"></i>Slet liste</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                Er du sikker på, at du vil slette listen <strong id="listDeleteName"></strong> med <strong id="listDeleteCount">0</strong> linjer?
+                Alle statusser, noter og tilknytninger slettes med. Eksporter listen først, hvis du vil gemme svarene. Denne handling kan ikke fortrydes.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <form asp-controller="ActivityLists" asp-action="Delete" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="listDeleteId" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i> Slet
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const createForm = document.querySelector('[data-list-create-form]');
+        createForm?.addEventListener('submit', (e) => {
+            if (!createForm.checkValidity()) return;
+            // Import of a big sheet can take a moment — show it's working and prevent double submits.
+            const btn = createForm.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importerer…';
+        });
+
+        const deleteModal = document.getElementById('listDeleteModal');
+        let deleteRow = null;
+        deleteModal?.addEventListener('show.bs.modal', (event) => {
+            const btn = event.relatedTarget;
+            if (!btn) return;
+            deleteRow = btn.closest('tr');
+            document.getElementById('listDeleteName').textContent = btn.dataset.title;
+            document.getElementById('listDeleteCount').textContent = btn.dataset.count;
+            document.getElementById('listDeleteId').value = btn.dataset.id;
+        });
+
+        const deleteForm = deleteModal?.querySelector('form');
+        deleteForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = deleteForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            const data = await window.FvForm.submit(deleteForm);
+            submitBtn.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(deleteModal)?.hide();
+                deleteRow?.remove();
+                const counter = document.querySelector('[data-lists-tab-count]');
+                if (counter) {
+                    const next = Math.max(0, Number(counter.textContent) - 1);
+                    counter.textContent = next;
+                    counter.hidden = next === 0;
+                }
+            }
+        });
+    })();
+</script>

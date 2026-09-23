@@ -70,6 +70,13 @@ namespace web.Data
         public DbSet<ActivityFile> ActivityFiles { get; set; } = null!;
         public DbSet<ActivityFileVersion> ActivityFileVersions { get; set; } = null!;
 
+        // Aktivitet "Lister"-fane: arbejdslister importeret fra Excel, med status/note/tilknyttet pr. linje
+        public DbSet<ActivityList> ActivityLists { get; set; } = null!;
+        public DbSet<ActivityListColumn> ActivityListColumns { get; set; } = null!;
+        public DbSet<ActivityListStatus> ActivityListStatuses { get; set; } = null!;
+        public DbSet<ActivityListItem> ActivityListItems { get; set; } = null!;
+        public DbSet<ActivityListCellValue> ActivityListCellValues { get; set; } = null!;
+
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
         public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
@@ -888,6 +895,135 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => new { e.ActivityFileId, e.VersionNumber }).IsUnique();
+            });
+
+            // Configure ActivityList
+            builder.Entity<ActivityList>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.SourceFileName)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Activity)
+                    .WithMany()
+                    .HasForeignKey(e => e.ActivityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.ActivityId);
+            });
+
+            // Configure ActivityListColumn
+            builder.Entity<ActivityListColumn>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Kind)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasConversion<string>();
+
+                entity.Property(e => e.Options)
+                    .HasMaxLength(2000);
+
+                entity.HasOne(e => e.ActivityList)
+                    .WithMany(l => l.Columns)
+                    .HasForeignKey(e => e.ActivityListId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityListId, e.Order });
+            });
+
+            // Configure ActivityListStatus
+            builder.Entity<ActivityListStatus>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Color)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.HasOne(e => e.ActivityList)
+                    .WithMany(l => l.Statuses)
+                    .HasForeignKey(e => e.ActivityListId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityListId, e.Order });
+            });
+
+            // Configure ActivityListItem
+            builder.Entity<ActivityListItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Note)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.ActivityList)
+                    .WithMany(l => l.Items)
+                    .HasForeignKey(e => e.ActivityListId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Status)
+                    .WithMany()
+                    .HasForeignKey(e => e.StatusId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.AssignedToWorkgroupMember)
+                    .WithMany()
+                    .HasForeignKey(e => e.AssignedToWorkgroupMemberId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.UpdatedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.UpdatedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => new { e.ActivityListId, e.Order });
+                entity.HasIndex(e => e.AssignedToWorkgroupMemberId);
+            });
+
+            // Configure ActivityListCellValue
+            builder.Entity<ActivityListCellValue>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Value)
+                    .HasMaxLength(4000);
+
+                entity.HasOne(e => e.Item)
+                    .WithMany(i => i.Values)
+                    .HasForeignKey(e => e.ActivityListItemId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Column)
+                    .WithMany(c => c.Values)
+                    .HasForeignKey(e => e.ActivityListColumnId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityListItemId, e.ActivityListColumnId }).IsUnique();
+                entity.HasIndex(e => e.ActivityListColumnId);
             });
 
             // Configure CommunicationMessage

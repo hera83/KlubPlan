@@ -7,6 +7,7 @@ using web.Infrastructure;
 using web.Repositories.Activities.Dtos;
 using web.Repositories.Activities.Interfaces;
 using web.Repositories.ActivityFiles.Interfaces;
+using web.Repositories.ActivityLists.Interfaces;
 using web.ViewModels;
 
 namespace web.Controllers
@@ -17,9 +18,11 @@ namespace web.Controllers
         private readonly IActivityService _activityService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IActivityFileService _activityFileService;
+        private readonly IActivityListService _activityListService;
 
-        public ActivitiesController(IActivityService activityService, UserManager<ApplicationUser> userManager, IActivityFileService activityFileService)
+        public ActivitiesController(IActivityService activityService, UserManager<ApplicationUser> userManager, IActivityFileService activityFileService, IActivityListService activityListService)
         {
+            _activityListService = activityListService;
             _activityService = activityService;
             _activityFileService = activityFileService;
             _userManager = userManager;
@@ -118,6 +121,7 @@ namespace web.Controllers
             if (User.IsInRole(AppRoles.Administrator) || User.IsInRole(AppRoles.Developer))
             {
                 model.Files = await _activityFileService.GetFolderAsync(id, folder, null, ct);
+                model.Lists = await _activityListService.GetListsAsync(id, _userManager.GetUserId(User), ct);
             }
 
             ViewData["ActiveTab"] = string.IsNullOrWhiteSpace(tab) ? "oversigt" : tab;

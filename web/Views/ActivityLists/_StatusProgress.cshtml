@@ -1,0 +1,14 @@
+@model List<web.ViewModels.ActivityListStatusViewModel>
+@{
+    var total = Model.Sum(s => s.Count);
+}
+@* Stacked bar: one segment per status in status order. data-status-id lets activity-list.js update widths live. *@
+<div class="list-progress" role="img" aria-label="@string.Join(", ", Model.Select(s => $"{s.Name}: {s.Count}"))">
+    @foreach (var status in Model)
+    {
+        var pct = total == 0 ? 0 : status.Count * 100.0 / total;
+        <div class="list-progress-segment list-color-@status.Color" data-status-id="@status.Id"
+             style="width:@(pct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"
+             title="@status.Name: @status.Count"></div>
+    }
+</div>

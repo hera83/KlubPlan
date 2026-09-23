@@ -1,0 +1,155 @@
+@using System.Text.Json
+@using web.Data.Entities
+@using web.Infrastructure
+@using web.Repositories.ActivityLists
+@model web.ViewModels.ActivityListItemsViewModel
+@{
+    var schema = Model.Schema;
+    var statuses = schema.Statuses.ToDictionary(s => s.Id);
+    var colCount = 1 + schema.Columns.Count + 2 + (schema.ShowNote ? 1 : 0) + 1;
+
+    // Header button that toggles sorting; the arrow shows the active sort.
+    Microsoft.AspNetCore.Html.IHtmlContent SortHeader(string key, string label, string? icon = null)
+    {
+        var active = (Model.SortColumn ?? "order") == key;
+        var desc = active && Model.SortDir == "desc";
+        var arrow = active ? (desc ? "bi-arrow-down" : "bi-arrow-up") : string.Empty;
+        var iconHtml = icon is null ? string.Empty : $"<i class=\"bi {icon} me-1 text-muted\"></i>";
+        return new Microsoft.AspNetCore.Html.HtmlString(
+            $"<button type=\"button\" class=\"files-sort{(active ? " is-active" : "")}\" data-list-sort=\"{key}\" data-list-sort-active-dir=\"{(active ? (desc ? "desc" : "asc") : "")}\">{iconHtml}{System.Net.WebUtility.HtmlEncode(label)}<i class=\"bi ms-1 {arrow}\"></i></button>");
+    }
+
+    string KindIcon(ActivityListColumnKind kind) => kind switch
+    {
+        ActivityListColumnKind.YesNo => "bi-check2-square",
+        ActivityListColumnKind.Choice => "bi-menu-button-wide",
+        _ => "bi-fonts"
+    };
+}
+
+<div class="table-responsive list-items-wrap">
+    <table class="table align-middle list-items-table mb-0">
+        <thead>
+            <tr>
+                <th class="list-col-nr">@SortHeader("order", "#")</th>
+                @foreach (var column in schema.Columns)
+                {
+                    <th class="@(column.IsImported ? "" : "list-col-extra")" title="@(column.IsImported ? "Fra Excel-arket" : $"Ekstra kolonne ({column.KindLabel})")">
+                        @SortHeader($"c{column.Id}", column.Name, column.IsImported ? null : KindIcon(column.Kind))
+                    </th>
+                }
+                <th class="list-col-status">@SortHeader("status", "Status")</th>
+                <th class="list-col-assigned">@SortHeader("assigned", "Tilknyttet")</th>
+                @if (schema.ShowNote)
+                {
+                    <th class="list-col-note">@SortHeader("note", "Note")</th>
+                }
+                <th class="text-end">Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr class="list-empty-row">
+                    <td colspan="@colCount" class="text-muted">
+                        @(Model.HasFilter ? "Ingen linjer matcher filteret." : "Listen har ingen linjer endnu.")
+                    </td>
+                </tr>
+            }
+            @foreach (var row in Model.Rows)
+            {
+                var status = row.StatusId.HasValue ? statuses.GetValueOrDefault(row.StatusId.Value) : null;
+                var updatedText = ActivityListService.UpdatedText(row.UpdatedByName, row.UpdatedAtUtc);
+                <tr data-list-item="@row.Id" data-row-number="@row.RowNumber" data-values="@JsonSerializer.Serialize(row.Values)">
+                    <td class="list-col-nr text-muted" data-label="#">
+                        <span>@row.RowNumber</span>
+                        <i class="bi bi-clock-history list-history ms-1" data-list-history title="@updatedText" hidden="@(updatedText is null)"></i>
+                    </td>
+                    @foreach (var column in schema.Columns)
+                    {
+                        var value = row.Values.GetValueOrDefault(column.Id);
+                        <td data-label="@column.Name" class="@(column.IsImported ? "list-cell-readonly" : "list-cell-edit")">
+                            @switch (column.Kind)
+                            {
+                                case ActivityListColumnKind.Imported:
+                                    <span class="list-cell-text">@value</span>
+                                    break;
+                                case ActivityListColumnKind.YesNo:
+                                    <input type="checkbox" class="form-check-input" data-list-field="column" data-column-id="@column.Id"
+                                           checked="@(value == "true")" aria-label="@column.Name" />
+                                    break;
+                                case ActivityListColumnKind.Choice:
+                                    <select class="form-select form-select-sm" data-list-field="column" data-column-id="@column.Id" aria-label="@column.Name">
+                                        <option value="">–</option>
+                                        @foreach (var option in column.Options)
+                                        {
+                                            <option value="@option" selected="@(option == value)">@option</option>
+                                        }
+                                        @if (value is not null && !column.Options.Contains(value))
+                                        {
+                                            <option value="@value" selected>@value</option>
+                                        }
+                                    </select>
+                                    break;
+                                default:
+                                    <input type="text" class="form-control form-control-sm" data-list-field="column" data-column-id="@column.Id"
+                                           value="@value" maxlength="4000" aria-label="@column.Name" />
+                                    break;
+                            }
+                        </td>
+                    }
+                    <td class="list-col-status" data-label="Status">
+                        <select class="form-select form-select-sm list-status-select" data-list-field="status" data-color="@(status?.Color ?? "muted")" aria-label="Status">
+                            @foreach (var option in schema.Statuses)
+                            {
+                                <option value="@option.Id" data-color="@option.Color" selected="@(option.Id == row.StatusId)">@option.Name</option>
+                            }
+                        </select>
+                    </td>
+                    <td class="list-col-assigned" data-label="Tilknyttet">
+                        <select class="form-select form-select-sm" data-list-field="assigned" aria-label="Tilknyttet">
+                            <option value="">Ingen</option>
+                            @foreach (var member in schema.Members)
+                            {
+                                <option value="@member.Id" selected="@(member.Id == row.AssignedMemberId)">@member.Name@(member.IsMe ? " (mig)" : "")</option>
+                            }
+                        </select>
+                    </td>
+                    @if (schema.ShowNote)
+                    {
+                        <td class="list-col-note" data-label="Note">
+                            <textarea class="form-control form-control-sm list-note" data-list-field="note" rows="1" maxlength="2000" placeholder="Tilføj note…" aria-label="Note">@row.Note</textarea>
+                        </td>
+                    }
+                    <td class="text-end text-nowrap" data-label="">
+                        <button type="button" class="btn btn-sm btn-secondary btn-icon" data-list-edit-item title="Rediger linje" aria-label="Rediger linje @row.RowNumber">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <select class="form-select form-select-sm w-auto" data-table-page-size aria-label="Linjer pr. side">
+            @foreach (var size in new[] { 25, 50, 100, 250 })
+            {
+                <option value="@size" selected="@(size == Model.PageSize)">@size pr. side</option>
+            }
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel { Page = Model.Page, TotalPages = Model.TotalPages })
+    </div>
+</div>

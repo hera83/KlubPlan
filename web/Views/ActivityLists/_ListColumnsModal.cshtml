@@ -1,0 +1,85 @@
+@using web.Data.Entities
+@model web.ViewModels.ActivityListSchemaViewModel
+
+<!-- Kolonner: omdøb, tilføj ekstra kolonner, fjern Note -->
+<div class="modal fade" id="listColumnsModal" tabindex="-1" aria-labelledby="listColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="listColumnsModalLabel"><i class="bi bi-layout-three-columns me-2"></i>Kolonner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <h6 class="mb-2">Faste kolonner</h6>
+                <ul class="list-group mb-4">
+                    <li class="list-group-item d-flex align-items-center gap-2">
+                        <i class="bi bi-lock text-muted" title="Kan ikke fjernes"></i><span class="flex-grow-1">Status</span>
+                        <span class="text-muted small">Tilpasses under Statusser</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center gap-2">
+                        <i class="bi bi-lock text-muted" title="Kan ikke fjernes"></i><span class="flex-grow-1">Tilknyttet</span>
+                        <span class="text-muted small">Personer fra arbejdsgruppen</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center gap-2">
+                        <i class="bi bi-sticky text-muted"></i><span class="flex-grow-1">Note</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="listNoteSwitch" data-list-note-switch checked="@Model.ShowNote" />
+                            <label class="form-check-label small" for="listNoteSwitch">Vis</label>
+                        </div>
+                    </li>
+                </ul>
+
+                <h6 class="mb-2">Kolonner på listen</h6>
+                <ul class="list-group mb-4">
+                    @foreach (var column in Model.Columns)
+                    {
+                        <li class="list-group-item" data-list-column-row="@column.Id">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <input type="text" class="form-control form-control-sm list-column-name" value="@column.Name" maxlength="200" data-list-column-name aria-label="Kolonnenavn" />
+                                <span class="@(column.IsImported ? "badge-info" : "badge-ok") text-nowrap">@column.KindLabel</span>
+                                <button type="button" class="btn btn-sm btn-secondary btn-icon" data-list-column-save title="Gem" aria-label="Gem kolonne">
+                                    <i class="bi bi-floppy"></i>
+                                </button>
+                                @if (!column.IsImported)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon" data-list-column-delete title="Slet kolonnen og dens værdier" aria-label="Slet kolonne">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                            @if (column.Kind == ActivityListColumnKind.Choice)
+                            {
+                                <textarea class="form-control form-control-sm mt-2" rows="2" data-list-column-options aria-label="Valgmuligheder (én pr. linje)">@string.Join("\n", column.Options)</textarea>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                <h6 class="mb-2">Tilføj ekstra kolonne</h6>
+                <form class="row g-2 align-items-start" data-list-column-add>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control" name="Name" maxlength="200" placeholder="Fx Betalt" required aria-label="Kolonnenavn" />
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" name="Kind" data-list-column-kind aria-label="Kolonnetype">
+                            <option value="Text">Tekst</option>
+                            <option value="YesNo">Ja/nej</option>
+                            <option value="Choice">Valgliste</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i> Tilføj</button>
+                    </div>
+                    <div class="col-12" data-list-column-options-wrap hidden>
+                        <textarea class="form-control" name="Options" rows="3" placeholder="Én valgmulighed pr. linje, fx S, M og L på hver sin linje" aria-label="Valgmuligheder"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Luk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -170,5 +170,8 @@ namespace web.ViewModels
 
         /// <summary>"Filer"-fanens første visning (rod eller ?folder=). Kun sat for administratorer.</summary>
         public ActivityFilesViewModel? Files { get; set; }
+
+        /// <summary>"Lister"-fanens arbejdslister. Kun sat for administratorer.</summary>
+        public List<ActivityListSummaryViewModel>? Lists { get; set; }
     }
 }

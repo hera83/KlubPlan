@@ -1,0 +1,37 @@
+@using web.Constants
+@model web.ViewModels.ActivityListSchemaViewModel
+
+<!-- Statusser for denne liste -->
+<div class="modal fade" id="listStatusesModal" tabindex="-1" aria-labelledby="listStatusesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" data-list-statuses-form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="listStatusesModalLabel"><i class="bi bi-tags me-2"></i>Statusser</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Navn og farve pr. status. <strong>Standard</strong> er den status, nye linjer får. Fjerner du en status, får dens linjer standard-statussen.</p>
+                <div class="list-status-rows" data-list-status-rows>
+                    @foreach (var status in Model.Statuses)
+                    {
+                        @await Html.PartialAsync("_ListStatusRow", status)
+                    }
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-list-status-add>
+                    <i class="bi bi-plus-lg me-1"></i> Tilføj status
+                </button>
+                <template data-list-status-template>
+                    @await Html.PartialAsync("_ListStatusRow", new web.ViewModels.ActivityListStatusViewModel { Id = 0, Name = string.Empty, Color = "info", Count = -1 })
+                </template>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,93 @@
+@using web.Infrastructure
+@model List<web.ViewModels.ActivityListSummaryViewModel>
+
+@*
+    "Lister"-fanen: arbejdslister importeret fra Excel. Selve listen åbnes på sin egen side
+    (ActivityLists/Details). Modals: _ListCreateModal.cshtml.
+*@
+<div data-lists-tab>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-muted mb-0">Arbejdslister fra Excel — hver række bliver en linje med status, note og tilknyttet person.</p>
+        <button type="button" class="btn btn-primary text-nowrap ms-2" data-bs-toggle="modal" data-bs-target="#listCreateModal" title="Opret liste" aria-label="Opret liste">
+            <i class="bi bi-plus-lg me-1"></i> Opret liste
+        </button>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="files-empty">
+            <i class="bi bi-list-check files-empty-icon"></i>
+            <p class="fw-semibold mb-1">Der er ingen lister endnu</p>
+            <p class="text-muted mb-3">Upload et Excel-ark — første række bliver kolonneoverskrifter, og hver række derunder bliver en linje på listen.</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#listCreateModal">
+                <i class="bi bi-file-earmark-excel me-1"></i> Opret første liste
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Liste</th>
+                        <th class="text-end">Linjer</th>
+                        <th style="min-width:12rem">Fremdrift</th>
+                        <th class="d-none d-md-table-cell text-end">Mine</th>
+                        <th class="d-none d-lg-table-cell">Oprettet</th>
+                        <th class="text-end">Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var list in Model)
+                    {
+                        var defaultCount = list.Statuses.Where(s => s.IsDefault).Sum(s => s.Count);
+                        var handled = list.ItemCount - defaultCount;
+                        <tr>
+                            <td>
+                                <a class="fw-semibold text-decoration-none" asp-controller="ActivityLists" asp-action="Details" asp-route-id="@list.Id">@list.Title</a>
+                                @if (!string.IsNullOrWhiteSpace(list.Description))
+                                {
+                                    <div class="text-muted small text-truncate" style="max-width:28rem" title="@list.Description">@list.Description</div>
+                                }
+                            </td>
+                            <td class="text-end">@list.ItemCount</td>
+                            <td>
+                                @await Html.PartialAsync("~/Views/ActivityLists/_StatusProgress.cshtml", list.Statuses)
+                                <div class="text-muted small mt-1">
+                                    @handled af @list.ItemCount behandlet
+                                    @if (list.UnassignedCount > 0)
+                                    {
+                                        <span class="ms-1">· @list.UnassignedCount uden tilknytning</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="d-none d-md-table-cell text-end">@(list.MineCount > 0 ? list.MineCount.ToString() : "–")</td>
+                            <td class="d-none d-lg-table-cell text-muted">
+                                @list.CreatedAtUtc.ToLocalTime().ToDanishDate()
+                                @if (!string.IsNullOrEmpty(list.CreatedByName))
+                                {
+                                    <div class="small">af @list.CreatedByName</div>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <div class="d-inline-flex gap-1">
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-controller="ActivityLists" asp-action="Details" asp-route-id="@list.Id" title="Åbn liste" aria-label="Åbn liste">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    <a class="btn btn-sm btn-secondary btn-icon" asp-controller="ActivityLists" asp-action="Export" asp-route-listId="@list.Id" title="Eksporter til Excel" aria-label="Eksporter til Excel">
+                                        <i class="bi bi-file-earmark-excel"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-secondary btn-icon" data-bs-toggle="modal" data-bs-target="#listDeleteModal"
+                                            data-id="@list.Id" data-title="@list.Title" data-count="@list.ItemCount" title="Slet liste" aria-label="Slet liste">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

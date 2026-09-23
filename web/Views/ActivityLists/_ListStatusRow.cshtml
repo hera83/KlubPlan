@@ -1,0 +1,21 @@
+@using web.Constants
+@model web.ViewModels.ActivityListStatusViewModel
+@* One editable row in the Statusser modal. Id 0 / Count -1 = template for a new status. *@
+<div class="list-status-row" data-list-status-row data-id="@(Model.Id > 0 ? Model.Id.ToString() : "")">
+    <span class="list-legend-dot list-color-@Model.Color" data-list-status-dot></span>
+    <input type="text" class="form-control form-control-sm" value="@Model.Name" maxlength="50" required placeholder="Navn" data-list-status-name aria-label="Statusnavn" />
+    <select class="form-select form-select-sm w-auto" data-list-status-color aria-label="Farve">
+        @foreach (var color in ActivityListRules.StatusColors)
+        {
+            <option value="@color.Key" selected="@(color.Key == Model.Color)">@color.Label</option>
+        }
+    </select>
+    <label class="form-check m-0 text-nowrap small">
+        <input class="form-check-input" type="radio" name="listStatusDefault" data-list-status-default checked="@Model.IsDefault" />
+        Standard
+    </label>
+    <span class="text-muted small text-nowrap list-status-count">@(Model.Count < 0 ? "Ny" : $"{Model.Count} linjer")</span>
+    <button type="button" class="btn btn-sm btn-outline-danger btn-icon" data-list-status-remove title="Fjern status" aria-label="Fjern status">
+        <i class="bi bi-trash"></i>
+    </button>
+</div>
