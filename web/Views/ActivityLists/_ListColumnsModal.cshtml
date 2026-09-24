@@ -29,7 +29,8 @@
                     </li>
                 </ul>
 
-                <h6 class="mb-2">Kolonner på listen</h6>
+                <h6 class="mb-1">Kolonner på listen</h6>
+                <p class="text-muted small mb-2">Slå <strong>Vis</strong> fra for at skjule en kolonne i tabellen. Skjulte kolonner kommer stadig med ved eksport.</p>
                 <ul class="list-group mb-4">
                     @foreach (var column in Model.Columns)
                     {
@@ -37,6 +38,10 @@
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 <input type="text" class="form-control form-control-sm list-column-name" value="@column.Name" maxlength="200" data-list-column-name aria-label="Kolonnenavn" />
                                 <span class="@(column.IsImported ? "badge-info" : "badge-ok") text-nowrap">@column.KindLabel</span>
+                                <div class="form-check form-switch m-0" title="Skjul kolonnen i tabellen. Den kommer stadig med ved eksport.">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="listColumnVisible@(column.Id)" data-list-column-visible checked="@(!column.IsHidden)" />
+                                    <label class="form-check-label small" for="listColumnVisible@(column.Id)">Vis</label>
+                                </div>
                                 <button type="button" class="btn btn-sm btn-secondary btn-icon" data-list-column-save title="Gem" aria-label="Gem kolonne">
                                     <i class="bi bi-floppy"></i>
                                 </button>

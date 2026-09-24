@@ -6,7 +6,9 @@
 @{
     var schema = Model.Schema;
     var statuses = schema.Statuses.ToDictionary(s => s.Id);
-    var colCount = 1 + schema.Columns.Count + 2 + (schema.ShowNote ? 1 : 0) + 1;
+    // Hidden columns are left out of the table only (still in data-values, the line modal and exports).
+    var columns = schema.VisibleColumns;
+    var colCount = 1 + columns.Count + 2 + (schema.ShowNote ? 1 : 0) + 1;
 
     // Header button that toggles sorting; the arrow shows the active sort.
     Microsoft.AspNetCore.Html.IHtmlContent SortHeader(string key, string label, string? icon = null)
@@ -32,7 +34,7 @@
         <thead>
             <tr>
                 <th class="list-col-nr">@SortHeader("order", "#")</th>
-                @foreach (var column in schema.Columns)
+                @foreach (var column in columns)
                 {
                     <th class="@(column.IsImported ? "" : "list-col-extra")" title="@(column.IsImported ? "Fra Excel-arket" : $"Ekstra kolonne ({column.KindLabel})")">
                         @SortHeader($"c{column.Id}", column.Name, column.IsImported ? null : KindIcon(column.Kind))
@@ -65,7 +67,7 @@
                         <span>@row.RowNumber</span>
                         <i class="bi bi-clock-history list-history ms-1" data-list-history title="@updatedText" hidden="@(updatedText is null)"></i>
                     </td>
-                    @foreach (var column in schema.Columns)
+                    @foreach (var column in columns)
                     {
                         var value = row.Values.GetValueOrDefault(column.Id);
                         <td data-label="@column.Name" class="@(column.IsImported ? "list-cell-readonly" : "list-cell-edit")">
@@ -144,10 +146,11 @@
         }
     </p>
     <div class="table-footer-end">
-        <select class="form-select form-select-sm w-auto" data-table-page-size aria-label="Linjer pr. side">
-            @foreach (var size in new[] { 25, 50, 100, 250 })
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            @foreach (var size in new[] { 10, 50, 100 })
             {
-                <option value="@size" selected="@(size == Model.PageSize)">@size pr. side</option>
+                <option value="@size" selected="@(size == Model.PageSize)">@size</option>
             }
         </select>
         @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel { Page = Model.Page, TotalPages = Model.TotalPages })

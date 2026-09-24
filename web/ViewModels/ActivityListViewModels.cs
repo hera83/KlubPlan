@@ -64,6 +64,9 @@ namespace web.ViewModels
 
         public IEnumerable<ActivityListColumnViewModel> ImportedColumns => Columns.Where(c => c.IsImported);
         public IEnumerable<ActivityListColumnViewModel> ExtraColumns => Columns.Where(c => !c.IsImported);
+
+        /// <summary>Columns shown in the table; hidden columns are still exported.</summary>
+        public List<ActivityListColumnViewModel> VisibleColumns => Columns.Where(c => !c.IsHidden).ToList();
     }
 
     public class ActivityListColumnViewModel
@@ -72,6 +75,7 @@ namespace web.ViewModels
         public string Name { get; set; } = string.Empty;
         public ActivityListColumnKind Kind { get; set; }
         public List<string> Options { get; set; } = new();
+        public bool IsHidden { get; set; }
         public bool IsImported => Kind == ActivityListColumnKind.Imported;
 
         public string KindLabel => Kind switch
@@ -148,7 +152,7 @@ namespace web.ViewModels
         public string? SortDir { get; set; }
 
         public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 50;
+        public int PageSize { get; set; } = 10;
 
         public bool HasFilter => !string.IsNullOrWhiteSpace(SearchText) || StatusId.HasValue
             || !string.IsNullOrWhiteSpace(Assigned) || !string.IsNullOrWhiteSpace(NoteFilter);

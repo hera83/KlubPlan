@@ -342,6 +342,20 @@
             else e.target.checked = !e.target.checked;
         });
 
+        columnsModalEl?.addEventListener('change', async (e) => {
+            const visibleSwitch = e.target.closest('[data-list-column-visible]');
+            if (!visibleSwitch) return;
+            const row = visibleSwitch.closest('[data-list-column-row]');
+            visibleSwitch.disabled = true;
+            const data = await post(ds.urlColumnHidden, {
+                ColumnId: row.dataset.listColumnRow,
+                Hidden: visibleSwitch.checked ? 'false' : 'true'
+            });
+            visibleSwitch.disabled = false;
+            if (data.success) columnsChanged = true;
+            else visibleSwitch.checked = !visibleSwitch.checked;
+        });
+
         columnsModalEl?.addEventListener('click', async (e) => {
             const row = e.target.closest('[data-list-column-row]');
             if (!row) return;

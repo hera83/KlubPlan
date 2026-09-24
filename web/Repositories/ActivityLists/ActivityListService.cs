@@ -260,7 +260,7 @@ namespace web.Repositories.ActivityLists
 
             var (_, schema, myMemberIds) = context.Value;
             var page = Math.Max(1, filter.Page);
-            var pageSize = filter.PageSize is > 0 and <= 500 ? filter.PageSize : 50;
+            var pageSize = filter.PageSize is > 0 and <= 500 ? filter.PageSize : 10;
 
             var query = BuildQuery(filter, schema, myMemberIds);
             var total = await query.CountAsync(ct);
@@ -581,6 +581,19 @@ namespace web.Repositories.ActivityLists
             return ActivityListActionResultDto.Ok(columnId, $"Kolonnen \"{column.Name}\" er slettet.");
         }
 
+        public async Task<ActivityListActionResultDto> SetColumnHiddenAsync(int listId, int columnId, bool hidden, CancellationToken ct = default)
+        {
+            var column = await _context.ActivityListColumns.FirstOrDefaultAsync(c => c.Id == columnId && c.ActivityListId == listId, ct);
+            if (column is null)
+                return ActivityListActionResultDto.Fail("Kolonnen blev ikke fundet.");
+
+            column.IsHidden = hidden;
+            await _context.SaveChangesAsync(ct);
+            return ActivityListActionResultDto.Ok(columnId, hidden
+                ? $"Kolonnen \"{column.Name}\" er skjult i tabellen. Den kommer stadig med ved eksport."
+                : $"Kolonnen \"{column.Name}\" vises igen i tabellen.");
+        }
+
         public async Task<ActivityListActionResultDto> SetNoteVisibleAsync(int listId, bool visible, CancellationToken ct = default)
         {
             var list = await _context.ActivityLists.FirstOrDefaultAsync(l => l.Id == listId, ct);
@@ -768,7 +781,8 @@ namespace web.Repositories.ActivityLists
                         Id = c.Id,
                         Name = c.Name,
                         Kind = c.Kind,
-                        Options = ParseOptions(c.Options)
+                        Options = ParseOptions(c.Options),
+                        IsHidden = c.IsHidden
                     })
                     .ToList()
             };

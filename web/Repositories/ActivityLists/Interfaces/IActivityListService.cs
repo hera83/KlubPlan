@@ -42,6 +42,8 @@ namespace web.Repositories.ActivityLists.Interfaces
         Task<ActivityListActionResultDto> DeleteColumnAsync(int listId, int columnId, CancellationToken ct = default);
 
         /// <summary>Hides/shows the Note column. Existing notes are kept while hidden.</summary>
+        Task<ActivityListActionResultDto> SetColumnHiddenAsync(int listId, int columnId, bool hidden, CancellationToken ct = default);
+
         Task<ActivityListActionResultDto> SetNoteVisibleAsync(int listId, bool visible, CancellationToken ct = default);
 
         /// <summary>Replaces the list's statuses. Lines with a removed status get the default status.</summary>

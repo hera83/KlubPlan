@@ -202,6 +202,14 @@ namespace web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetColumnHidden(int listId, int columnId, bool hidden, CancellationToken ct)
+        {
+            var result = await _listService.SetColumnHiddenAsync(listId, columnId, hidden, ct);
+            return result.Success ? this.ToastSuccessJson(result.Message!) : this.ToastErrorJson(result.ErrorMessage!);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SetNoteVisible(int listId, bool visible, CancellationToken ct)
         {
             var result = await _listService.SetNoteVisibleAsync(listId, visible, ct);

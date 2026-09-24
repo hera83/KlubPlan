@@ -16,6 +16,9 @@ namespace web.Data.Entities
 
         public int Order { get; set; }
 
+        /// <summary>Hidden from the list table to save space. Still searchable, editable in the line modal and included in exports.</summary>
+        public bool IsHidden { get; set; }
+
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
         public virtual ActivityList ActivityList { get; set; } = null!;
