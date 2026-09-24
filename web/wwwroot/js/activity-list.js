@@ -2,7 +2,7 @@
 // • Status, Tilknyttet, Note og ekstra kolonner gemmes automatisk, når feltet ændres.
 // • Sortering (klik på kolonneoverskrift), "Kun mine" og klik på en status i
 //   fremdriften filtrerer tabellen (data-table.js står for søgning/filter/paginering).
-// • Modals: rediger/tilføj linje, fordel linjer, kolonner, statusser, rediger liste.
+// • Modals: rediger/tilføj linje, fordel linjer, send links, kolonner, statusser, rediger liste.
 // Markup: Views/ActivityLists/*.cshtml.
 (() => {
     const initPage = (page) => {
@@ -325,6 +325,48 @@
                 bootstrap.Modal.getInstance(distributeModalEl)?.hide();
                 reloadTable();
                 refreshCounts();
+            }
+        });
+
+        // ─── Send links (eksterne kontakter) ───────────────────────────────────
+        const sendModalEl = document.getElementById('listSendLinksModal');
+        const sendForm = sendModalEl?.querySelector('[data-list-send-links-form]');
+        const sendSubmit = sendModalEl?.querySelector('[data-list-send-submit]');
+
+        const updateSendSubmit = () => {
+            if (!sendForm || !sendSubmit) return;
+            const anyMember = sendForm.querySelector('[data-list-send-member]:checked');
+            const anyChannel = sendForm.querySelector('[data-list-send-channel]:checked');
+            sendSubmit.disabled = !anyMember || !anyChannel;
+        };
+
+        sendModalEl?.addEventListener('show.bs.modal', refreshCounts);
+        sendForm?.addEventListener('change', updateSendSubmit);
+        sendModalEl?.querySelector('[data-list-send-all]')?.addEventListener('click', () => {
+            const boxes = Array.from(sendForm.querySelectorAll('[data-list-send-member]:not(:disabled)'));
+            const allChecked = boxes.every((b) => b.checked);
+            boxes.forEach((b) => { b.checked = !allChecked; });
+            updateSendSubmit();
+        });
+        sendModalEl?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-list-copy-link]');
+            if (!btn) return;
+            try {
+                await navigator.clipboard.writeText(btn.dataset.listCopyLink);
+                window.FvToast?.show('success', 'Linket er kopieret.');
+            } catch {
+                window.FvToast?.show('error', 'Linket kunne ikke kopieres.');
+            }
+        });
+        sendForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            sendSubmit.disabled = true;
+            const data = await post(ds.urlSendLinks, new FormData(sendForm));
+            sendSubmit.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(sendModalEl)?.hide();
+                sendForm.reset();
+                updateSendSubmit();
             }
         });
 

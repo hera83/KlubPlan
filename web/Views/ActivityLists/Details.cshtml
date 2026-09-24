@@ -14,6 +14,7 @@
      data-url-save-item="@Url.Action("SaveItem")"
      data-url-delete-item="@Url.Action("DeleteItem")"
      data-url-distribute="@Url.Action("Distribute")"
+     data-url-send-links="@Url.Action("SendLinks")"
      data-url-save-column="@Url.Action("SaveColumn")"
      data-url-delete-column="@Url.Action("DeleteColumn")"
      data-url-column-hidden="@Url.Action("SetColumnHidden")"
@@ -115,6 +116,9 @@
                         </button>
                     </div>
                     <div class="table-toolbar-end">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listSendLinksModal" title="Send links til eksterne kontakter" aria-label="Send links til eksterne kontakter">
+                            <i class="bi bi-send me-1"></i> Send links
+                        </button>
                         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listDistributeModal" title="Fordel linjer" aria-label="Fordel linjer">
                             <i class="bi bi-people me-1"></i> Fordel linjer
                         </button>
@@ -198,6 +202,7 @@
 @await Html.PartialAsync("_ListEditModal", Model)
 @await Html.PartialAsync("_ListItemModal", schema)
 @await Html.PartialAsync("_ListDistributeModal", Model)
+@await Html.PartialAsync("_ListSendLinksModal", Model)
 @await Html.PartialAsync("_ListColumnsModal", schema)
 @await Html.PartialAsync("_ListStatusesModal", schema)
 <script src="~/js/activity-list.js" asp-append-version="true"></script>

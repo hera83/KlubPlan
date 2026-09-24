@@ -13,6 +13,13 @@ namespace web.Data.Entities
 
         public int ActivityId { get; set; }
 
+        /// <summary>
+        /// Unguessable id used in the public work list link (/Arbejdsliste?Id={listId}&amp;UId={PublicId}),
+        /// so an external contact (no login) can open the lines assigned to them — and only those.
+        /// Only external contacts (ApplicationUserId null) can use it; administrators log in instead.
+        /// </summary>
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         /// <summary>Linked administrator, if any. Kept even if the user is later deleted (FK is SetNull) — the member row survives as an unlinked entry.</summary>
         public string? ApplicationUserId { get; set; }
 

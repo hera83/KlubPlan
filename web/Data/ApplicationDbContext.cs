@@ -769,6 +769,10 @@ namespace web.Data
             {
                 entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.PublicId)
+                    .IsRequired()
+                    .HasConversion<string>();
+
                 entity.Property(e => e.Name)
                     .HasMaxLength(200);
 
@@ -793,6 +797,8 @@ namespace web.Data
 
                 entity.HasIndex(e => new { e.ActivityId, e.Order });
                 entity.HasIndex(e => e.ApplicationUserId);
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
             });
 
             // Configure ActivityTask
@@ -998,6 +1004,11 @@ namespace web.Data
                 entity.HasOne(e => e.UpdatedByUser)
                     .WithMany()
                     .HasForeignKey(e => e.UpdatedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.UpdatedByWorkgroupMember)
+                    .WithMany()
+                    .HasForeignKey(e => e.UpdatedByWorkgroupMemberId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => new { e.ActivityListId, e.Order });

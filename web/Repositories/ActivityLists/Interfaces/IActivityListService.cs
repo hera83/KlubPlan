@@ -51,5 +51,19 @@ namespace web.Repositories.ActivityLists.Interfaces
 
         /// <summary>The whole list, or only the lines matching the filter, as .xlsx.</summary>
         Task<ActivityListExportDto?> ExportAsync(ActivityListItemFilterViewModel filter, string? userId, CancellationToken ct = default);
+
+        /// <summary>Queues an e-mail and/or SMS with each selected external contact's personal /Arbejdsliste link.</summary>
+        Task<ActivityListActionResultDto> SendLinksAsync(ActivityListSendLinksViewModel input, string baseUrl, CancellationToken ct = default);
+
+        // Public, unauthenticated /Arbejdsliste?Id={listId}&UId={member.PublicId} — an external contact
+        // in the activity's workgroup sees and works on only the lines assigned to them.
+
+        Task<PublicWorkListViewModel> GetPublicListAsync(int listId, Guid memberPublicId, CancellationToken ct = default);
+
+        /// <summary>Null when the link isn't (or no longer) valid.</summary>
+        Task<PublicWorkListItemsViewModel?> GetPublicItemsAsync(Guid memberPublicId, ActivityListItemFilterViewModel filter, CancellationToken ct = default);
+
+        /// <summary>Status, Note or an extra column on one of the member's own lines — never Tilknyttet.</summary>
+        Task<ActivityListFieldUpdateResultDto> UpdatePublicFieldAsync(Guid memberPublicId, ActivityListFieldUpdateViewModel input, CancellationToken ct = default);
     }
 }

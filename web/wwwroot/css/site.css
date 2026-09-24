@@ -1209,6 +1209,9 @@ input[type="file"]::-webkit-file-upload-button:hover {
   max-width: 640px;
 }
 
+/* Offentlig arbejdsliste (/Arbejdsliste) — listetabeller har brug for mere bredde */
+.public-work-list-card { max-width: 1200px; }
+
 /* ── Misc utilities ── */
 .text-muted { color: var(--clr-text-muted) !important; }
 .form-text { color: var(--clr-text-muted); }

@@ -24,6 +24,9 @@ namespace web.Data.Entities
 
         public string? UpdatedByUserId { get; set; }
 
+        /// <summary>Set instead of UpdatedByUserId when the change came from an external contact via the public /Arbejdsliste link.</summary>
+        public int? UpdatedByWorkgroupMemberId { get; set; }
+
         public virtual ActivityList ActivityList { get; set; } = null!;
 
         public virtual ActivityListStatus? Status { get; set; }
@@ -31,6 +34,8 @@ namespace web.Data.Entities
         public virtual ActivityWorkgroupMember? AssignedToWorkgroupMember { get; set; }
 
         public virtual ApplicationUser? UpdatedByUser { get; set; }
+
+        public virtual ActivityWorkgroupMember? UpdatedByWorkgroupMember { get; set; }
 
         public virtual ICollection<ActivityListCellValue> Values { get; set; } = new List<ActivityListCellValue>();
     }

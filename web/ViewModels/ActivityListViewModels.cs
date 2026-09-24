@@ -110,6 +110,14 @@ namespace web.ViewModels
         public bool IsMe { get; set; }
 
         public int AssignedCount { get; set; }
+
+        /// <summary>External contacts only — used by "Send links" (a linked administrator logs in instead).</summary>
+        public string? Email { get; set; }
+
+        public string? Mobile { get; set; }
+
+        /// <summary>ActivityWorkgroupMember.PublicId — the UId in the member's public /Arbejdsliste link.</summary>
+        public Guid PublicId { get; set; }
     }
 
     /// <summary>The list page (ActivityLists/Details).</summary>
@@ -260,5 +268,48 @@ namespace web.ViewModels
         public string Name { get; set; } = string.Empty;
 
         public string Color { get; set; } = "muted";
+    }
+
+    /// <summary>"Send links" — each selected external contact gets their own /Arbejdsliste link by e-mail and/or SMS.</summary>
+    public class ActivityListSendLinksViewModel
+    {
+        [Required]
+        public int ListId { get; set; }
+
+        public List<int> MemberIds { get; set; } = new();
+
+        public bool ViaEmail { get; set; }
+
+        public bool ViaSms { get; set; }
+
+        [StringLength(1000, ErrorMessage = "Beskeden må højst være {1} tegn.")]
+        public string? Message { get; set; }
+    }
+
+    // ── Offentligt link (Arbejdsliste) ──────────────────────────────────────
+
+    /// <summary>
+    /// The public, unauthenticated /Arbejdsliste?Id={listId}&amp;UId={member.PublicId} page: an external
+    /// workgroup contact sees and works on only the lines assigned to them. Status NotFound covers a
+    /// wrong/old link, a list from another activity and a member that is (now) a linked administrator.
+    /// </summary>
+    public class PublicWorkListViewModel
+    {
+        public bool Found { get; set; }
+        public int ListId { get; set; }
+        public Guid MemberPublicId { get; set; }
+        public string MemberName { get; set; } = string.Empty;
+        public string ActivityTitle { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+
+        /// <summary>Statuses with counts for the member's own lines only.</summary>
+        public ActivityListSchemaViewModel Schema { get; set; } = new();
+        public PublicWorkListItemsViewModel Items { get; set; } = new();
+    }
+
+    public class PublicWorkListItemsViewModel : ActivityListItemsViewModel
+    {
+        public Guid MemberPublicId { get; set; }
     }
 }

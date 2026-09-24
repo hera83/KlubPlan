@@ -1,0 +1,107 @@
+@using web.Repositories.ActivityLists
+@model web.ViewModels.ActivityListDetailsViewModel
+@{
+    // Only external contacts get a link — administrators in the workgroup log in and use this page.
+    var externals = Model.Schema.Members.Where(m => !m.IsLinkedUser).ToList();
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+}
+
+<!-- Send personlige links til eksterne kontakter i arbejdsgruppen -->
+<div class="modal fade" id="listSendLinksModal" tabindex="-1" aria-labelledby="listSendLinksModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" asp-action="SendLinks" method="post" data-list-send-links-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ListId" value="@Model.Id" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="listSendLinksModalLabel"><i class="bi bi-send me-2"></i>Send links</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                @if (externals.Count == 0)
+                {
+                    <p class="mb-0 text-muted">
+                        Arbejdsgruppen har ingen eksterne kontakter. Links kan kun sendes til personer, der er registreret som
+                        ekstern kontakt under
+                        <a asp-controller="Activities" asp-action="Details" asp-route-id="@Model.ActivityId" asp-route-tab="arbejdsgruppe">Arbejdsgruppe</a>.
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted">
+                        Hver person får sit eget link, hvor de uden login kan se og arbejde på de linjer, der er tildelt dem — ikke de andres.
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="form-label mb-0">Eksterne kontakter</span>
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" data-list-send-all><i class="bi bi-check2-all me-1"></i>Vælg alle</button>
+                    </div>
+                    <div class="list-group mb-3">
+                        @foreach (var member in externals)
+                        {
+                            var hasContact = !string.IsNullOrWhiteSpace(member.Email) || !string.IsNullOrWhiteSpace(member.Mobile);
+                            <div class="list-group-item d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="checkbox" name="MemberIds" value="@member.Id" id="sendLinkMember@(member.Id)"
+                                       data-list-send-member disabled="@(!hasContact)" />
+                                <label class="flex-grow-1 mb-0" for="sendLinkMember@(member.Id)">
+                                    @member.Name
+                                    @if (!string.IsNullOrWhiteSpace(member.Role))
+                                    {
+                                        <span class="text-muted small ms-1">@member.Role</span>
+                                    }
+                                    <span class="d-block text-muted small">
+                                        @if (!string.IsNullOrWhiteSpace(member.Email))
+                                        {
+                                            <span class="me-3"><i class="bi bi-envelope me-1"></i>@member.Email</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(member.Mobile))
+                                        {
+                                            <span class="me-3"><i class="bi bi-phone me-1"></i>@member.Mobile</span>
+                                        }
+                                        @if (!hasContact)
+                                        {
+                                            <span><i class="bi bi-exclamation-triangle me-1"></i>Ingen e-mail eller mobilnummer</span>
+                                        }
+                                    </span>
+                                </label>
+                                <span class="text-muted small text-nowrap"><span data-list-member-count="@member.Id">@member.AssignedCount</span> linjer</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-list-copy-link="@ActivityListService.BuildPublicLink(baseUrl, Model.Id, member.PublicId)"
+                                        title="Kopiér link" aria-label="Kopiér link til @member.Name">
+                                    <i class="bi bi-link-45deg"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <span class="form-label d-block">Send via</span>
+                    <div class="d-flex gap-4 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ViaEmail" value="true" id="sendLinksViaEmail" checked data-list-send-channel />
+                            <label class="form-check-label" for="sendLinksViaEmail"><i class="bi bi-envelope me-1"></i>E-mail</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ViaSms" value="true" id="sendLinksViaSms" data-list-send-channel />
+                            <label class="form-check-label" for="sendLinksViaSms"><i class="bi bi-chat-dots me-1"></i>SMS</label>
+                        </div>
+                    </div>
+
+                    <label class="form-label" for="sendLinksMessage">Besked <span class="text-muted small">(valgfri)</span></label>
+                    <textarea class="form-control" name="Message" id="sendLinksMessage" rows="3" maxlength="1000"
+                              placeholder="Fx: Husk at ringe alle dine numre igennem inden fredag."></textarea>
+                    <div class="form-text">
+                        Beskeden indledes med "Hej &lt;navn&gt;" og afsluttes med antal linjer og personens eget link.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                @if (externals.Count > 0)
+                {
+                    <button type="submit" class="btn btn-primary" data-list-send-submit disabled>
+                        <i class="bi bi-send me-1"></i> Send links
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>

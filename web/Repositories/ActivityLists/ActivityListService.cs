@@ -259,6 +259,12 @@ namespace web.Repositories.ActivityLists
                 return null;
 
             var (_, schema, myMemberIds) = context.Value;
+            return await QueryItemsAsync<ActivityListItemsViewModel>(filter, schema, myMemberIds, ct);
+        }
+
+        private async Task<T> QueryItemsAsync<T>(ActivityListItemFilterViewModel filter, ActivityListSchemaViewModel schema, HashSet<int> myMemberIds, CancellationToken ct)
+            where T : ActivityListItemsViewModel, new()
+        {
             var page = Math.Max(1, filter.Page);
             var pageSize = filter.PageSize is > 0 and <= 500 ? filter.PageSize : 10;
 
@@ -278,12 +284,13 @@ namespace web.Repositories.ActivityLists
                     i.Note,
                     i.AssignedToWorkgroupMemberId,
                     i.UpdatedAtUtc,
-                    UpdatedBy = i.UpdatedByUser != null ? i.UpdatedByUser.DisplayName : null,
+                    UpdatedBy = i.UpdatedByUser != null ? i.UpdatedByUser.DisplayName
+                        : i.UpdatedByWorkgroupMember != null ? i.UpdatedByWorkgroupMember.Name : null,
                     Values = i.Values.Select(v => new { v.ActivityListColumnId, v.Value }).ToList()
                 })
                 .ToListAsync(ct);
 
-            return new ActivityListItemsViewModel
+            return new T
             {
                 ListId = filter.ListId,
                 SearchText = filter.SearchText,
@@ -312,7 +319,15 @@ namespace web.Repositories.ActivityLists
 
         // ─── Lines ───────────────────────────────────────────────────────────────
 
-        public async Task<ActivityListFieldUpdateResultDto> UpdateFieldAsync(ActivityListFieldUpdateViewModel input, string? userId, CancellationToken ct = default)
+        public Task<ActivityListFieldUpdateResultDto> UpdateFieldAsync(ActivityListFieldUpdateViewModel input, string? userId, CancellationToken ct = default)
+            => UpdateFieldCoreAsync(input, userId, null, ct);
+
+        /// <summary>
+        /// Shared by the logged-in list page and the public /Arbejdsliste link. With actingMember set
+        /// (an external contact), only lines assigned to that member can be changed, Tilknyttet can't be
+        /// changed, and the returned counts cover the member's own lines only.
+        /// </summary>
+        private async Task<ActivityListFieldUpdateResultDto> UpdateFieldCoreAsync(ActivityListFieldUpdateViewModel input, string? userId, ActivityWorkgroupMember? actingMember, CancellationToken ct)
         {
             ActivityListFieldUpdateResultDto Fail(string message) => new() { Success = false, ErrorMessage = message };
 
@@ -325,6 +340,14 @@ namespace web.Repositories.ActivityLists
                 .FirstOrDefaultAsync(i => i.Id == input.ItemId && i.ActivityListId == input.ListId, ct);
             if (item is null)
                 return Fail("Linjen blev ikke fundet — den kan være slettet.");
+
+            if (actingMember is not null)
+            {
+                if (item.AssignedToWorkgroupMemberId != actingMember.Id)
+                    return Fail("Linjen er ikke længere tildelt dig.");
+                if (input.Field == ActivityListRules.FieldAssigned)
+                    return Fail("Du kan ikke ændre, hvem linjen er tilknyttet.");
+            }
 
             var value = string.IsNullOrWhiteSpace(input.Value) ? null : input.Value.Trim();
 
@@ -374,16 +397,20 @@ namespace web.Repositories.ActivityLists
             }
 
             item.UpdatedAtUtc = DateTime.UtcNow;
-            item.UpdatedByUserId = userId;
+            item.UpdatedByUserId = actingMember is null ? userId : null;
+            item.UpdatedByWorkgroupMemberId = actingMember?.Id;
             await _context.SaveChangesAsync(ct);
 
+            var actingMemberId = actingMember?.Id;
             var statusCounts = await _context.ActivityListItems
-                .Where(i => i.ActivityListId == list.Id && i.StatusId != null)
+                .Where(i => i.ActivityListId == list.Id && i.StatusId != null && (actingMemberId == null || i.AssignedToWorkgroupMemberId == actingMemberId))
                 .GroupBy(i => i.StatusId!.Value)
                 .Select(g => new { g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Key, g => g.Count, ct);
 
-            var userName = userId is null ? null : await _context.Users.Where(u => u.Id == userId).Select(u => u.DisplayName).FirstOrDefaultAsync(ct);
+            var userName = actingMember is not null
+                ? actingMember.Name
+                : userId is null ? null : await _context.Users.Where(u => u.Id == userId).Select(u => u.DisplayName).FirstOrDefaultAsync(ct);
 
             return new ActivityListFieldUpdateResultDto
             {
@@ -440,6 +467,7 @@ namespace web.Repositories.ActivityLists
 
             item.UpdatedAtUtc = DateTime.UtcNow;
             item.UpdatedByUserId = userId;
+            item.UpdatedByWorkgroupMemberId = null;
             await _context.SaveChangesAsync(ct);
             return ActivityListActionResultDto.Ok(item.Id, isNew ? $"Linje {item.Order} er tilføjet." : $"Linje {item.Order} er gemt.");
         }
@@ -502,6 +530,7 @@ namespace web.Repositories.ActivityLists
                     items[index].AssignedToWorkgroupMemberId = members[m].Id;
                     items[index].UpdatedAtUtc = now;
                     items[index].UpdatedByUserId = userId;
+                    items[index].UpdatedByWorkgroupMemberId = null;
                 }
             }
 
@@ -681,7 +710,8 @@ namespace web.Repositories.ActivityLists
                     i.Note,
                     i.AssignedToWorkgroupMemberId,
                     i.UpdatedAtUtc,
-                    UpdatedBy = i.UpdatedByUser != null ? i.UpdatedByUser.DisplayName : null,
+                    UpdatedBy = i.UpdatedByUser != null ? i.UpdatedByUser.DisplayName
+                        : i.UpdatedByWorkgroupMember != null ? i.UpdatedByWorkgroupMember.Name : null,
                     Values = i.Values.Select(v => new { v.ActivityListColumnId, v.Value }).ToList()
                 })
                 .ToListAsync(ct);
@@ -731,6 +761,186 @@ namespace web.Repositories.ActivityLists
                 Content = content,
                 FileName = SanitizeFileName($"{list.Title}{suffix}") + ".xlsx"
             };
+        }
+
+        // ─── Offentligt link (/Arbejdsliste) ─────────────────────────────────────
+
+        public async Task<PublicWorkListViewModel> GetPublicListAsync(int listId, Guid memberPublicId, CancellationToken ct = default)
+        {
+            var resolved = await ResolvePublicAsync(listId, memberPublicId, ct);
+            if (resolved is null)
+                return new PublicWorkListViewModel { Found = false };
+
+            var (list, member, schema) = resolved.Value;
+            var items = await QueryPublicItemsAsync(new ActivityListItemFilterViewModel { ListId = listId }, member, schema, ct);
+
+            return new PublicWorkListViewModel
+            {
+                Found = true,
+                ListId = list.Id,
+                MemberPublicId = member.PublicId,
+                MemberName = member.Name ?? string.Empty,
+                ActivityTitle = list.Activity.Title,
+                Title = list.Title,
+                Description = list.Description,
+                Schema = schema,
+                Items = items
+            };
+        }
+
+        public async Task<PublicWorkListItemsViewModel?> GetPublicItemsAsync(Guid memberPublicId, ActivityListItemFilterViewModel filter, CancellationToken ct = default)
+        {
+            var resolved = await ResolvePublicAsync(filter.ListId, memberPublicId, ct);
+            if (resolved is null)
+                return null;
+
+            var (_, member, schema) = resolved.Value;
+            return await QueryPublicItemsAsync(filter, member, schema, ct);
+        }
+
+        public async Task<ActivityListFieldUpdateResultDto> UpdatePublicFieldAsync(Guid memberPublicId, ActivityListFieldUpdateViewModel input, CancellationToken ct = default)
+        {
+            var member = await FindPublicMemberAsync(input.ListId, memberPublicId, ct);
+            if (member is null)
+                return new ActivityListFieldUpdateResultDto { Success = false, ErrorMessage = "Linket er ikke længere gyldigt." };
+
+            return await UpdateFieldCoreAsync(input, null, member, ct);
+        }
+
+        public async Task<ActivityListActionResultDto> SendLinksAsync(ActivityListSendLinksViewModel input, string baseUrl, CancellationToken ct = default)
+        {
+            if (!input.ViaEmail && !input.ViaSms)
+                return ActivityListActionResultDto.Fail("Vælg e-mail og/eller SMS.");
+
+            var list = await _context.ActivityLists.AsNoTracking().Include(l => l.Activity).FirstOrDefaultAsync(l => l.Id == input.ListId, ct);
+            if (list is null)
+                return ActivityListActionResultDto.Fail("Listen blev ikke fundet.");
+
+            // Only external contacts — administrators in the workgroup log in and use the list page.
+            var members = await _context.ActivityWorkgroupMembers
+                .AsNoTracking()
+                .Where(m => m.ActivityId == list.ActivityId && m.ApplicationUserId == null && input.MemberIds.Contains(m.Id))
+                .OrderBy(m => m.Order)
+                .ToListAsync(ct);
+            if (members.Count == 0)
+                return ActivityListActionResultDto.Fail("Vælg mindst én ekstern kontakt fra arbejdsgruppen.");
+
+            var assignedCounts = await _context.ActivityListItems
+                .Where(i => i.ActivityListId == list.Id && i.AssignedToWorkgroupMemberId != null)
+                .GroupBy(i => i.AssignedToWorkgroupMemberId!.Value)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Key, g => g.Count, ct);
+
+            var message = string.IsNullOrWhiteSpace(input.Message) ? null : input.Message.Trim();
+            var subject = $"{list.Activity.Title}: {list.Title}";
+            int emails = 0, sms = 0;
+            var missing = new List<string>();
+
+            foreach (var member in members)
+            {
+                var name = member.Name ?? string.Empty;
+                var count = assignedCounts.GetValueOrDefault(member.Id);
+                var body = $"Hej {name}\n\n"
+                    + (message is null ? string.Empty : $"{message}\n\n")
+                    + $"Du har {count} linje{(count == 1 ? "" : "r")} på listen \"{list.Title}\" ({list.Activity.Title}). "
+                    + $"Åbn dine linjer her:\n{BuildPublicLink(baseUrl, list.Id, member.PublicId)}";
+
+                var sent = false;
+                if (input.ViaEmail && !string.IsNullOrWhiteSpace(member.Email))
+                {
+                    _context.CommunicationEmailMessages.Add(new CommunicationEmailMessage
+                    {
+                        ToAddress = member.Email.Trim(),
+                        Subject = subject,
+                        Body = body,
+                        HtmlBody = EmailHtmlBuilder.FromPlainText(body),
+                        Status = CommunicationEmailMessageStatus.Pending
+                    });
+                    emails++;
+                    sent = true;
+                }
+                if (input.ViaSms && !string.IsNullOrWhiteSpace(member.Mobile))
+                {
+                    _context.SmsMessages.Add(new SmsMessage
+                    {
+                        Direction = SmsDirection.Outbound,
+                        PhoneNumber = member.Mobile.Trim(),
+                        Body = body,
+                        Status = SmsMessageStatus.Pending
+                    });
+                    sms++;
+                    sent = true;
+                }
+                if (!sent)
+                    missing.Add(name);
+            }
+
+            if (emails + sms == 0)
+                return ActivityListActionResultDto.Fail($"Ingen af de valgte har {(input.ViaEmail && input.ViaSms ? "e-mail eller mobilnummer" : input.ViaEmail ? "en e-mail" : "et mobilnummer")} registreret.");
+
+            // Picked up and sent by CommunicationEmailWorker / SmsWorker.
+            await _context.SaveChangesAsync(ct);
+            _logger.LogInformation("List {ListId}: queued work list links to {Members} member(s) ({Emails} e-mail, {Sms} SMS)", list.Id, members.Count - missing.Count, emails, sms);
+
+            var parts = new List<string>();
+            if (emails > 0) parts.Add($"{emails} e-mail{(emails == 1 ? "" : "s")}");
+            if (sms > 0) parts.Add($"{sms} SMS");
+            var text = $"Links sendes: {string.Join(" og ", parts)}.";
+            if (missing.Count > 0)
+                text += $" Mangler kontaktinfo: {string.Join(", ", missing)}.";
+            return ActivityListActionResultDto.Ok(list.Id, text);
+        }
+
+        public static string BuildPublicLink(string baseUrl, int listId, Guid memberPublicId)
+            => $"{baseUrl.TrimEnd('/')}/Arbejdsliste?Id={listId}&UId={memberPublicId}";
+
+        /// <summary>An external contact (no login) in the list's activity workgroup, or null.</summary>
+        private async Task<ActivityWorkgroupMember?> FindPublicMemberAsync(int listId, Guid memberPublicId, CancellationToken ct)
+        {
+            if (memberPublicId == Guid.Empty)
+                return null;
+
+            return await _context.ActivityWorkgroupMembers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.PublicId == memberPublicId
+                    && m.ApplicationUserId == null
+                    && _context.ActivityLists.Any(l => l.Id == listId && l.ActivityId == m.ActivityId), ct);
+        }
+
+        /// <summary>
+        /// Gate for the public link + a schema trimmed for it: no other members (their names aren't
+        /// shown) and status counts for the member's own lines only.
+        /// </summary>
+        private async Task<(ActivityList List, ActivityWorkgroupMember Member, ActivityListSchemaViewModel Schema)?> ResolvePublicAsync(int listId, Guid memberPublicId, CancellationToken ct)
+        {
+            var member = await FindPublicMemberAsync(listId, memberPublicId, ct);
+            if (member is null)
+                return null;
+
+            var context = await LoadSchemaAsync(listId, null, ct);
+            if (context is null)
+                return null;
+
+            var (list, schema, _) = context.Value;
+            var ownCounts = await _context.ActivityListItems
+                .Where(i => i.ActivityListId == listId && i.AssignedToWorkgroupMemberId == member.Id && i.StatusId != null)
+                .GroupBy(i => i.StatusId!.Value)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Key, g => g.Count, ct);
+            schema.Statuses.ForEach(s => s.Count = ownCounts.GetValueOrDefault(s.Id));
+            schema.Members = new List<ActivityListMemberViewModel>();
+
+            return (list, member, schema);
+        }
+
+        private async Task<PublicWorkListItemsViewModel> QueryPublicItemsAsync(ActivityListItemFilterViewModel filter, ActivityWorkgroupMember member, ActivityListSchemaViewModel schema, CancellationToken ct)
+        {
+            // Always locked to the member's own lines, whatever the query string says.
+            filter.Assigned = member.Id.ToString(CultureInfo.InvariantCulture);
+            var items = await QueryItemsAsync<PublicWorkListItemsViewModel>(filter, schema, new HashSet<int>(), ct);
+            items.Assigned = null;
+            items.MemberPublicId = member.PublicId;
+            return items;
         }
 
         // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -802,7 +1012,10 @@ namespace web.Repositories.ActivityLists
                     Name = m.ApplicationUser != null ? m.ApplicationUser.DisplayName : (m.Name ?? string.Empty),
                     Role = m.Role,
                     IsLinkedUser = m.ApplicationUserId != null,
-                    IsMe = userId != null && m.ApplicationUserId == userId
+                    IsMe = userId != null && m.ApplicationUserId == userId,
+                    Email = m.ApplicationUserId == null ? m.Email : null,
+                    Mobile = m.ApplicationUserId == null ? m.Mobile : null,
+                    PublicId = m.PublicId
                 })
                 .ToListAsync(ct);
         }

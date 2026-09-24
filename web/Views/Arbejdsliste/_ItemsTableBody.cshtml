@@ -1,0 +1,115 @@
+@using web.Data.Entities
+@model web.ViewModels.PublicWorkListItemsViewModel
+@{
+    var schema = Model.Schema;
+    var statuses = schema.Statuses.ToDictionary(s => s.Id);
+    // Same columns as the logged-in list page, minus Tilknyttet (always the member) and the edit button.
+    var columns = schema.VisibleColumns;
+    var colCount = 1 + columns.Count + 1 + (schema.ShowNote ? 1 : 0);
+}
+
+<div class="table-responsive list-items-wrap">
+    <table class="table align-middle list-items-table mb-0">
+        <thead>
+            <tr>
+                <th class="list-col-nr">#</th>
+                @foreach (var column in columns)
+                {
+                    <th class="@(column.IsImported ? "" : "list-col-extra")">@column.Name</th>
+                }
+                <th class="list-col-status">Status</th>
+                @if (schema.ShowNote)
+                {
+                    <th class="list-col-note">Note</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr class="list-empty-row">
+                    <td colspan="@colCount" class="text-muted">
+                        @(Model.HasFilter ? "Ingen linjer matcher søgningen." : "Du har ingen linjer på denne liste endnu.")
+                    </td>
+                </tr>
+            }
+            @foreach (var row in Model.Rows)
+            {
+                var status = row.StatusId.HasValue ? statuses.GetValueOrDefault(row.StatusId.Value) : null;
+                <tr data-list-item="@row.Id">
+                    <td class="list-col-nr text-muted" data-label="#">@row.RowNumber</td>
+                    @foreach (var column in columns)
+                    {
+                        var value = row.Values.GetValueOrDefault(column.Id);
+                        <td data-label="@column.Name" class="@(column.IsImported ? "list-cell-readonly" : "list-cell-edit")">
+                            @switch (column.Kind)
+                            {
+                                case ActivityListColumnKind.Imported:
+                                    <span class="list-cell-text">@value</span>
+                                    break;
+                                case ActivityListColumnKind.YesNo:
+                                    <input type="checkbox" class="form-check-input" data-list-field="column" data-column-id="@column.Id"
+                                           checked="@(value == "true")" aria-label="@column.Name" />
+                                    break;
+                                case ActivityListColumnKind.Choice:
+                                    <select class="form-select form-select-sm" data-list-field="column" data-column-id="@column.Id" aria-label="@column.Name">
+                                        <option value="">–</option>
+                                        @foreach (var option in column.Options)
+                                        {
+                                            <option value="@option" selected="@(option == value)">@option</option>
+                                        }
+                                        @if (value is not null && !column.Options.Contains(value))
+                                        {
+                                            <option value="@value" selected>@value</option>
+                                        }
+                                    </select>
+                                    break;
+                                default:
+                                    <input type="text" class="form-control form-control-sm" data-list-field="column" data-column-id="@column.Id"
+                                           value="@value" maxlength="4000" aria-label="@column.Name" />
+                                    break;
+                            }
+                        </td>
+                    }
+                    <td class="list-col-status" data-label="Status">
+                        <select class="form-select form-select-sm list-status-select" data-list-field="status" data-color="@(status?.Color ?? "muted")" aria-label="Status">
+                            @foreach (var option in schema.Statuses)
+                            {
+                                <option value="@option.Id" data-color="@option.Color" selected="@(option.Id == row.StatusId)">@option.Name</option>
+                            }
+                        </select>
+                    </td>
+                    @if (schema.ShowNote)
+                    {
+                        <td class="list-col-note" data-label="Note">
+                            <textarea class="form-control form-control-sm list-note" data-list-field="note" rows="1" maxlength="2000" placeholder="Tilføj note…" aria-label="Note">@row.Note</textarea>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            @foreach (var size in new[] { 10, 50, 100 })
+            {
+                <option value="@size" selected="@(size == Model.PageSize)">@size</option>
+            }
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel { Page = Model.Page, TotalPages = Model.TotalPages })
+    </div>
+</div>

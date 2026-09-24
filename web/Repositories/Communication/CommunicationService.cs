@@ -1,6 +1,3 @@
-using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using web.Constants;
 using web.Data;
@@ -689,7 +686,7 @@ namespace web.Repositories.Communication
                         ToAddress = recipient.Address,
                         Subject = message.Subject,
                         Body = body,
-                        HtmlBody = BuildHtmlEmailBody(body),
+                        HtmlBody = EmailHtmlBuilder.FromPlainText(body),
                         Status = CommunicationEmailMessageStatus.Pending
                     };
                     _context.CommunicationEmailMessages.Add(email);
@@ -865,32 +862,5 @@ namespace web.Repositories.Communication
             var data = await File.ReadAllBytesAsync(fullPath, ct);
             return (data, attachment.FileMetadata.ContentType, attachment.FileMetadata.OriginalFileName);
         }
-
-        /// <summary>
-        /// Renders the plain-text email body (same text used for SMS) as HTML: bare http(s) links
-        /// become clickable &lt;a href&gt; tags and line breaks become &lt;br&gt;. Sent as the HTML
-        /// alternative alongside the plain-text Body — SmsMessage.Body is never touched by this,
-        /// SMS always stays plain text.
-        /// </summary>
-        private static string BuildHtmlEmailBody(string plainBody)
-        {
-            var html = new StringBuilder();
-            var lastIndex = 0;
-
-            foreach (Match match in UrlPattern.Matches(plainBody))
-            {
-                html.Append(WebUtility.HtmlEncode(plainBody[lastIndex..match.Index]));
-                var encodedUrl = WebUtility.HtmlEncode(match.Value);
-                html.Append($"<a href=\"{encodedUrl}\">{encodedUrl}</a>");
-                lastIndex = match.Index + match.Length;
-            }
-
-            html.Append(WebUtility.HtmlEncode(plainBody[lastIndex..]));
-
-            var htmlBody = html.ToString().Replace("\r\n", "\n").Replace("\n", "<br>\n");
-            return $"<!DOCTYPE html><html><body style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1a1a;\">{htmlBody}</body></html>";
-        }
-
-        private static readonly Regex UrlPattern = new(@"https?://[^\s<>""]+", RegexOptions.Compiled);
     }
 }

@@ -227,6 +227,17 @@ namespace web.Controllers
             return result.Success ? this.ToastSuccessJson(result.Message!) : this.ToastErrorJson(result.ErrorMessage!);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendLinks(ActivityListSendLinksViewModel model, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return this.ToastErrorJson(FirstModelError() ?? "Links kunne ikke sendes.");
+
+            var result = await _listService.SendLinksAsync(model, $"{Request.Scheme}://{Request.Host}", ct);
+            return result.Success ? this.ToastSuccessJson(result.Message!) : this.ToastErrorJson(result.ErrorMessage!);
+        }
+
         private string? FirstModelError()
             => ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
     }
