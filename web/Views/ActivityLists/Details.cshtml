@@ -15,6 +15,10 @@
      data-url-delete-item="@Url.Action("DeleteItem")"
      data-url-distribute="@Url.Action("Distribute")"
      data-url-send-links="@Url.Action("SendLinks")"
+     data-url-item-labels="@Url.Action("ItemLabels")"
+     data-url-save-item-labels="@Url.Action("SaveItemLabels")"
+     data-url-labels-count="@Url.Action("LabelsCount")"
+     data-url-labels-pdf="@Url.Action("LabelsPdf")"
      data-url-save-column="@Url.Action("SaveColumn")"
      data-url-delete-column="@Url.Action("DeleteColumn")"
      data-url-column-hidden="@Url.Action("SetColumnHidden")"
@@ -119,6 +123,9 @@
                         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listSendLinksModal" title="Send links til eksterne kontakter" aria-label="Send links til eksterne kontakter">
                             <i class="bi bi-send me-1"></i> Send links
                         </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listPrintLabelsModal" title="Print labels som PDF" aria-label="Print labels som PDF">
+                            <i class="bi bi-printer me-1"></i> Print labels
+                        </button>
                         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listDistributeModal" title="Fordel linjer" aria-label="Fordel linjer">
                             <i class="bi bi-people me-1"></i> Fordel linjer
                         </button>
@@ -203,6 +210,8 @@
 @await Html.PartialAsync("_ListItemModal", schema)
 @await Html.PartialAsync("_ListDistributeModal", Model)
 @await Html.PartialAsync("_ListSendLinksModal", Model)
+@await Html.PartialAsync("_ListLabelsModal")
+@await Html.PartialAsync("_ListPrintLabelsModal")
 @await Html.PartialAsync("_ListColumnsModal", schema)
 @await Html.PartialAsync("_ListStatusesModal", schema)
 <script src="~/js/activity-list.js" asp-append-version="true"></script>

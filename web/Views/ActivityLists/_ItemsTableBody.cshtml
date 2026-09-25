@@ -62,6 +62,7 @@
             {
                 var status = row.StatusId.HasValue ? statuses.GetValueOrDefault(row.StatusId.Value) : null;
                 var updatedText = ActivityListService.UpdatedText(row.UpdatedByName, row.UpdatedAtUtc);
+                var labelTitle = row.LabelCopies > 0 ? $"Labels ({row.LabelCopies} stk.)" : "Tilføj label";
                 <tr data-list-item="@row.Id" data-row-number="@row.RowNumber" data-values="@JsonSerializer.Serialize(row.Values)">
                     <td class="list-col-nr text-muted" data-label="#">
                         <span>@row.RowNumber</span>
@@ -124,6 +125,13 @@
                         </td>
                     }
                     <td class="text-end text-nowrap" data-label="">
+                        <button type="button" class="btn btn-sm btn-secondary btn-icon list-label-btn" data-list-labels title="@labelTitle" aria-label="@labelTitle – linje @row.RowNumber">
+                            <i class="bi @(row.LabelCopies > 0 ? "bi-tag-fill" : "bi-tag")"></i>
+                            @if (row.LabelCopies > 0)
+                            {
+                                <span class="list-label-count">@row.LabelCopies</span>
+                            }
+                        </button>
                         <button type="button" class="btn btn-sm btn-secondary btn-icon" data-list-edit-item title="Rediger linje" aria-label="Rediger linje @row.RowNumber">
                             <i class="bi bi-pencil"></i>
                         </button>

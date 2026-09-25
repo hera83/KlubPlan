@@ -27,6 +27,8 @@ using web.Repositories.ActivityFiles;
 using web.Repositories.ActivityFiles.Interfaces;
 using web.Repositories.ActivityLists;
 using web.Repositories.ActivityLists.Interfaces;
+using web.Repositories.ActivityListLabels;
+using web.Repositories.ActivityListLabels.Interfaces;
 using web.BgSerives;
 using web.Services.AiGateway;
 using web.Services.AiGateway.Interfaces;
@@ -141,6 +143,11 @@ try
     builder.Services.AddScoped<IActivityService, ActivityService>();
     builder.Services.AddScoped<IActivityFileService, ActivityFileService>();
     builder.Services.AddScoped<IActivityListService, ActivityListService>();
+    builder.Services.AddScoped<IActivityListLabelService, ActivityListLabelService>();
+
+    // QuestPDF (labels på Aktiviteter → Lister): Community-licensen dækker privat/forenings-brug.
+    QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
     builder.Services.AddSingleton<ITranscriptionQueue, TranscriptionQueue>();
     builder.Services.AddHostedService<TranscriptionWorker>();
 

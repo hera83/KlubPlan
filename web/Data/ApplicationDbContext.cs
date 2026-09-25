@@ -76,6 +76,7 @@ namespace web.Data
         public DbSet<ActivityListStatus> ActivityListStatuses { get; set; } = null!;
         public DbSet<ActivityListItem> ActivityListItems { get; set; } = null!;
         public DbSet<ActivityListCellValue> ActivityListCellValues { get; set; } = null!;
+        public DbSet<ActivityListLabel> ActivityListLabels { get; set; } = null!;
 
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
@@ -1035,6 +1036,26 @@ namespace web.Data
 
                 entity.HasIndex(e => new { e.ActivityListItemId, e.ActivityListColumnId }).IsUnique();
                 entity.HasIndex(e => e.ActivityListColumnId);
+            });
+
+            // Configure ActivityListLabel
+            builder.Entity<ActivityListLabel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Text)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Item)
+                    .WithMany(i => i.Labels)
+                    .HasForeignKey(e => e.ActivityListItemId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.ActivityListItemId, e.Order });
             });
 
             // Configure CommunicationMessage

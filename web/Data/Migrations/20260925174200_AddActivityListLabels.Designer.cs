@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using web.Data;
 
@@ -10,9 +11,11 @@ using web.Data;
 namespace web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925174200_AddActivityListLabels")]
+    partial class AddActivityListLabels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -192,7 +195,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("StartAtUtc");
 
-                    b.ToTable("Activities", (string)null);
+                    b.ToTable("Activities");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityFile", b =>
@@ -224,7 +227,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityId", "FolderId");
 
-                    b.ToTable("ActivityFiles", (string)null);
+                    b.ToTable("ActivityFiles");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityFileVersion", b =>
@@ -257,7 +260,7 @@ namespace web.Data.Migrations
                     b.HasIndex("ActivityFileId", "VersionNumber")
                         .IsUnique();
 
-                    b.ToTable("ActivityFileVersions", (string)null);
+                    b.ToTable("ActivityFileVersions");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityFolder", b =>
@@ -292,7 +295,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityId", "ParentFolderId");
 
-                    b.ToTable("ActivityFolders", (string)null);
+                    b.ToTable("ActivityFolders");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityForm", b =>
@@ -307,7 +310,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId");
 
-                    b.ToTable("ActivityForms", (string)null);
+                    b.ToTable("ActivityForms");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityList", b =>
@@ -348,7 +351,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityId");
 
-                    b.ToTable("ActivityLists", (string)null);
+                    b.ToTable("ActivityLists");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityListCellValue", b =>
@@ -374,7 +377,7 @@ namespace web.Data.Migrations
                     b.HasIndex("ActivityListItemId", "ActivityListColumnId")
                         .IsUnique();
 
-                    b.ToTable("ActivityListCellValues", (string)null);
+                    b.ToTable("ActivityListCellValues");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityListColumn", b =>
@@ -413,7 +416,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityListId", "Order");
 
-                    b.ToTable("ActivityListColumns", (string)null);
+                    b.ToTable("ActivityListColumns");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityListItem", b =>
@@ -462,7 +465,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityListId", "Order");
 
-                    b.ToTable("ActivityListItems", (string)null);
+                    b.ToTable("ActivityListItems");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityListLabel", b =>
@@ -495,7 +498,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityListItemId", "Order");
 
-                    b.ToTable("ActivityListLabels", (string)null);
+                    b.ToTable("ActivityListLabels");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityListStatus", b =>
@@ -527,7 +530,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityListId", "Order");
 
-                    b.ToTable("ActivityListStatuses", (string)null);
+                    b.ToTable("ActivityListStatuses");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityTargetGroup", b =>
@@ -542,7 +545,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("ActivityTargetGroups", (string)null);
+                    b.ToTable("ActivityTargetGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityTask", b =>
@@ -592,7 +595,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityId", "Order");
 
-                    b.ToTable("ActivityTasks", (string)null);
+                    b.ToTable("ActivityTasks");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ActivityWorkgroupMember", b =>
@@ -642,7 +645,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ActivityId", "Order");
 
-                    b.ToTable("ActivityWorkgroupMembers", (string)null);
+                    b.ToTable("ActivityWorkgroupMembers");
                 });
 
             modelBuilder.Entity("web.Data.Entities.AppSetting", b =>
@@ -666,7 +669,7 @@ namespace web.Data.Migrations
 
                     b.HasKey("Key");
 
-                    b.ToTable("AppSettings", (string)null);
+                    b.ToTable("AppSettings");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ApplicationUser", b =>
@@ -809,7 +812,7 @@ namespace web.Data.Migrations
                     b.HasIndex("PublicId")
                         .IsUnique();
 
-                    b.ToTable("Arrangements", (string)null);
+                    b.ToTable("Arrangements");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementAllowedGroup", b =>
@@ -824,7 +827,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("ArrangementAllowedGroups", (string)null);
+                    b.ToTable("ArrangementAllowedGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementAllowedPerson", b =>
@@ -839,7 +842,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("ArrangementAllowedPersons", (string)null);
+                    b.ToTable("ArrangementAllowedPersons");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementFormField", b =>
@@ -878,7 +881,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementId", "Order");
 
-                    b.ToTable("ArrangementFormFields", (string)null);
+                    b.ToTable("ArrangementFormFields");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementRegistration", b =>
@@ -903,7 +906,7 @@ namespace web.Data.Migrations
                     b.HasIndex("ArrangementId", "PersonId")
                         .IsUnique();
 
-                    b.ToTable("ArrangementRegistrations", (string)null);
+                    b.ToTable("ArrangementRegistrations");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementRegistrationAnswer", b =>
@@ -927,7 +930,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementRegistrationId");
 
-                    b.ToTable("ArrangementRegistrationAnswers", (string)null);
+                    b.ToTable("ArrangementRegistrationAnswers");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementRegistrationShift", b =>
@@ -952,7 +955,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementShiftId");
 
-                    b.ToTable("ArrangementRegistrationShifts", (string)null);
+                    b.ToTable("ArrangementRegistrationShifts");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementShift", b =>
@@ -991,7 +994,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementId", "Order");
 
-                    b.ToTable("ArrangementShifts", (string)null);
+                    b.ToTable("ArrangementShifts");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ArrangementShiftRequirement", b =>
@@ -1015,7 +1018,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ArrangementShiftId", "Order");
 
-                    b.ToTable("ArrangementShiftRequirements", (string)null);
+                    b.ToTable("ArrangementShiftRequirements");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationEmailMessage", b =>
@@ -1073,7 +1076,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ToAddress");
 
-                    b.ToTable("CommunicationEmailMessages", (string)null);
+                    b.ToTable("CommunicationEmailMessages");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationMessage", b =>
@@ -1145,7 +1148,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId");
 
-                    b.ToTable("CommunicationMessages", (string)null);
+                    b.ToTable("CommunicationMessages");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationMessageAttachment", b =>
@@ -1169,7 +1172,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FileMetadataId");
 
-                    b.ToTable("CommunicationMessageAttachments", (string)null);
+                    b.ToTable("CommunicationMessageAttachments");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationMessageGroup", b =>
@@ -1184,7 +1187,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("CommunicationMessageGroups", (string)null);
+                    b.ToTable("CommunicationMessageGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationMessageRecipient", b =>
@@ -1235,7 +1238,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("Channel", "Address");
 
-                    b.ToTable("CommunicationMessageRecipients", (string)null);
+                    b.ToTable("CommunicationMessageRecipients");
                 });
 
             modelBuilder.Entity("web.Data.Entities.CommunicationMessageRecipientPerson", b =>
@@ -1250,7 +1253,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("CommunicationMessageRecipientPersons", (string)null);
+                    b.ToTable("CommunicationMessageRecipientPersons");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FileMetadata", b =>
@@ -1305,7 +1308,7 @@ namespace web.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FileMetadata", (string)null);
+                    b.ToTable("FileMetadata");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Form", b =>
@@ -1359,7 +1362,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("RootFormId");
 
-                    b.ToTable("Forms", (string)null);
+                    b.ToTable("Forms");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormAnswer", b =>
@@ -1383,7 +1386,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormSubmissionId");
 
-                    b.ToTable("FormAnswers", (string)null);
+                    b.ToTable("FormAnswers");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormField", b =>
@@ -1422,7 +1425,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId", "Order");
 
-                    b.ToTable("FormFields", (string)null);
+                    b.ToTable("FormFields");
                 });
 
             modelBuilder.Entity("web.Data.Entities.FormSubmission", b =>
@@ -1447,7 +1450,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("FormId");
 
-                    b.ToTable("FormSubmissions", (string)null);
+                    b.ToTable("FormSubmissions");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Meeting", b =>
@@ -1499,7 +1502,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("RootMeetingId");
 
-                    b.ToTable("Meetings", (string)null);
+                    b.ToTable("Meetings");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingAttachment", b =>
@@ -1540,7 +1543,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("MeetingId");
 
-                    b.ToTable("MeetingAttachments", (string)null);
+                    b.ToTable("MeetingAttachments");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingAttendee", b =>
@@ -1558,7 +1561,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("MeetingAttendees", (string)null);
+                    b.ToTable("MeetingAttendees");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingDecision", b =>
@@ -1593,7 +1596,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("ResponsibleUserId");
 
-                    b.ToTable("MeetingDecisions", (string)null);
+                    b.ToTable("MeetingDecisions");
                 });
 
             modelBuilder.Entity("web.Data.Entities.MeetingGroup", b =>
@@ -1608,7 +1611,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonGroupId");
 
-                    b.ToTable("MeetingGroups", (string)null);
+                    b.ToTable("MeetingGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.Person", b =>
@@ -1658,7 +1661,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Uid")
                         .IsUnique();
 
-                    b.ToTable("People", (string)null);
+                    b.ToTable("People");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGroup", b =>
@@ -1683,7 +1686,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("PersonGroups", (string)null);
+                    b.ToTable("PersonGroups");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGroupMembership", b =>
@@ -1703,7 +1706,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("PersonGroupMemberships", (string)null);
+                    b.ToTable("PersonGroupMemberships");
                 });
 
             modelBuilder.Entity("web.Data.Entities.PersonGuardian", b =>
@@ -1735,7 +1738,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("PersonGuardians", (string)null);
+                    b.ToTable("PersonGuardians");
                 });
 
             modelBuilder.Entity("web.Data.Entities.SmsMessage", b =>
@@ -1802,7 +1805,7 @@ namespace web.Data.Migrations
 
                     b.HasIndex("PhoneNumber");
 
-                    b.ToTable("SmsMessages", (string)null);
+                    b.ToTable("SmsMessages");
                 });
 
             modelBuilder.Entity("web.Data.Entities.ThemeSetting", b =>
@@ -1880,7 +1883,7 @@ namespace web.Data.Migrations
                     b.HasIndex("Name", "ThemeMode")
                         .IsUnique();
 
-                    b.ToTable("ThemeSettings", (string)null);
+                    b.ToTable("ThemeSettings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

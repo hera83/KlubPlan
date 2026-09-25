@@ -2404,6 +2404,67 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .list-status-count { min-width: 4.5rem; text-align: right; }
 .list-column-name { flex: 1 1 12rem; width: auto; }
 
+/* Labels: knap på linjen (antal kopier som lille tæller) + Labels-modal */
+.list-label-btn { position: relative; }
+.list-label-count {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.4rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--clr-info);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.1rem;
+  text-align: center;
+  pointer-events: none;
+}
+.list-label-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.list-label-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.list-label-row [data-list-label-text] { flex: 1 1 auto; min-width: 0; }
+.list-label-qty { flex: 0 0 8rem; width: 8rem; }
+
+/* Print labels: A4-ark i miniature med labels i bredden × højden */
+.list-print-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 15rem;
+}
+.list-print-sheet {
+  display: grid;
+  gap: 1px;
+  width: 10.5rem;
+  aspect-ratio: 210 / 297;
+  background: var(--clr-border);
+  border: 1px solid var(--clr-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.list-print-sheet.is-landscape {
+  width: 15rem;
+  aspect-ratio: 297 / 210;
+}
+.list-print-sheet > span { background: var(--clr-surface); }
+.list-print-sheet > span.is-filled { background: var(--clr-info-bg); }
+.list-print-hint {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--clr-info-bg);
+  color: var(--clr-text);
+  font-size: 0.875rem;
+}
+
 /* Mobil: hver linje vises som et kort med "Label: værdi" */
 @media (max-width: 767.98px) {
   .list-items-wrap { overflow: visible; }

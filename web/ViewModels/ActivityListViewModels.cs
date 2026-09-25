@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using web.Constants;
 using web.Data.Entities;
 
 namespace web.ViewModels
@@ -184,6 +185,9 @@ namespace web.ViewModels
         public int? AssignedMemberId { get; set; }
         public DateTime? UpdatedAtUtc { get; set; }
         public string? UpdatedByName { get; set; }
+
+        /// <summary>Copies to print for the line (sum of its labels' quantities) — shown on the "Labels" button.</summary>
+        public int LabelCopies { get; set; }
     }
 
     /// <summary>Inline edit of one field on one line (autosave).</summary>
@@ -284,6 +288,53 @@ namespace web.ViewModels
 
         [StringLength(1000, ErrorMessage = "Beskeden må højst være {1} tegn.")]
         public string? Message { get; set; }
+    }
+
+    // ── Labels ──────────────────────────────────────────────────────────────
+
+    /// <summary>The line's labels, loaded into the "Labels" modal.</summary>
+    public class ActivityListItemLabelsViewModel
+    {
+        public int ItemId { get; set; }
+        public int RowNumber { get; set; }
+        public List<ActivityListLabelInput> Labels { get; set; } = new();
+    }
+
+    /// <summary>"Labels" modal → Gem. Replaces all labels on the line; rows without text are skipped.</summary>
+    public class ActivityListItemLabelsSaveViewModel
+    {
+        [Required]
+        public int ListId { get; set; }
+
+        [Required]
+        public int ItemId { get; set; }
+
+        [MaxLength(ActivityListRules.MaxLabelsPerItem, ErrorMessage = "En linje kan højst have {1} labels.")]
+        public List<ActivityListLabelInput> Labels { get; set; } = new();
+    }
+
+    public class ActivityListLabelInput
+    {
+        [StringLength(ActivityListRules.MaxLabelTextLength, ErrorMessage = "Teksten på en label må højst være {1} tegn.")]
+        public string? Text { get; set; }
+
+        [Range(1, ActivityListRules.MaxLabelQuantity, ErrorMessage = "Antal skal være mellem {1} og {2}.")]
+        public int Quantity { get; set; } = 1;
+    }
+
+    /// <summary>
+    /// "Print labels": the A4 sheet's grid (labels across × down, portrait or landscape) plus the
+    /// list filter — only set when "Kun linjer i nuværende filter" is chosen.
+    /// </summary>
+    public class ActivityListLabelPrintViewModel : ActivityListItemFilterViewModel
+    {
+        [Range(1, ActivityListRules.MaxLabelsAcross, ErrorMessage = "Labels i bredden skal være mellem {1} og {2}.")]
+        public int Across { get; set; } = 3;
+
+        [Range(1, ActivityListRules.MaxLabelsDown, ErrorMessage = "Labels i højden skal være mellem {1} og {2}.")]
+        public int Down { get; set; } = 8;
+
+        public bool Landscape { get; set; }
     }
 
     // ── Offentligt link (Arbejdsliste) ──────────────────────────────────────

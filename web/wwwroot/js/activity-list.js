@@ -2,7 +2,8 @@
 // • Status, Tilknyttet, Note og ekstra kolonner gemmes automatisk, når feltet ændres.
 // • Sortering (klik på kolonneoverskrift), "Kun mine" og klik på en status i
 //   fremdriften filtrerer tabellen (data-table.js står for søgning/filter/paginering).
-// • Modals: rediger/tilføj linje, fordel linjer, send links, kolonner, statusser, rediger liste.
+// • Modals: rediger/tilføj linje, labels på en linje, fordel linjer, send links, print labels,
+//   kolonner, statusser, rediger liste.
 // Markup: Views/ActivityLists/*.cshtml.
 (() => {
     const initPage = (page) => {
@@ -193,14 +194,19 @@
             btn.addEventListener('click', () => setTimeout(syncFilterButtons));
         });
 
-        page.querySelector('[data-list-export-filtered]')?.addEventListener('click', () => {
+        // Search + filter panel (incl. sorting) as query string — used by "Kun linjer i nuværende filter".
+        const filterParams = () => {
             const params = new URLSearchParams({ listId });
             const search = tableRoot.querySelector('[data-table-search]')?.value.trim();
             if (search) params.set('SearchText', search);
             tableRoot.querySelectorAll('[data-table-filter-panel] [name]').forEach((field) => {
                 if (field.name !== 'ListId' && field.value) params.set(field.name, field.value);
             });
-            window.location.href = `${ds.urlExport}?${params}`;
+            return params;
+        };
+
+        page.querySelector('[data-list-export-filtered]')?.addEventListener('click', () => {
+            window.location.href = `${ds.urlExport}?${filterParams()}`;
         });
 
         // ─── Rediger / tilføj linje ────────────────────────────────────────────
@@ -368,6 +374,225 @@
                 sendForm.reset();
                 updateSendSubmit();
             }
+        });
+
+        // ─── Labels på en linje ────────────────────────────────────────────────
+        const labelsModalEl = document.getElementById('listLabelsModal');
+        const labelsForm = labelsModalEl?.querySelector('[data-list-labels-form]');
+        const labelRows = labelsModalEl?.querySelector('[data-list-label-rows]');
+        const labelTemplate = labelsModalEl?.querySelector('[data-list-label-template]');
+        const labelsEmpty = labelsModalEl?.querySelector('[data-list-labels-empty]');
+        const labelsSubmit = labelsModalEl?.querySelector('[data-list-labels-submit]');
+        let labelsRequest = 0;
+        let labelsShown = false;
+
+        const syncLabelsEmpty = () => { labelsEmpty.hidden = labelRows.children.length > 0; };
+
+        const addLabelRow = (label) => {
+            labelRows.appendChild(labelTemplate.content.cloneNode(true));
+            const row = labelRows.lastElementChild;
+            if (label) {
+                row.querySelector('[data-list-label-text]').value = label.text || '';
+                row.querySelector('[data-list-label-quantity]').value = label.quantity || 1;
+            }
+            syncLabelsEmpty();
+            return row;
+        };
+
+        const focusFirstLabel = () => labelRows.querySelector('[data-list-label-text]')?.focus();
+
+        const openLabelsModal = async (row) => {
+            if (!labelsModalEl || !row) return;
+            const request = ++labelsRequest;
+            labelsForm.querySelector('[data-list-labels-item-id]').value = row.dataset.listItem;
+            labelsModalEl.querySelector('[data-list-labels-title]').textContent = `Labels – linje ${row.dataset.rowNumber}`;
+            labelRows.innerHTML = '';
+            labelsEmpty.hidden = true;
+            labelsSubmit.disabled = true;
+            bootstrap.Modal.getOrCreateInstance(labelsModalEl).show();
+
+            try {
+                const params = new URLSearchParams({ listId, itemId: row.dataset.listItem });
+                const res = await fetch(`${ds.urlItemLabels}?${params}`, { headers: { 'X-Requested-With': 'fetch' } });
+                const data = await res.json();
+                if (request !== labelsRequest) return;
+                if (!data.success) {
+                    window.FvToast?.show('error', data.message || 'Linjens labels kunne ikke hentes.');
+                    bootstrap.Modal.getInstance(labelsModalEl)?.hide();
+                    return;
+                }
+                (data.labels || []).forEach(addLabelRow);
+                // A line without labels opens with one empty label, ready to type.
+                if (labelRows.children.length === 0) addLabelRow(null);
+                labelsSubmit.disabled = false;
+                if (labelsShown) focusFirstLabel();
+            } catch {
+                if (request !== labelsRequest) return;
+                window.FvToast?.show('error', 'Netværksfejl. Prøv igen.');
+                bootstrap.Modal.getInstance(labelsModalEl)?.hide();
+            }
+        };
+
+        tableRoot.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-list-labels]');
+            if (btn) openLabelsModal(btn.closest('[data-list-item]'));
+        });
+
+        labelsModalEl?.addEventListener('shown.bs.modal', () => {
+            labelsShown = true;
+            focusFirstLabel();
+        });
+        labelsModalEl?.addEventListener('hidden.bs.modal', () => { labelsShown = false; });
+
+        labelsModalEl?.querySelector('[data-list-label-add]')?.addEventListener('click', () => {
+            addLabelRow(null).querySelector('[data-list-label-text]').focus();
+        });
+        labelRows?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-list-label-remove]');
+            if (!btn) return;
+            btn.closest('[data-list-label-row]').remove();
+            syncLabelsEmpty();
+        });
+
+        labelsForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('ItemId', labelsForm.querySelector('[data-list-labels-item-id]').value);
+            labelRows.querySelectorAll('[data-list-label-row]').forEach((row, i) => {
+                fd.append(`Labels[${i}].Text`, row.querySelector('[data-list-label-text]').value);
+                fd.append(`Labels[${i}].Quantity`, row.querySelector('[data-list-label-quantity]').value);
+            });
+            labelsSubmit.disabled = true;
+            const data = await post(ds.urlSaveItemLabels, fd);
+            labelsSubmit.disabled = false;
+            if (data.success) {
+                bootstrap.Modal.getInstance(labelsModalEl)?.hide();
+                reloadTable();
+            }
+        });
+
+        // ─── Print labels ──────────────────────────────────────────────────────
+        // A4 split into "i bredden" × "i højden" labels with no page margin (same maths as ActivityListLabelPdf).
+        const printModalEl = document.getElementById('listPrintLabelsModal');
+        const printForm = printModalEl?.querySelector('[data-list-print-form]');
+        const printAcross = printForm?.querySelector('[data-list-print-across]');
+        const printDown = printForm?.querySelector('[data-list-print-down]');
+        const printSheet = printModalEl?.querySelector('[data-list-print-sheet]');
+        const printSize = printModalEl?.querySelector('[data-list-print-size]');
+        const printCount = printModalEl?.querySelector('[data-list-print-count]');
+        const printSubmit = printModalEl?.querySelector('[data-list-print-submit]');
+        const printStorageKey = 'klubplan.printLabels';
+        const printTotals = { copies: 0, lines: 0, loaded: false };
+        let printCountRequest = 0;
+
+        const printSettings = () => ({
+            across: Number(printAcross.value),
+            down: Number(printDown.value),
+            landscape: printForm.querySelector('[data-list-print-orientation]:checked')?.value === 'true',
+            filtered: printForm.querySelector('[data-list-print-scope]:checked')?.value === 'filter'
+        });
+
+        const isValidGrid = (s) => Number.isInteger(s.across) && Number.isInteger(s.down)
+            && s.across >= 1 && s.across <= Number(printAcross.max)
+            && s.down >= 1 && s.down <= Number(printDown.max);
+
+        const printScopeParams = (s) => (s.filtered ? filterParams() : new URLSearchParams({ listId }));
+
+        const formatMm = (mm) => mm.toLocaleString('da-DK', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+        const renderPrintPreview = () => {
+            const s = printSettings();
+            printSheet.classList.toggle('is-landscape', s.landscape);
+            printSheet.replaceChildren();
+            if (!isValidGrid(s)) {
+                printSize.textContent = `Angiv 1–${printAcross.max} labels i bredden og 1–${printDown.max} i højden.`;
+                printSubmit.disabled = true;
+                return;
+            }
+
+            const perSheet = s.across * s.down;
+            printSheet.style.gridTemplateColumns = `repeat(${s.across}, 1fr)`;
+            printSheet.style.gridTemplateRows = `repeat(${s.down}, 1fr)`;
+            // Filled cells = what the first sheet will hold, starting top left.
+            const filled = Math.min(printTotals.copies, perSheet);
+            for (let n = 0; n < perSheet; n++) {
+                const cell = document.createElement('span');
+                if (n < filled) cell.className = 'is-filled';
+                printSheet.appendChild(cell);
+            }
+
+            const [pageWidth, pageHeight] = s.landscape ? [297, 210] : [210, 297];
+            printSize.textContent = `${formatMm(pageWidth / s.across)} × ${formatMm(pageHeight / s.down)} mm pr. label · ${perSheet} pr. ark`;
+            if (!printTotals.loaded) return;
+            if (printTotals.copies === 0) {
+                printCount.textContent = s.filtered ? 'Ingen labels på linjerne i det nuværende filter.' : 'Ingen labels at printe endnu.';
+            } else {
+                const sheets = Math.ceil(printTotals.copies / perSheet);
+                printCount.textContent = `${printTotals.copies} labels fra ${printTotals.lines} ${printTotals.lines === 1 ? 'linje' : 'linjer'} · ${sheets} ark`;
+            }
+            printSubmit.disabled = printTotals.copies === 0;
+        };
+
+        const refreshPrintCount = async () => {
+            const request = ++printCountRequest;
+            printTotals.loaded = false;
+            printCount.textContent = 'Tæller labels…';
+            printSubmit.disabled = true;
+            try {
+                const res = await fetch(`${ds.urlLabelsCount}?${printScopeParams(printSettings())}`, { headers: { 'X-Requested-With': 'fetch' } });
+                if (!res.ok) throw new Error(res.statusText);
+                const data = await res.json();
+                if (request !== printCountRequest) return;
+                printTotals.copies = data.copies || 0;
+                printTotals.lines = data.lines || 0;
+                printTotals.loaded = true;
+                renderPrintPreview();
+            } catch {
+                if (request !== printCountRequest) return;
+                printCount.textContent = 'Antallet af labels kunne ikke hentes.';
+            }
+        };
+
+        // The sheet setup is remembered per browser — the same label paper is usually used again.
+        const loadPrintSettings = () => {
+            try {
+                const saved = JSON.parse(localStorage.getItem(printStorageKey) || 'null');
+                if (!saved) return;
+                if (saved.across) printAcross.value = saved.across;
+                if (saved.down) printDown.value = saved.down;
+                const orientation = printForm.querySelector(`[data-list-print-orientation][value="${saved.landscape ? 'true' : 'false'}"]`);
+                if (orientation) orientation.checked = true;
+            } catch { /* no storage — keep the defaults */ }
+        };
+        const savePrintSettings = (s) => {
+            try {
+                localStorage.setItem(printStorageKey, JSON.stringify({ across: s.across, down: s.down, landscape: s.landscape }));
+            } catch { /* no storage */ }
+        };
+
+        if (printForm) loadPrintSettings();
+        printModalEl?.addEventListener('show.bs.modal', () => {
+            renderPrintPreview();
+            refreshPrintCount();
+        });
+        printForm?.addEventListener('input', (e) => {
+            if (e.target.matches('[data-list-print-across], [data-list-print-down]')) renderPrintPreview();
+        });
+        printForm?.addEventListener('change', (e) => {
+            if (e.target.matches('[data-list-print-orientation]')) renderPrintPreview();
+            if (e.target.matches('[data-list-print-scope]')) refreshPrintCount();
+        });
+        printForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const s = printSettings();
+            if (!isValidGrid(s) || printTotals.copies === 0) return;
+            const params = printScopeParams(s);
+            params.set('Across', s.across);
+            params.set('Down', s.down);
+            params.set('Landscape', s.landscape);
+            savePrintSettings(s);
+            window.open(`${ds.urlLabelsPdf}?${params}`, '_blank', 'noopener');
+            bootstrap.Modal.getInstance(printModalEl)?.hide();
         });
 
         // ─── Kolonner ──────────────────────────────────────────────────────────

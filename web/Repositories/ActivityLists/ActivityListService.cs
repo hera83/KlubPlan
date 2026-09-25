@@ -286,7 +286,8 @@ namespace web.Repositories.ActivityLists
                     i.UpdatedAtUtc,
                     UpdatedBy = i.UpdatedByUser != null ? i.UpdatedByUser.DisplayName
                         : i.UpdatedByWorkgroupMember != null ? i.UpdatedByWorkgroupMember.Name : null,
-                    Values = i.Values.Select(v => new { v.ActivityListColumnId, v.Value }).ToList()
+                    Values = i.Values.Select(v => new { v.ActivityListColumnId, v.Value }).ToList(),
+                    LabelCopies = i.Labels.Sum(l => l.Quantity)
                 })
                 .ToListAsync(ct);
 
@@ -312,9 +313,20 @@ namespace web.Repositories.ActivityLists
                     AssignedMemberId = r.AssignedToWorkgroupMemberId,
                     UpdatedAtUtc = r.UpdatedAtUtc,
                     UpdatedByName = r.UpdatedBy,
-                    Values = r.Values.ToDictionary(v => v.ActivityListColumnId, v => v.Value)
+                    Values = r.Values.ToDictionary(v => v.ActivityListColumnId, v => v.Value),
+                    LabelCopies = r.LabelCopies
                 }).ToList()
             };
+        }
+
+        public async Task<List<int>?> GetItemIdsAsync(ActivityListItemFilterViewModel filter, string? userId, CancellationToken ct = default)
+        {
+            var context = await LoadSchemaAsync(filter.ListId, userId, ct);
+            if (context is null)
+                return null;
+
+            var (_, schema, myMemberIds) = context.Value;
+            return await Sort(BuildQuery(filter, schema, myMemberIds), filter).Select(i => i.Id).ToListAsync(ct);
         }
 
         // ─── Lines ───────────────────────────────────────────────────────────────
@@ -1142,7 +1154,7 @@ namespace web.Repositories.ActivityLists
             return string.IsNullOrEmpty(userName) ? $"Ændret {when}" : $"Ændret af {userName} · {when}";
         }
 
-        private static string SanitizeFileName(string name)
+        internal static string SanitizeFileName(string name)
         {
             var invalid = Path.GetInvalidFileNameChars().Concat(new[] { '\\', '/', ':', '*', '?', '"', '<', '>', '|' }).ToHashSet();
             var cleaned = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();

@@ -38,5 +38,7 @@ namespace web.Data.Entities
         public virtual ActivityWorkgroupMember? UpdatedByWorkgroupMember { get; set; }
 
         public virtual ICollection<ActivityListCellValue> Values { get; set; } = new List<ActivityListCellValue>();
+
+        public virtual ICollection<ActivityListLabel> Labels { get; set; } = new List<ActivityListLabel>();
     }
 }

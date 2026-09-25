@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using web.Constants;
 using web.Data.Entities;
 using web.Infrastructure;
+using web.Repositories.ActivityListLabels.Interfaces;
 using web.Repositories.ActivityLists.Dtos;
 using web.Repositories.ActivityLists.Interfaces;
 using web.ViewModels;
@@ -20,11 +22,13 @@ namespace web.Controllers
         private const string ItemsView = "_ItemsTableBody";
 
         private readonly IActivityListService _listService;
+        private readonly IActivityListLabelService _labelService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public ActivityListsController(IActivityListService listService, UserManager<ApplicationUser> userManager)
+        public ActivityListsController(IActivityListService listService, IActivityListLabelService labelService, UserManager<ApplicationUser> userManager)
         {
             _listService = listService;
+            _labelService = labelService;
             _userManager = userManager;
         }
 
@@ -236,6 +240,60 @@ namespace web.Controllers
 
             var result = await _listService.SendLinksAsync(model, $"{Request.Scheme}://{Request.Host}", ct);
             return result.Success ? this.ToastSuccessJson(result.Message!) : this.ToastErrorJson(result.ErrorMessage!);
+        }
+
+        // ─── Labels ─────────────────────────────────────────────────────────────
+
+        /// <summary>The line's labels for the "Labels" modal.</summary>
+        [HttpGet]
+        public async Task<IActionResult> ItemLabels(int listId, int itemId, CancellationToken ct)
+        {
+            var model = await _labelService.GetItemLabelsAsync(listId, itemId, ct);
+            return model is null ? this.ToastErrorJson("Linjen blev ikke fundet.") : Json(new { success = true, model.RowNumber, model.Labels });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveItemLabels(ActivityListItemLabelsSaveViewModel model, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return this.ToastErrorJson(FirstModelError() ?? "Labels kunne ikke gemmes.");
+
+            var result = await _labelService.SaveItemLabelsAsync(model, ct);
+            return result.Success ? this.ToastSuccessJson(result.Message ?? "Labels er gemt.") : this.ToastErrorJson(result.ErrorMessage!);
+        }
+
+        /// <summary>How many labels "Print labels" would print for the chosen scope (whole list or current filter).</summary>
+        [HttpGet]
+        public async Task<IActionResult> LabelsCount(ActivityListItemFilterViewModel filter, CancellationToken ct)
+        {
+            var counts = await _labelService.CountAsync(filter, UserId, ct);
+            return counts is null ? NotFound() : Json(counts);
+        }
+
+        /// <summary>The label sheets as a PDF, shown in the browser (new tab) so it can be printed from there.</summary>
+        [HttpGet]
+        public async Task<IActionResult> LabelsPdf(ActivityListLabelPrintViewModel model, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                this.ToastError(FirstModelError() ?? "Labels kunne ikke printes.");
+                return RedirectToAction(nameof(Details), new { id = model.ListId });
+            }
+
+            var pdf = await _labelService.BuildPdfAsync(model, UserId, ct);
+            if (pdf is null)
+                return NotFound();
+            if (!pdf.Success)
+            {
+                this.ToastWarning(pdf.ErrorMessage!);
+                return RedirectToAction(nameof(Details), new { id = model.ListId });
+            }
+
+            var disposition = new ContentDispositionHeaderValue("inline");
+            disposition.SetHttpFileName(pdf.FileName);
+            Response.Headers.ContentDisposition = disposition.ToString();
+            return File(pdf.Content, "application/pdf");
         }
 
         private string? FirstModelError()

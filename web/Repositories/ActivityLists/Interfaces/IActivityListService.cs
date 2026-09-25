@@ -26,6 +26,9 @@ namespace web.Repositories.ActivityLists.Interfaces
 
         Task<ActivityListItemsViewModel?> GetItemsAsync(ActivityListItemFilterViewModel filter, string? userId, CancellationToken ct = default);
 
+        /// <summary>Ids of all lines matching the filter (no paging), in the filter's sort order. Null when the list doesn't exist.</summary>
+        Task<List<int>?> GetItemIdsAsync(ActivityListItemFilterViewModel filter, string? userId, CancellationToken ct = default);
+
         Task<ActivityListFieldUpdateResultDto> UpdateFieldAsync(ActivityListFieldUpdateViewModel input, string? userId, CancellationToken ct = default);
 
         /// <summary>Adds (itemId null) or edits a line's column values — incl. the imported columns.</summary>

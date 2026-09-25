@@ -14,6 +14,18 @@ namespace web.Constants
 
         public const int MaxNoteLength = 2000;
 
+        /// <summary>Labels on a line ("Labels"-knappen) and "Print labels".</summary>
+        public const int MaxLabelTextLength = 500;
+        public const int MaxLabelsPerItem = 50;
+        public const int MaxLabelQuantity = 500;
+
+        /// <summary>Grid on an A4 sheet: labels across (per row) and down (rows).</summary>
+        public const int MaxLabelsAcross = 10;
+        public const int MaxLabelsDown = 30;
+
+        /// <summary>Upper limit for one PDF so a mistyped quantity can't generate an endless document.</summary>
+        public const int MaxLabelsPerPdf = 10000;
+
         /// <summary>Field names used by the inline editing endpoint.</summary>
         public const string FieldStatus = "status";
         public const string FieldNote = "note";
