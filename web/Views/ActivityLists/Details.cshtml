@@ -114,36 +114,38 @@
                             <i class="bi bi-search"></i>
                             <input type="search" class="form-control" placeholder="Søg i listen..." data-table-search autocomplete="off" />
                         </div>
-                        <button type="button" class="btn btn-outline-secondary text-nowrap" data-list-mine-toggle
+                        @{ var mineTitle = Model.CurrentUserIsMember ? "Kun mine – vis kun linjer tilknyttet dig" : "Kun mine – du er ikke med i aktivitetens arbejdsgruppe"; }
+                        <button type="button" class="btn btn-icon btn-outline-secondary" data-list-mine-toggle
                                 disabled="@(!Model.CurrentUserIsMember)"
-                                title="@(Model.CurrentUserIsMember ? "Vis kun linjer tilknyttet dig" : "Du er ikke med i aktivitetens arbejdsgruppe")">
-                            <i class="bi bi-person-check me-1"></i> Kun mine
+                                title="@mineTitle" aria-label="@mineTitle">
+                            <i class="bi bi-person-check"></i>
                         </button>
                     </div>
+                    @* Icon-only toolbar (deliberate exception to icon+label) — there are too many actions to fit with text; the title shows the name on hover. *@
                     <div class="table-toolbar-end">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listColumnSumModal" title="Læg tallene i en kolonne sammen" aria-label="Læg tallene i en kolonne sammen">
-                            <i class="bi bi-calculator me-1"></i> Optælling
+                        <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listColumnSumModal" title="Optælling – læg tallene i en kolonne sammen" aria-label="Optælling – læg tallene i en kolonne sammen">
+                            <i class="bi bi-calculator"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listSendLinksModal" title="Send links til eksterne kontakter" aria-label="Send links til eksterne kontakter">
-                            <i class="bi bi-send me-1"></i> Send links
+                        <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listSendLinksModal" title="Send links til eksterne kontakter" aria-label="Send links til eksterne kontakter">
+                            <i class="bi bi-send"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listPrintLabelsModal" title="Print labels som PDF" aria-label="Print labels som PDF">
-                            <i class="bi bi-printer me-1"></i> Print labels
+                        <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listPrintLabelsModal" title="Print labels som PDF" aria-label="Print labels som PDF">
+                            <i class="bi bi-printer"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listDistributeModal" title="Fordel linjer" aria-label="Fordel linjer">
-                            <i class="bi bi-people me-1"></i> Fordel linjer
+                        <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listDistributeModal" title="Fordel linjer" aria-label="Fordel linjer">
+                            <i class="bi bi-people"></i>
                         </button>
                         <div class="btn-group">
-                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Tilpas liste" aria-label="Tilpas liste">
-                                <i class="bi bi-sliders me-1"></i> Tilpas
+                            <button type="button" class="btn btn-icon btn-outline-secondary" data-bs-toggle="dropdown" aria-expanded="false" title="Tilpas liste (kolonner og statusser)" aria-label="Tilpas liste (kolonner og statusser)">
+                                <i class="bi bi-sliders"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#listColumnsModal"><i class="bi bi-layout-three-columns me-2"></i>Kolonner…</button></li>
                                 <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#listStatusesModal"><i class="bi bi-tags me-2"></i>Statusser…</button></li>
                             </ul>
                         </div>
-                        <button type="button" class="btn btn-primary" data-list-add-item title="Tilføj linje" aria-label="Tilføj linje">
-                            <i class="bi bi-plus-lg me-1"></i> Tilføj linje
+                        <button type="button" class="btn btn-icon btn-primary" data-list-add-item title="Tilføj linje" aria-label="Tilføj linje">
+                            <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
                 </div>
