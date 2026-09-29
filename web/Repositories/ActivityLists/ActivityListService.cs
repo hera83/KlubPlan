@@ -778,20 +778,24 @@ namespace web.Repositories.ActivityLists
 
         // ─── Optælling ───────────────────────────────────────────────────────────
 
-        public async Task<ActivityListColumnSumDto?> SumColumnAsync(int listId, int columnId, CancellationToken ct = default)
+        public async Task<ActivityListColumnSumDto?> SumColumnAsync(ActivityListItemFilterViewModel filter, int columnId, string? userId, CancellationToken ct = default)
         {
-            var column = await _context.ActivityListColumns.AsNoTracking()
-                .Where(c => c.Id == columnId && c.ActivityListId == listId)
-                .Select(c => new { c.Id, c.Name, c.Kind })
-                .FirstOrDefaultAsync(ct);
+            var context = await LoadSchemaAsync(filter.ListId, userId, ct);
+            if (context is null)
+                return null;
+
+            var (_, schema, myMemberIds) = context.Value;
+            var column = schema.Columns.FirstOrDefault(c => c.Id == columnId);
             if (column is null)
                 return null;
             if (column.Kind == ActivityListColumnKind.YesNo)
                 return ActivityListColumnSumDto.Fail("En Ja/nej-kolonne kan ikke tælles op.");
 
-            var total = await _context.ActivityListItems.CountAsync(i => i.ActivityListId == listId, ct);
+            // Same lines as the table shows for the filter — a sub-query, so no huge IN (...) with line ids.
+            var itemIds = BuildQuery(filter, schema, myMemberIds).Select(i => i.Id);
+            var total = await itemIds.CountAsync(ct);
             var values = await _context.ActivityListCellValues.AsNoTracking()
-                .Where(v => v.ActivityListColumnId == columnId && v.Item.ActivityListId == listId && v.Value != null)
+                .Where(v => v.ActivityListColumnId == columnId && v.Value != null && itemIds.Contains(v.ActivityListItemId))
                 .Select(v => v.Value!)
                 .ToListAsync(ct);
 
@@ -821,7 +825,8 @@ namespace web.Repositories.ActivityLists
                 Sum = sum,
                 SumText = sum.ToString("N0", DanishCulture),
                 Counted = counted,
-                Skipped = total - counted
+                Skipped = total - counted,
+                Filtered = filter.HasFilter
             };
         }
 

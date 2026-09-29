@@ -115,17 +115,17 @@ namespace web.Controllers
             return File(export.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", export.FileName);
         }
 
-        /// <summary>"Optælling": the sum of one column over the whole list, shown in the card under the table.</summary>
+        /// <summary>"Optælling": the sum of one column over the lines in the table's current search/filter, shown in the card under the table.</summary>
         [HttpGet]
-        public async Task<IActionResult> ColumnSum(int listId, int columnId, CancellationToken ct)
+        public async Task<IActionResult> ColumnSum(ActivityListItemFilterViewModel filter, int columnId, CancellationToken ct)
         {
-            var result = await _listService.SumColumnAsync(listId, columnId, ct);
+            var result = await _listService.SumColumnAsync(filter, columnId, UserId, ct);
             if (result is null)
                 return this.ToastErrorJson("Kolonnen blev ikke fundet.");
             if (!result.Success)
                 return this.ToastErrorJson(result.ErrorMessage!);
 
-            return Json(new { success = true, result.ColumnId, result.ColumnName, result.Sum, result.SumText, result.Counted, result.Skipped });
+            return Json(new { success = true, result.ColumnId, result.ColumnName, result.Sum, result.SumText, result.Counted, result.Skipped, result.Filtered });
         }
 
         [HttpPost]

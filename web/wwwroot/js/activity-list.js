@@ -4,7 +4,8 @@
 //   fremdriften filtrerer tabellen (data-table.js står for søgning/filter/paginering).
 // • Modals: rediger/tilføj linje, labels på en linje, fordel linjer, send links, optælling,
 //   print labels, kolonner, statusser, rediger liste.
-// • Optælling viser summen af én kolonne i et card under tabellen og tælles igen, når en linje ændres.
+// • Optælling viser summen af én kolonne (linjerne i nuværende søgning/filter) i et card under
+//   tabellen og tælles igen, når en linje eller filteret ændres.
 // Markup: Views/ActivityLists/*.cshtml.
 (() => {
     const initPage = (page) => {
@@ -125,7 +126,8 @@
 
             field.dataset.prev = value;
             flash(cell, 'is-saved');
-            if (field.dataset.columnId && field.dataset.columnId === sumColumnId) refreshSum();
+            // Any field can move the line in/out of the filter (status, tilknyttet, søgning), so always recount.
+            refreshSum();
             counts.statusCounts = data.statusCounts || counts.statusCounts;
             counts.unassigned = data.unassignedCount ?? counts.unassigned;
             renderCounts();
@@ -381,19 +383,30 @@
         });
 
         // ─── Optælling (sum af én kolonne) ─────────────────────────────────────
-        // The card under the table is recounted whenever a line changes, so it never shows an old sum.
+        // Counts the lines in the table's current search/filter (sorting ignored). The card under the
+        // table is recounted whenever a line changes or the table is reloaded with another filter.
         const sumModalEl = document.getElementById('listColumnSumModal');
         const sumForm = sumModalEl?.querySelector('[data-list-sum-form]');
         const sumSubmit = sumModalEl?.querySelector('[data-list-sum-submit]');
         const sumCard = page.querySelector('[data-list-sum-card]');
         let sumColumnId = null;
         let sumRequest = 0;
+        let sumFilterKey = null;
+
+        const sumFilterParams = () => {
+            const params = filterParams();
+            params.delete('SortColumn');
+            params.delete('SortDir');
+            return params;
+        };
 
         const refreshSum = async ({ announce = false } = {}) => {
             if (!sumColumnId || !sumCard) return false;
             const request = ++sumRequest;
             try {
-                const params = new URLSearchParams({ listId, columnId: sumColumnId });
+                const params = sumFilterParams();
+                sumFilterKey = params.toString();
+                params.set('columnId', sumColumnId);
                 const res = await fetch(`${ds.urlColumnSum}?${params}`, { headers: { 'X-Requested-With': 'fetch' } });
                 const data = await res.json();
                 if (request !== sumRequest) return false;
@@ -405,6 +418,7 @@
                 sumCard.querySelector('[data-list-sum-value]').textContent = data.sumText;
                 sumCard.querySelector('[data-list-sum-counted]').textContent = data.counted;
                 sumCard.querySelector('[data-list-sum-skipped]').textContent = data.skipped;
+                sumCard.querySelector('[data-list-sum-scope]').textContent = data.filtered ? 'Kun linjer i nuværende filter' : 'Hele listen';
                 sumCard.hidden = false;
                 if (announce) sumCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 return true;
@@ -434,6 +448,13 @@
             if (ok) bootstrap.Modal.getInstance(sumModalEl)?.hide();
             else sumColumnId = previous;
         });
+        // Search, filter panel, "Kun mine" and the status legend all end in a table reload — recount
+        // then, but not for paging/sorting (same lines, same sum).
+        if (sumCard) {
+            new MutationObserver(() => {
+                if (sumColumnId && sumFilterParams().toString() !== sumFilterKey) refreshSum();
+            }).observe(tableRoot.querySelector('[data-table-region]'), { childList: true });
+        }
         sumCard?.querySelector('[data-list-sum-close]')?.addEventListener('click', () => {
             sumColumnId = null;
             sumRequest++;

@@ -15,8 +15,9 @@
             </div>
             <div class="modal-body">
                 <p class="text-muted">
-                    Vælg den kolonne der skal lægges sammen for hele listen. Kun felter med hele tal (0-9) tælles med –
-                    tomme felter og felter med andet indhold springes over.
+                    Vælg den kolonne der skal lægges sammen. Der tælles kun linjer i det nuværende filter og søgning
+                    (hele listen, hvis der ikke er filtreret). Kun felter med hele tal (0-9) tælles med – tomme felter og
+                    felter med andet indhold springes over.
                 </p>
                 @if (columns.Count == 0)
                 {

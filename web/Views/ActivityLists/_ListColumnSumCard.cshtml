@@ -1,8 +1,11 @@
-@* "Optælling" result under the table — hidden until a column is counted, filled and kept up to date by activity-list.js. *@
+@* "Optælling" result under the table (lines in the current search/filter) — hidden until a column is counted, filled and kept up to date by activity-list.js. *@
 
 <div class="card shadow-sm mt-3" data-list-sum-card hidden>
     <div class="card-header d-flex align-items-center justify-content-between gap-2">
-        <span class="fw-semibold text-truncate"><i class="bi bi-calculator me-2"></i>Optælling: <span data-list-sum-column-name></span></span>
+        <div class="text-truncate">
+            <span class="fw-semibold"><i class="bi bi-calculator me-2"></i>Optælling: <span data-list-sum-column-name></span></span>
+            <span class="text-muted small ms-2" data-list-sum-scope></span>
+        </div>
         <button type="button" class="btn btn-icon btn-outline-secondary btn-sm" data-list-sum-close title="Luk optælling" aria-label="Luk optælling">
             <i class="bi bi-x-lg"></i>
         </button>
