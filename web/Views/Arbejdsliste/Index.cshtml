@@ -107,8 +107,8 @@
 
                                 @* Hidden query fields sent with every table request (data-table.js). *@
                                 <div data-table-filter-panel hidden>
-                                    <input type="hidden" name="ListId" value="@Model.ListId" />
-                                    <input type="hidden" name="UId" value="@Model.MemberPublicId" />
+                                    <input type="hidden" name="ListId" value="@Model.ListId" data-table-filter-keep />
+                                    <input type="hidden" name="UId" value="@Model.MemberPublicId" data-table-filter-keep />
                                     <input type="hidden" name="StatusId" data-list-filter-status />
                                 </div>
 

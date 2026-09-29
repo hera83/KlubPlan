@@ -85,7 +85,8 @@
         root.querySelectorAll('[data-table-filter-reset]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const panel = btn.closest('[data-table-filter-panel]');
-                panel?.querySelectorAll('[name]').forEach((field) => {
+                // data-table-filter-keep = fixed query fields (fx ListId, sortering), der ikke er filtre.
+                panel?.querySelectorAll('[name]:not([data-table-filter-keep])').forEach((field) => {
                     if (field.tagName === 'SELECT') {
                         field.selectedIndex = 0;
                     } else if (field.type === 'checkbox') {
