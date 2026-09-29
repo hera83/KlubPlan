@@ -55,6 +55,9 @@ namespace web.Repositories.ActivityLists.Interfaces
         /// <summary>The whole list, or only the lines matching the filter, as .xlsx.</summary>
         Task<ActivityListExportDto?> ExportAsync(ActivityListItemFilterViewModel filter, string? userId, CancellationToken ct = default);
 
+        /// <summary>"Optælling": adds up the whole-number cells of one column over the whole list. Null when the list/column doesn't exist.</summary>
+        Task<ActivityListColumnSumDto?> SumColumnAsync(int listId, int columnId, CancellationToken ct = default);
+
         /// <summary>Queues an e-mail and/or SMS with each selected external contact's personal /Arbejdsliste link.</summary>
         Task<ActivityListActionResultDto> SendLinksAsync(ActivityListSendLinksViewModel input, string baseUrl, CancellationToken ct = default);
 

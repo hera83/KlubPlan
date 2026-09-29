@@ -15,6 +15,7 @@
      data-url-delete-item="@Url.Action("DeleteItem")"
      data-url-distribute="@Url.Action("Distribute")"
      data-url-send-links="@Url.Action("SendLinks")"
+     data-url-column-sum="@Url.Action("ColumnSum")"
      data-url-item-labels="@Url.Action("ItemLabels")"
      data-url-save-item-labels="@Url.Action("SaveItemLabels")"
      data-url-labels-count="@Url.Action("LabelsCount")"
@@ -120,6 +121,9 @@
                         </button>
                     </div>
                     <div class="table-toolbar-end">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listColumnSumModal" title="Læg tallene i en kolonne sammen" aria-label="Læg tallene i en kolonne sammen">
+                            <i class="bi bi-calculator me-1"></i> Optælling
+                        </button>
                         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#listSendLinksModal" title="Send links til eksterne kontakter" aria-label="Send links til eksterne kontakter">
                             <i class="bi bi-send me-1"></i> Send links
                         </button>
@@ -204,12 +208,15 @@
             </div>
         </div>
     </div>
+
+    @await Html.PartialAsync("_ListColumnSumCard")
 </div>
 
 @await Html.PartialAsync("_ListEditModal", Model)
 @await Html.PartialAsync("_ListItemModal", schema)
 @await Html.PartialAsync("_ListDistributeModal", Model)
 @await Html.PartialAsync("_ListSendLinksModal", Model)
+@await Html.PartialAsync("_ListColumnSumModal", schema)
 @await Html.PartialAsync("_ListLabelsModal")
 @await Html.PartialAsync("_ListPrintLabelsModal")
 @await Html.PartialAsync("_ListColumnsModal", schema)

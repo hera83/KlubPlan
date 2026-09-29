@@ -2465,6 +2465,11 @@ input[type="file"]::-webkit-file-upload-button:hover {
   font-size: 0.875rem;
 }
 
+/* Optælling: stort sum-tal øverst i cardet under tabellen, stat-tiles med antal linjer nedenunder. */
+.list-sum-total { display: flex; flex-direction: column; }
+.list-sum-label { font-size: 0.8rem; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.list-sum-value { font-size: 2rem; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
 /* Mobil: hver linje vises som et kort med "Label: værdi" */
 @media (max-width: 767.98px) {
   .list-items-wrap { overflow: visible; }

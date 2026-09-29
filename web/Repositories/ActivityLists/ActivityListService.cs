@@ -14,6 +14,7 @@ namespace web.Repositories.ActivityLists
     public class ActivityListService : IActivityListService
     {
         private const int ImportBatchSize = 500;
+        private static readonly CultureInfo DanishCulture = CultureInfo.GetCultureInfo("da-DK");
 
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ActivityListService> _logger;
@@ -773,6 +774,65 @@ namespace web.Repositories.ActivityLists
                 Content = content,
                 FileName = SanitizeFileName($"{list.Title}{suffix}") + ".xlsx"
             };
+        }
+
+        // ─── Optælling ───────────────────────────────────────────────────────────
+
+        public async Task<ActivityListColumnSumDto?> SumColumnAsync(int listId, int columnId, CancellationToken ct = default)
+        {
+            var column = await _context.ActivityListColumns.AsNoTracking()
+                .Where(c => c.Id == columnId && c.ActivityListId == listId)
+                .Select(c => new { c.Id, c.Name, c.Kind })
+                .FirstOrDefaultAsync(ct);
+            if (column is null)
+                return null;
+            if (column.Kind == ActivityListColumnKind.YesNo)
+                return ActivityListColumnSumDto.Fail("En Ja/nej-kolonne kan ikke tælles op.");
+
+            var total = await _context.ActivityListItems.CountAsync(i => i.ActivityListId == listId, ct);
+            var values = await _context.ActivityListCellValues.AsNoTracking()
+                .Where(v => v.ActivityListColumnId == columnId && v.Item.ActivityListId == listId && v.Value != null)
+                .Select(v => v.Value!)
+                .ToListAsync(ct);
+
+            // Lines without a stored value (empty cells) never reach the loop — they count as skipped too.
+            var sum = 0m;
+            var counted = 0;
+            foreach (var value in values)
+            {
+                if (!TryParseWholeNumber(value, out var number))
+                    continue;
+                try
+                {
+                    sum += number;
+                    counted++;
+                }
+                catch (OverflowException)
+                {
+                    // Absurdly large numbers are skipped rather than breaking the whole count.
+                }
+            }
+
+            return new ActivityListColumnSumDto
+            {
+                Success = true,
+                ColumnId = column.Id,
+                ColumnName = column.Name,
+                Sum = sum,
+                SumText = sum.ToString("N0", DanishCulture),
+                Counted = counted,
+                Skipped = total - counted
+            };
+        }
+
+        /// <summary>True when the value, after trimming spaces, is nothing but the digits 0-9.</summary>
+        private static bool TryParseWholeNumber(string value, out decimal number)
+        {
+            number = 0;
+            var text = value.Trim();
+            return text.Length > 0
+                && text.All(char.IsAsciiDigit)
+                && decimal.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out number);
         }
 
         // ─── Offentligt link (/Arbejdsliste) ─────────────────────────────────────

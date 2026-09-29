@@ -2,8 +2,9 @@
 // • Status, Tilknyttet, Note og ekstra kolonner gemmes automatisk, når feltet ændres.
 // • Sortering (klik på kolonneoverskrift), "Kun mine" og klik på en status i
 //   fremdriften filtrerer tabellen (data-table.js står for søgning/filter/paginering).
-// • Modals: rediger/tilføj linje, labels på en linje, fordel linjer, send links, print labels,
-//   kolonner, statusser, rediger liste.
+// • Modals: rediger/tilføj linje, labels på en linje, fordel linjer, send links, optælling,
+//   print labels, kolonner, statusser, rediger liste.
+// • Optælling viser summen af én kolonne i et card under tabellen og tælles igen, når en linje ændres.
 // Markup: Views/ActivityLists/*.cshtml.
 (() => {
     const initPage = (page) => {
@@ -124,6 +125,7 @@
 
             field.dataset.prev = value;
             flash(cell, 'is-saved');
+            if (field.dataset.columnId && field.dataset.columnId === sumColumnId) refreshSum();
             counts.statusCounts = data.statusCounts || counts.statusCounts;
             counts.unassigned = data.unassignedCount ?? counts.unassigned;
             renderCounts();
@@ -258,6 +260,7 @@
                 bootstrap.Modal.getInstance(itemModalEl)?.hide();
                 reloadTable();
                 refreshCounts();
+                refreshSum();
             }
         });
 
@@ -272,6 +275,7 @@
                 bootstrap.Modal.getInstance(itemModalEl)?.hide();
                 reloadTable();
                 refreshCounts();
+                refreshSum();
             }
         });
 
@@ -374,6 +378,66 @@
                 sendForm.reset();
                 updateSendSubmit();
             }
+        });
+
+        // ─── Optælling (sum af én kolonne) ─────────────────────────────────────
+        // The card under the table is recounted whenever a line changes, so it never shows an old sum.
+        const sumModalEl = document.getElementById('listColumnSumModal');
+        const sumForm = sumModalEl?.querySelector('[data-list-sum-form]');
+        const sumSubmit = sumModalEl?.querySelector('[data-list-sum-submit]');
+        const sumCard = page.querySelector('[data-list-sum-card]');
+        let sumColumnId = null;
+        let sumRequest = 0;
+
+        const refreshSum = async ({ announce = false } = {}) => {
+            if (!sumColumnId || !sumCard) return false;
+            const request = ++sumRequest;
+            try {
+                const params = new URLSearchParams({ listId, columnId: sumColumnId });
+                const res = await fetch(`${ds.urlColumnSum}?${params}`, { headers: { 'X-Requested-With': 'fetch' } });
+                const data = await res.json();
+                if (request !== sumRequest) return false;
+                if (!data.success) {
+                    window.FvToast?.show(data.type || 'error', data.message || 'Kolonnen kunne ikke tælles op.');
+                    return false;
+                }
+                sumCard.querySelector('[data-list-sum-column-name]').textContent = data.columnName;
+                sumCard.querySelector('[data-list-sum-value]').textContent = data.sumText;
+                sumCard.querySelector('[data-list-sum-counted]').textContent = data.counted;
+                sumCard.querySelector('[data-list-sum-skipped]').textContent = data.skipped;
+                sumCard.hidden = false;
+                if (announce) sumCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                return true;
+            } catch {
+                if (request === sumRequest) window.FvToast?.show('error', 'Netværksfejl. Prøv igen.');
+                return false;
+            }
+        };
+
+        sumModalEl?.addEventListener('show.bs.modal', () => {
+            // Pre-select the column currently counted, so "Optælling" again is just a quick switch.
+            sumForm.querySelectorAll('[data-list-sum-column]').forEach((radio) => { radio.checked = radio.value === sumColumnId; });
+            sumSubmit.disabled = !sumColumnId;
+        });
+        sumForm?.addEventListener('change', () => {
+            sumSubmit.disabled = !sumForm.querySelector('[data-list-sum-column]:checked');
+        });
+        sumForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selected = sumForm.querySelector('[data-list-sum-column]:checked');
+            if (!selected) return;
+            sumSubmit.disabled = true;
+            const previous = sumColumnId;
+            sumColumnId = selected.value;
+            const ok = await refreshSum({ announce: true });
+            sumSubmit.disabled = false;
+            if (ok) bootstrap.Modal.getInstance(sumModalEl)?.hide();
+            else sumColumnId = previous;
+        });
+        sumCard?.querySelector('[data-list-sum-close]')?.addEventListener('click', () => {
+            sumColumnId = null;
+            sumRequest++;
+            sumCard.hidden = true;
         });
 
         // ─── Labels på en linje ────────────────────────────────────────────────

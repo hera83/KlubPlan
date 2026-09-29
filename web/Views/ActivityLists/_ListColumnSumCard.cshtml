@@ -1,0 +1,38 @@
+@* "Optælling" result under the table — hidden until a column is counted, filled and kept up to date by activity-list.js. *@
+
+<div class="card shadow-sm mt-3" data-list-sum-card hidden>
+    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+        <span class="fw-semibold text-truncate"><i class="bi bi-calculator me-2"></i>Optælling: <span data-list-sum-column-name></span></span>
+        <button type="button" class="btn btn-icon btn-outline-secondary btn-sm" data-list-sum-close title="Luk optælling" aria-label="Luk optælling">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="list-sum-total">
+            <span class="list-sum-label">Sum</span>
+            <span class="list-sum-value" data-list-sum-value>0</span>
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-sm-6 col-lg-4">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon" style="background:var(--clr-ok-bg);color:var(--clr-ok);"><i class="bi bi-check2-circle"></i></div>
+                    <div class="stat-tile-body">
+                        <div class="stat-tile-value" data-list-sum-counted>0</div>
+                        <div class="stat-tile-label">Linjer lagt sammen</div>
+                        <div class="stat-tile-sub">Felter med kun tal</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon" style="background:var(--clr-warn-bg);color:var(--clr-warn);"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="stat-tile-body">
+                        <div class="stat-tile-value" data-list-sum-skipped>0</div>
+                        <div class="stat-tile-label">Linjer sprunget over</div>
+                        <div class="stat-tile-sub">Tomme eller ikke kun tal</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
