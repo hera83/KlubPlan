@@ -58,6 +58,9 @@ namespace web.Repositories.ActivityLists.Interfaces
         /// <summary>"Optælling": adds up the whole-number cells of one column over the lines matching the filter. Null when the list/column doesn't exist.</summary>
         Task<ActivityListColumnSumDto?> SumColumnAsync(ActivityListItemFilterViewModel filter, int columnId, string? userId, CancellationToken ct = default);
 
+        /// <summary>Saves which column "Optælling" sums on the list (null = remove the card), so it's there again next time.</summary>
+        Task<ActivityListActionResultDto> SetSumColumnAsync(int listId, int? columnId, CancellationToken ct = default);
+
         /// <summary>Queues an e-mail and/or SMS with each selected external contact's personal /Arbejdsliste link.</summary>
         Task<ActivityListActionResultDto> SendLinksAsync(ActivityListSendLinksViewModel input, string baseUrl, CancellationToken ct = default);
 

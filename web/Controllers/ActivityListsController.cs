@@ -128,6 +128,15 @@ namespace web.Controllers
             return Json(new { success = true, result.ColumnId, result.ColumnName, result.Sum, result.SumText, result.Counted, result.Skipped, result.Filtered });
         }
 
+        /// <summary>Saves (or with no columnId removes) the list's "Optælling" column.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetSumColumn(int listId, int? columnId, CancellationToken ct)
+        {
+            var result = await _listService.SetSumColumnAsync(listId, columnId, ct);
+            return result.Success ? this.ToastSuccessJson(result.Message!) : this.ToastErrorJson(result.ErrorMessage!);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Update(ActivityListUpdateViewModel model, CancellationToken ct)

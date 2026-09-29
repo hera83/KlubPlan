@@ -22,6 +22,13 @@ namespace web.Data.Entities
         /// <summary>The Note column can be removed per list; Status and Tilknyttet are always there.</summary>
         public bool ShowNote { get; set; } = true;
 
+        /// <summary>
+        /// "Optælling": the column whose sum is shown under the table, until removed again. Plain id
+        /// without FK (avoids a list↔column cycle) — cleared when the column is deleted and ignored
+        /// if it no longer points to a countable column of this list.
+        /// </summary>
+        public int? SumColumnId { get; set; }
+
         public string? CreatedByUserId { get; set; }
 
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;

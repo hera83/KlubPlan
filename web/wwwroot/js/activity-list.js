@@ -389,7 +389,8 @@
         const sumForm = sumModalEl?.querySelector('[data-list-sum-form]');
         const sumSubmit = sumModalEl?.querySelector('[data-list-sum-submit]');
         const sumCard = page.querySelector('[data-list-sum-card]');
-        let sumColumnId = null;
+        // The chosen column is saved on the list, so the card is back when the page is opened again.
+        let sumColumnId = ds.sumColumnId || null;
         let sumRequest = 0;
         let sumFilterKey = null;
 
@@ -443,10 +444,16 @@
             sumSubmit.disabled = true;
             const previous = sumColumnId;
             sumColumnId = selected.value;
-            const ok = await refreshSum({ announce: true });
+            let ok = await refreshSum({ announce: true });
+            if (ok && sumColumnId !== previous) ok = (await post(ds.urlSetSumColumn, { ColumnId: sumColumnId })).success;
             sumSubmit.disabled = false;
-            if (ok) bootstrap.Modal.getInstance(sumModalEl)?.hide();
-            else sumColumnId = previous;
+            if (ok) {
+                bootstrap.Modal.getInstance(sumModalEl)?.hide();
+            } else {
+                sumColumnId = previous;
+                if (previous) refreshSum();
+                else sumCard.hidden = true;
+            }
         });
         // Search, filter panel, "Kun mine" and the status legend all end in a table reload — recount
         // then, but not for paging/sorting (same lines, same sum).
@@ -455,11 +462,17 @@
                 if (sumColumnId && sumFilterParams().toString() !== sumFilterKey) refreshSum();
             }).observe(tableRoot.querySelector('[data-table-region]'), { childList: true });
         }
-        sumCard?.querySelector('[data-list-sum-close]')?.addEventListener('click', () => {
+        sumCard?.querySelector('[data-list-sum-close]')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            const data = await post(ds.urlSetSumColumn, {});
+            btn.disabled = false;
+            if (!data.success) return;
             sumColumnId = null;
             sumRequest++;
             sumCard.hidden = true;
         });
+        refreshSum();
 
         // ─── Labels på en linje ────────────────────────────────────────────────
         const labelsModalEl = document.getElementById('listLabelsModal');

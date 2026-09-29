@@ -63,6 +63,9 @@ namespace web.ViewModels
         public List<ActivityListStatusViewModel> Statuses { get; set; } = new();
         public List<ActivityListMemberViewModel> Members { get; set; } = new();
 
+        /// <summary>"Optælling": the saved column to sum under the table, or null when none is set up.</summary>
+        public int? SumColumnId { get; set; }
+
         public IEnumerable<ActivityListColumnViewModel> ImportedColumns => Columns.Where(c => c.IsImported);
         public IEnumerable<ActivityListColumnViewModel> ExtraColumns => Columns.Where(c => !c.IsImported);
 

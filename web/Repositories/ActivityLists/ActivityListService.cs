@@ -620,6 +620,10 @@ namespace web.Repositories.ActivityLists
 
             _context.ActivityListColumns.Remove(column);
             await _context.SaveChangesAsync(ct);
+            // A counted column that's deleted also removes the "Optælling" card.
+            await _context.ActivityLists
+                .Where(l => l.Id == listId && l.SumColumnId == columnId)
+                .ExecuteUpdateAsync(s => s.SetProperty(l => l.SumColumnId, (int?)null), ct);
             return ActivityListActionResultDto.Ok(columnId, $"Kolonnen \"{column.Name}\" er slettet.");
         }
 
@@ -828,6 +832,35 @@ namespace web.Repositories.ActivityLists
                 Skipped = total - counted,
                 Filtered = filter.HasFilter
             };
+        }
+
+        public async Task<ActivityListActionResultDto> SetSumColumnAsync(int listId, int? columnId, CancellationToken ct = default)
+        {
+            var list = await _context.ActivityLists.FirstOrDefaultAsync(l => l.Id == listId, ct);
+            if (list is null)
+                return ActivityListActionResultDto.Fail("Listen blev ikke fundet.");
+
+            if (columnId is null)
+            {
+                list.SumColumnId = null;
+                list.UpdatedAtUtc = DateTime.UtcNow;
+                await _context.SaveChangesAsync(ct);
+                return ActivityListActionResultDto.Ok(listId, "Optællingen er fjernet.");
+            }
+
+            var column = await _context.ActivityListColumns.AsNoTracking()
+                .Where(c => c.Id == columnId && c.ActivityListId == listId)
+                .Select(c => new { c.Name, c.Kind })
+                .FirstOrDefaultAsync(ct);
+            if (column is null)
+                return ActivityListActionResultDto.Fail("Kolonnen blev ikke fundet.");
+            if (column.Kind == ActivityListColumnKind.YesNo)
+                return ActivityListActionResultDto.Fail("En Ja/nej-kolonne kan ikke tælles op.");
+
+            list.SumColumnId = columnId;
+            list.UpdatedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(ct);
+            return ActivityListActionResultDto.Ok(listId, $"Optælling af \"{column.Name}\" er gemt på listen.");
         }
 
         /// <summary>True when the value, after trimming spaces, is nothing but the digits 0-9.</summary>
@@ -1073,6 +1106,9 @@ namespace web.Repositories.ActivityLists
                     })
                     .ToList()
             };
+            schema.SumColumnId = schema.Columns.Any(c => c.Id == list.SumColumnId && c.Kind != ActivityListColumnKind.YesNo)
+                ? list.SumColumnId
+                : null;
 
             return (list, schema, members.Where(m => m.IsMe).Select(m => m.Id).ToHashSet());
         }
