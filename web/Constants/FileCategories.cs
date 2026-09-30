@@ -29,5 +29,8 @@ namespace web.Constants
 
         /// <summary>Images and videos shown on info screens (Værktøjer → Infoskærme) — App_files/infoscreens/</summary>
         public const string InfoScreens = "infoscreens";
+
+        /// <summary>Images placed on designed labels (Værktøjer → Labels) — App_files/labels/</summary>
+        public const string Labels = "labels";
     }
 }

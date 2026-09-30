@@ -1,0 +1,45 @@
+@using web.Constants
+@model string
+@*
+    Sheet grid for a label collection: labels across × down on A4, portrait/landscape, with the label size
+    and a miniature sheet. Used by "Opret label-samling" and the designer's Indstillinger;
+    window.FvLabelDesign.bindSheetFields (wwwroot/js/label-design.js) drives it. Model = id prefix.
+*@
+@{
+    var id = Model;
+}
+
+<div class="row g-3 align-items-center">
+    <div class="col-sm-7">
+        <div class="row g-3">
+            <div class="col-6">
+                <label class="form-label" for="@(id)Across">Labels i bredden</label>
+                <input type="number" class="form-control" id="@(id)Across" name="Across" min="1" max="@LabelRules.MaxAcross" step="1"
+                       value="@LabelDesignRules.DefaultAcross" required data-sheet-across />
+            </div>
+            <div class="col-6">
+                <label class="form-label" for="@(id)Down">Labels i højden</label>
+                <input type="number" class="form-control" id="@(id)Down" name="Down" min="1" max="@LabelRules.MaxDown" step="1"
+                       value="@LabelDesignRules.DefaultDown" required data-sheet-down />
+            </div>
+            <div class="col-12">
+                <span class="form-label d-block">Papirretning</span>
+                <div class="btn-group" role="group" aria-label="Papirretning">
+                    <input type="radio" class="btn-check" name="Landscape" id="@(id)Portrait" value="false" checked data-sheet-orientation />
+                    <label class="btn btn-outline-secondary" for="@(id)Portrait"><i class="bi bi-tablet me-1"></i> Stående</label>
+                    <input type="radio" class="btn-check" name="Landscape" id="@(id)Landscape" value="true" data-sheet-orientation />
+                    <label class="btn btn-outline-secondary" for="@(id)Landscape"><i class="bi bi-tablet-landscape me-1"></i> Liggende</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-5">
+        <div class="ld-sheet-preview">
+            <div class="label-print-sheet" data-sheet-preview aria-hidden="true"></div>
+        </div>
+        <p class="small text-center text-muted mt-2 mb-0" data-sheet-size></p>
+    </div>
+</div>
+<div class="form-text mt-2">
+    A4 deles i lige store labels uden margen – som et udstanset label-ark (eller et helt ark, der skæres ud).
+</div>

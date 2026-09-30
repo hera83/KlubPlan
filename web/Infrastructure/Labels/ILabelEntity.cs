@@ -1,6 +1,6 @@
 namespace web.Infrastructure.Labels
 {
-    /// <summary>A stored label (ActivityListLabel, LabelCollectionItem) — lets <see cref="LabelRows.Apply"/> save any of them the same way.</summary>
+    /// <summary>A stored label (ActivityListLabel) — lets <see cref="LabelRows.Apply"/> save any of them the same way.</summary>
     public interface ILabelEntity
     {
         string Text { get; set; }

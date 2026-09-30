@@ -8,6 +8,7 @@
                 <th>Navn</th>
                 <th>Labels</th>
                 <th>Kopier</th>
+                <th>Label-ark</th>
                 <th>Senest ændret</th>
                 <th class="text-end">Handlinger</th>
             </tr>
@@ -16,7 +17,7 @@
             @if (Model.Collections.Count == 0)
             {
                 <tr>
-                    <td colspan="5" class="text-muted">Ingen label-samlinger fundet.</td>
+                    <td colspan="6" class="text-muted">Ingen label-samlinger fundet.</td>
                 </tr>
             }
             else
@@ -24,21 +25,29 @@
                 @foreach (var collection in Model.Collections)
                 {
                     <tr>
-                        <td>@collection.Name</td>
+                        <td><a asp-action="Designer" asp-route-id="@collection.Id">@collection.Name</a></td>
                         <td>@collection.LabelCount</td>
-                        <td>@collection.Copies stk.</td>
+                        <td>
+                            @collection.Copies stk.
+                            @if (collection.Sheets > 0)
+                            {
+                                <span class="text-muted small">(@collection.Sheets ark)</span>
+                            }
+                        </td>
+                        <td>
+                            @collection.Across × @collection.Down @(collection.Landscape ? "liggende" : "stående")
+                            <span class="text-muted small d-block">@collection.LabelSizeText</span>
+                        </td>
                         <td>@collection.ChangedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
-                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionPrintModal"
-                                        data-id="@collection.Id" data-name="@collection.Name" data-labels="@collection.LabelCount" data-copies="@collection.Copies"
-                                        title="Print labels som PDF" aria-label="Print labels som PDF">
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelDesignPrintModal"
+                                        data-id="@collection.Id" title="Print labels som PDF" aria-label="Print labels som PDF">
                                     <i class="bi bi-printer"></i>
                                 </button>
-                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionEditModal"
-                                        data-id="@collection.Id" title="Rediger" aria-label="Rediger">
+                                <a class="btn btn-sm btn-secondary btn-icon" asp-action="Designer" asp-route-id="@collection.Id" title="Design labels" aria-label="Design labels">
                                     <i class="bi bi-pencil"></i>
-                                </button>
+                                </a>
                                 <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionDeleteModal"
                                         data-id="@collection.Id" data-name="@collection.Name" title="Slet" aria-label="Slet">
                                     <i class="bi bi-trash"></i>

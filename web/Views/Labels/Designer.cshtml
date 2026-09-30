@@ -1,0 +1,117 @@
+@using System.Text.Json
+@using web.Constants
+@using web.Repositories.LabelCollections
+@model web.ViewModels.LabelDesignerViewModel
+@{
+    ViewData["Title"] = Model.Design.Name;
+    // The default encoder escapes <, > and &, so the JSON is safe inside the <script> block.
+    var seedJson = JsonSerializer.Serialize(new { design = Model.Design, media = Model.Media }, LabelCollectionService.JsonOptions);
+}
+
+@*
+    Label designer: label list (left), canvas (middle), properties (right) — the same layout (.isd-*) as the
+    info screen designer. label-designer.js holds the whole collection in memory and saves it in one go
+    (SaveDesign); labels are drawn by the shared label-design.js, the same as the print preview and the PDF.
+*@
+<div class="isd-page ld-page" data-label-designer
+     data-collection-id="@Model.Id"
+     data-url-save="@Url.Action("SaveDesign")"
+     data-url-upload="@Url.Action("UploadMedia")"
+     data-url-delete-media="@Url.Action("DeleteMedia")"
+     data-url-media="@Url.Action("Media")"
+     data-url-qr="@Url.Action("Qr")"
+     data-url-pdf="@Url.Action("Pdf")"
+     data-max-image-mb="@(LabelDesignRules.MaxImageBytes / (1024 * 1024))">
+    @Html.AntiForgeryToken()
+    <script type="application/json" data-ld-seed>@Html.Raw(seedJson)</script>
+
+    <div class="isd-topbar">
+        <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left me-1"></i>Tilbage til labels</a>
+        <button type="button" class="isd-title" data-ld-open-settings title="Skift navn og label-ark">
+            <span data-ld-title>@Model.Design.Name</span><i class="bi bi-pencil"></i>
+        </button>
+        <span class="isd-dirty" data-ld-dirty hidden><i class="bi bi-circle-fill"></i> Ikke gemt</span>
+        <div class="isd-topbar-spacer"></div>
+        <button type="button" class="btn btn-outline-secondary" data-ld-open-settings>
+            <i class="bi bi-gear me-1"></i> Indstillinger
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-ld-print title="Print labels som PDF">
+            <i class="bi bi-printer me-1"></i> Print
+        </button>
+        <button type="button" class="btn btn-primary" data-ld-save title="Gem (Ctrl+S)">
+            <i class="bi bi-floppy me-1"></i> Gem
+        </button>
+    </div>
+
+    <div class="isd-workspace">
+        <aside class="isd-slides" aria-label="Labels">
+            <div class="isd-panel-head">
+                <span>Labels</span>
+                <span class="text-muted small" data-ld-totals></span>
+            </div>
+            <div class="isd-slide-list" data-ld-label-list></div>
+            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2" data-ld-add-label>
+                <i class="bi bi-plus-lg me-1"></i> Ny label
+            </button>
+        </aside>
+
+        <section class="isd-main">
+            <div class="isd-toolbar">
+                <span class="isd-toolbar-label">Indsæt</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-add="text"><i class="bi bi-fonts me-1"></i> Tekst</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-add="image"><i class="bi bi-image me-1"></i> Billede</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-add="qr"><i class="bi bi-qr-code me-1"></i> QR-kode</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-add="serial"><i class="bi bi-123 me-1"></i> Løbenummer</button>
+                <div class="isd-toolbar-spacer"></div>
+                <span class="ld-size-badge" data-ld-size title="Labelens størrelse på arket"></span>
+                @* Icon-only undo/redo (deliberate exception to icon+label, like a text editor) — the title shows the name and shortcut. *@
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-ld-undo title="Fortryd (Ctrl+Z)" aria-label="Fortryd" disabled>
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-ld-redo title="Gentag (Ctrl+Y)" aria-label="Gentag" disabled>
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+
+            <div class="isd-stage-wrap" data-ld-stage-wrap>
+                <div class="isd-stage" data-ld-stage>
+                    <div class="isd-canvas" data-ld-canvas></div>
+                    <div class="isd-overlay">
+                        <div class="isd-guide isd-guide-v" data-ld-guide-v hidden></div>
+                        <div class="isd-guide isd-guide-h" data-ld-guide-h hidden></div>
+                        <div class="isd-selection" data-ld-selection hidden>
+                            <span class="isd-handle" data-handle="nw"></span>
+                            <span class="isd-handle" data-handle="n"></span>
+                            <span class="isd-handle" data-handle="ne"></span>
+                            <span class="isd-handle" data-handle="e"></span>
+                            <span class="isd-handle" data-handle="se"></span>
+                            <span class="isd-handle" data-handle="s"></span>
+                            <span class="isd-handle" data-handle="sw"></span>
+                            <span class="isd-handle" data-handle="w"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="isd-hint">
+                <i class="bi bi-lightbulb me-1"></i>
+                Træk for at flytte · træk i hjørnerne for at ændre størrelse (Shift bevarer formen, Alt slår hjælpelinjer fra) ·
+                dobbeltklik for at skrive · piletaster flytter · Ctrl+C / Ctrl+V kopierer mellem labels · Delete sletter
+            </p>
+        </section>
+
+        <aside class="isd-props" aria-label="Egenskaber">
+            @await Html.PartialAsync("_DesignerLabelProperties")
+            @await Html.PartialAsync("_DesignerElementProperties")
+        </aside>
+    </div>
+
+    @await Html.PartialAsync("_DesignerSettingsModal")
+    @await Html.PartialAsync("_DesignerMediaModal")
+    @await Html.PartialAsync("_DesignerLeaveModal")
+    @await Html.PartialAsync("_LabelPrintModal")
+</div>
+
+@section Scripts {
+    <script src="~/js/label-designer.js" asp-append-version="true"></script>
+}

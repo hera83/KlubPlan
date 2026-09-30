@@ -1,12 +1,14 @@
 @model web.ViewModels.LabelCollectionFilterViewModel
 
 <div data-label-collections-page
-     data-url-collection="@Url.Action("Collection")"
-     data-url-pdf="@Url.Action("Pdf")">
+     data-url-design="@Url.Action("Design")"
+     data-url-pdf="@Url.Action("Pdf")"
+     data-url-media="@Url.Action("Media")"
+     data-url-qr="@Url.Action("Qr")">
     <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div>
             <h1><i class="bi bi-tags me-2"></i>Labels</h1>
-            <p>Saml labels i samlinger og print dem på A4-labelark som PDF</p>
+            <p>Design labels med tekst, billeder, QR-koder og løbenumre – og print dem på A4-labelark som PDF</p>
         </div>
     </div>
 
@@ -21,7 +23,7 @@
                         </div>
                     </div>
                     <div class="table-toolbar-end">
-                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionEditModal" title="Opret label-samling" aria-label="Opret label-samling">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionCreateModal" title="Opret label-samling" aria-label="Opret label-samling">
                             <i class="bi bi-plus-lg"></i> Opret
                         </button>
                     </div>
@@ -34,9 +36,9 @@
         </div>
     </div>
 
-    @await Html.PartialAsync("_LabelCollectionEditModal")
+    @await Html.PartialAsync("_LabelCollectionCreateModal")
     @await Html.PartialAsync("_LabelCollectionDeleteModal")
-    @await Html.PartialAsync("~/Views/Shared/Partials/_PrintLabelsModal.cshtml", new web.ViewModels.PrintLabelsModalViewModel { ModalId = "labelCollectionPrintModal" })
+    @await Html.PartialAsync("_LabelPrintModal")
 </div>
 
 @section Scripts {

@@ -1,0 +1,32 @@
+@* Designer → Vælg billede: the collection's image library + upload (button or drag & drop). *@
+
+<!-- Vælg billede -->
+<div class="modal fade" id="ldMediaModal" tabindex="-1" aria-labelledby="ldMediaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ldMediaModalLabel"><i class="bi bi-images me-2"></i>Vælg billede</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" data-ld-media-drop>
+                <label class="isd-upload">
+                    <input type="file" hidden multiple accept=".png,.jpg,.jpeg,.webp" data-ld-media-input />
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span><strong>Upload fra computeren</strong> – eller træk filer herind</span>
+                    <small class="text-muted" data-ld-media-hint></small>
+                </label>
+                <div class="progress mt-2" data-ld-media-progress hidden>
+                    <div class="progress-bar" role="progressbar" style="width:0%"></div>
+                </div>
+                <p class="text-muted small mt-3 mb-2" data-ld-media-count></p>
+                <div class="isd-media-grid" data-ld-media-grid></div>
+                <p class="text-muted fst-italic mb-0" data-ld-media-empty hidden>Ingen billeder endnu – upload det første ovenfor.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

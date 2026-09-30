@@ -4,7 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Google Font ─────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Lato: labels (label-designeren) — samme skrift som QuestPDF bruger i label-PDF'en, så forhåndsvisningen passer med printet. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 /* ── CSS Custom Properties ───────────────────────────────────── */
 :root {
@@ -2514,6 +2515,7 @@ input[type="file"]::-webkit-file-upload-button:hover {
 /* ════════════════════════════════════════
    INFOSKÆRME — side-designer (Views/InfoScreens/Designer.cshtml)
    Selve sidevisningen (.isc-*) ligger i infoscreen.css, fælles med den kørende skærm.
+   Label-designeren (Views/Labels/Designer.cshtml) genbruger .isd-* layoutet, så de to ser ens ud.
    ════════════════════════════════════════ */
 
 .isd-page {
@@ -2845,3 +2847,105 @@ input[type="file"]::-webkit-file-upload-button:hover {
   .isd-slide-item { flex: 0 0 9rem; }
   .isd-stage-wrap { min-height: 22rem; }
 }
+
+/* ════════════════════════════════════════
+   LABELS — fælles label-visning (.lbl-*) og label-designer (Views/Labels/Designer.cshtml)
+   Visningen bruges af designeren, miniaturer og print-forhåndsvisningen (wwwroot/js/label-design.js).
+   Holdes i sync med PDF'en (Repositories/LabelCollections/LabelDesignPdf.cs): Lato, linjehøjde 1.2 og
+   tekst-padding 1 % / 2 % af labelens højde.
+   ════════════════════════════════════════ */
+
+/* En label fylder sin container; container-type gør cqh = 1 % af labelens højde (skriftstørrelser). */
+.lbl-label {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  background: #ffffff;
+  color: #000000;
+}
+
+.lbl-el {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.lbl-el.lbl-text {
+  display: flex;
+  flex-direction: column;
+  padding: 1cqh 2cqh;
+  font-family: 'Lato', 'Segoe UI', Arial, sans-serif;
+  line-height: 1.2;
+}
+.lbl-content {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  outline: none;
+}
+.lbl-el.is-placeholder > .lbl-content { opacity: 0.45; font-style: italic; }
+
+.lbl-el > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lbl-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(0, 0, 0, 0.4);
+  background: rgba(127, 127, 127, 0.14);
+  color: rgba(0, 0, 0, 0.6);
+  font: 600 clamp(8px, 9cqh, 15px)/1.2 'Inter', 'Segoe UI', Arial, sans-serif;
+  text-align: center;
+}
+.lbl-placeholder > i { font-size: 1.5em; }
+
+/* ── Designer (layoutet er .isd-* fra infoskærm-designeren) ── */
+.ld-size-badge {
+  color: var(--clr-text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.ld-page .isd-stage { background: #ffffff; }
+.ld-page .isd-canvas .lbl-el { cursor: move; }
+.ld-page .isd-thumb { background: #ffffff; }
+
+/* Ark-opsætning (opret + indstillinger): felter og et A4-ark i miniature */
+.ld-sheet-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 9.5rem;
+}
+.ld-sheet-preview .label-print-sheet { width: 6.2rem; }
+.ld-sheet-preview .label-print-sheet.is-landscape { width: 8.8rem; }
+
+/* Print: første ark med de rigtige labels */
+.lbl-sheet {
+  display: grid;
+  gap: 1px;
+  width: 17rem;
+  aspect-ratio: 210 / 297;
+  background: var(--clr-border);
+  border: 1px solid var(--clr-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.lbl-sheet.is-landscape {
+  width: 24rem;
+  max-width: 100%;
+  aspect-ratio: 297 / 210;
+}
+.lbl-sheet > div {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+.lbl-sheet > div.is-empty { background: var(--clr-surface-2); }

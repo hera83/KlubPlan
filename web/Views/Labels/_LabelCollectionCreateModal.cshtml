@@ -1,0 +1,32 @@
+@using web.Constants
+@* Opret label-samling: name + sheet grid → Gem → on to the designer (label-collections.js). *@
+
+<!-- Opret label-samling -->
+<div class="modal fade" id="labelCollectionCreateModal" tabindex="-1" aria-labelledby="labelCollectionCreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" asp-action="Create" method="post" data-label-collection-create-form>
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelCollectionCreateModalLabel"><i class="bi bi-tags me-2"></i>Opret label-samling</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="labelCollectionCreateName">Navn</label>
+                    <input type="text" class="form-control" id="labelCollectionCreateName" name="Name" required maxlength="@LabelRules.MaxCollectionNameLength"
+                           placeholder="Fx Navneskilte sommerlejr eller Garderobenumre" />
+                </div>
+                <h6 class="mb-2">Label-ark</h6>
+                @await Html.PartialAsync("_LabelSheetFields", "labelCollectionCreate")
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem og design labels
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

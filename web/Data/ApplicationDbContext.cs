@@ -78,9 +78,10 @@ namespace web.Data
         public DbSet<ActivityListCellValue> ActivityListCellValues { get; set; } = null!;
         public DbSet<ActivityListLabel> ActivityListLabels { get; set; } = null!;
 
-        // Værktøjer → Labels: named sets of labels printed to A4 label sheets
+        // Værktøjer → Labels: named sets of designed labels printed to A4 label sheets, with an image library each
         public DbSet<LabelCollection> LabelCollections { get; set; } = null!;
         public DbSet<LabelCollectionItem> LabelCollectionItems { get; set; } = null!;
+        public DbSet<LabelCollectionMedia> LabelCollectionMedia { get; set; } = null!;
 
         // Værktøjer → Infoskærme: slideshows played on projectors/screens via a public link
         public DbSet<InfoScreen> InfoScreens { get; set; } = null!;
@@ -1087,9 +1088,12 @@ namespace web.Data
             {
                 entity.HasKey(e => e.Id);
 
-                entity.Property(e => e.Text)
+                entity.Property(e => e.Background)
                     .IsRequired()
-                    .HasMaxLength(500);
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.ElementsJson)
+                    .IsRequired();
 
                 entity.Property(e => e.CreatedAtUtc)
                     .IsRequired();
@@ -1100,6 +1104,31 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.LabelCollectionId, e.Order });
+            });
+
+            // Configure LabelCollectionMedia
+            builder.Entity<LabelCollectionMedia>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.PublicId)
+                    .IsRequired();
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Collection)
+                    .WithMany(c => c.Media)
+                    .HasForeignKey(e => e.LabelCollectionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FileMetadata)
+                    .WithMany()
+                    .HasForeignKey(e => e.FileMetadataId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
             });
 
             // Configure InfoScreen

@@ -1,0 +1,46 @@
+@using web.Constants
+@* Designer → properties when no element is selected: the current label. Fields are bound by data-ld-label-prop. *@
+
+<div data-ld-panel="label">
+    <div class="isd-panel-head">
+        <span><i class="bi bi-tag me-1"></i><span data-ld-label-heading>Label</span></span>
+    </div>
+
+    <div class="isd-prop-group">
+        <label class="form-label" for="ldLabelQuantity">Antal kopier</label>
+        <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="ldLabelQuantity" min="1" max="@LabelRules.MaxQuantity" step="1" data-ld-label-prop="quantity" />
+            <span class="input-group-text">stk.</span>
+        </div>
+        <button type="button" class="btn btn-link btn-sm px-0" data-ld-quantity-all>
+            <i class="bi bi-files me-1"></i> Brug på alle labels
+        </button>
+    </div>
+
+    <div class="isd-prop-group">
+        <label class="form-label" for="ldLabelBackground">Baggrundsfarve</label>
+        <div class="isd-color-row">
+            <input type="color" class="form-control form-control-color" id="ldLabelBackground" data-ld-label-prop="background" />
+            <div class="isd-swatches" data-ld-swatches>
+                <button type="button" style="background:#ffffff" data-color="#ffffff" title="Hvid" aria-label="Hvid"></button>
+                <button type="button" style="background:#fef3c7" data-color="#fef3c7" title="Lys gul" aria-label="Lys gul"></button>
+                <button type="button" style="background:#dbeafe" data-color="#dbeafe" title="Lys blå" aria-label="Lys blå"></button>
+                <button type="button" style="background:#dcfce7" data-color="#dcfce7" title="Lys grøn" aria-label="Lys grøn"></button>
+                <button type="button" style="background:#fce7f3" data-color="#fce7f3" title="Lys rosa" aria-label="Lys rosa"></button>
+                <button type="button" style="background:#111827" data-color="#111827" title="Mørk" aria-label="Mørk"></button>
+            </div>
+        </div>
+        <div class="form-text mt-1">Hvid printes ikke – papirets egen farve bruges.</div>
+    </div>
+
+    <div class="isd-prop-actions">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-duplicate-label>
+            <i class="bi bi-copy me-1"></i> Duplikér label
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-ld-delete-label>
+            <i class="bi bi-trash me-1"></i> Slet label
+        </button>
+    </div>
+
+    <p class="isd-panel-tip"><i class="bi bi-hand-index me-1"></i>Klik på et element på labelen for at redigere det.</p>
+</div>

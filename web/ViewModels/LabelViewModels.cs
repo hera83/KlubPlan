@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using web.Constants;
+using web.Repositories.LabelCollections.Dtos;
 
 namespace web.ViewModels
 {
@@ -61,25 +63,78 @@ namespace web.ViewModels
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>Different labels in the collection.</summary>
+        /// <summary>Different label designs in the collection.</summary>
         public int LabelCount { get; set; }
 
         /// <summary>Labels on the sheets, i.e. the sum of the quantities.</summary>
         public int Copies { get; set; }
 
+        public int Across { get; set; }
+        public int Down { get; set; }
+        public bool Landscape { get; set; }
+
         public DateTime ChangedAtUtc { get; set; }
+
+        /// <summary>A4 sheets needed for all copies.</summary>
+        public int Sheets => Copies == 0 ? 0 : (int)Math.Ceiling(Copies / (double)(Across * Down));
+
+        /// <summary>"70 × 37,1 mm" — one label on the collection's sheet grid.</summary>
+        public string LabelSizeText => FormatLabelSize(Across, Down, Landscape);
+
+        public static string FormatLabelSize(int across, int down, bool landscape)
+        {
+            var (width, height) = LabelDesignRules.LabelSizeMm(across, down, landscape);
+            var da = CultureInfo.GetCultureInfo("da-DK");
+            return $"{width.ToString("0.#", da)} × {height.ToString("0.#", da)} mm";
+        }
     }
 
-    /// <summary>"Opret/Rediger label-samling" modal — name plus all its labels, saved at once. No Id = create.</summary>
-    public class LabelCollectionEditViewModel
+    /// <summary>"Opret label-samling" modal: name and sheet grid — then on to the designer.</summary>
+    public class LabelCollectionCreateViewModel
     {
-        public int? Id { get; set; }
-
         [Required(ErrorMessage = "Navn skal udfyldes.")]
         [StringLength(LabelRules.MaxCollectionNameLength, ErrorMessage = "Navnet må højst være {1} tegn.")]
         public string Name { get; set; } = string.Empty;
 
-        [MaxLength(LabelRules.MaxLabelsPerCollection, ErrorMessage = "En samling kan højst have {1} labels.")]
-        public List<LabelInputViewModel> Labels { get; set; } = new();
+        [Range(1, LabelRules.MaxAcross, ErrorMessage = "Labels i bredden skal være mellem {1} og {2}.")]
+        public int Across { get; set; } = LabelDesignRules.DefaultAcross;
+
+        [Range(1, LabelRules.MaxDown, ErrorMessage = "Labels i højden skal være mellem {1} og {2}.")]
+        public int Down { get; set; } = LabelDesignRules.DefaultDown;
+
+        public bool Landscape { get; set; }
+    }
+
+    // ── Label-designer ──────────────────────────────────────────────────────
+
+    public class LabelDesignerViewModel
+    {
+        public int Id { get; set; }
+
+        /// <summary>The collection's name, sheet grid and labels — the designer's starting state.</summary>
+        public LabelCollectionDesignDto Design { get; set; } = new();
+
+        /// <summary>The collection's image library.</summary>
+        public List<LabelMediaDto> Media { get; set; } = new();
+    }
+
+    /// <summary>Designer → Gem: the whole design as JSON (LabelCollectionDesignDto).</summary>
+    public class LabelDesignSaveViewModel
+    {
+        [Required]
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "Der er intet at gemme.")]
+        public string DesignJson { get; set; } = string.Empty;
+    }
+
+    /// <summary>"Print labels" for a designed collection: the grid is the collection's own, so only the cut marks are chosen.</summary>
+    public class LabelDesignPrintViewModel
+    {
+        [Required]
+        public int Id { get; set; }
+
+        /// <summary>Short cut marks on the lines between labels, for cutting uncut full-sheet label paper with a paper cutter.</summary>
+        public bool CutMarks { get; set; }
     }
 }

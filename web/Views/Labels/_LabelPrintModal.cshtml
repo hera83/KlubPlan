@@ -1,0 +1,49 @@
+@*
+    "Print labels" for a designed collection (the table and the designer): the first sheet drawn with the real
+    labels, the totals and cut marks → PDF in a new tab. The sheet grid is the collection's own (Indstillinger
+    in the designer). window.FvLabelDesign.initPrintModal (wwwroot/js/label-design.js) drives it.
+*@
+
+<!-- Print labels -->
+<div class="modal fade" id="labelDesignPrintModal" tabindex="-1" aria-labelledby="labelDesignPrintModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" data-ldp-form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelDesignPrintModalLabel"><i class="bi bi-printer me-2"></i><span data-ldp-title>Print labels</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4 align-items-center">
+                    <div class="col-md-5">
+                        <p class="fw-semibold mb-1" data-ldp-summary></p>
+                        <p class="small text-muted" data-ldp-size></p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="labelDesignPrintCutMarks" data-ldp-cut-marks />
+                            <label class="form-check-label" for="labelDesignPrintCutMarks">Skæremærker</label>
+                            <div class="form-text mt-0">Små streger ved hver labels hjørner, så et helt (ikke udstanset) ark kan skæres ud med en papirskærer.</div>
+                        </div>
+                        <p class="small text-muted mt-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>Ark-opsætningen ændres under <strong>Indstillinger</strong> i designeren.
+                        </p>
+                    </div>
+                    <div class="col-md-7 d-flex flex-column align-items-center">
+                        <div class="lbl-sheet" data-ldp-sheet aria-label="Første ark"></div>
+                        <p class="small text-muted text-center mt-2 mb-0">Første ark</p>
+                    </div>
+                </div>
+                <div class="label-print-hint mt-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Udskriv PDF'en i <strong>Faktisk størrelse / 100 %</strong> – ikke "Tilpas til side" – ellers skalerer printeren siden, og labels passer ikke med arket.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary" data-ldp-submit disabled>
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Generér PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

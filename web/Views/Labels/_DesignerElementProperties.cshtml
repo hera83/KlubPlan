@@ -1,0 +1,165 @@
+@using web.Constants
+@*
+    Designer → properties for the selected element. Fields are bound by data-ld-prop (element field),
+    data-ld-geom (x/y/w/h, shown in mm) and data-ld-font-pt (font size, shown in pt); groups are shown for the
+    element types in data-ld-show.
+*@
+
+<div data-ld-panel="element" hidden>
+    <div class="isd-panel-head">
+        <span data-ld-element-label>Element</span>
+        <button type="button" class="btn btn-sm btn-link px-0" data-ld-deselect title="Tilbage til labelen (Esc)">
+            <i class="bi bi-x-lg me-1"></i> Luk
+        </button>
+    </div>
+
+    @* ── Indhold ── *@
+    <div class="isd-prop-group" data-ld-show="text">
+        <label class="form-label" for="ldText">Tekst</label>
+        <textarea class="form-control form-control-sm" id="ldText" rows="4" maxlength="@LabelDesignRules.MaxTextLength" data-ld-prop="text"></textarea>
+        <div class="form-text mt-1">Du kan også dobbeltklikke på teksten og skrive direkte på labelen.</div>
+    </div>
+
+    <div class="isd-prop-group" data-ld-show="serial">
+        <div class="row g-2">
+            <div class="col-6">
+                <label class="form-label" for="ldSerialStart">Første nummer</label>
+                <input type="number" class="form-control form-control-sm" id="ldSerialStart" min="0" max="@LabelDesignRules.MaxSerialStart" step="1" data-ld-prop="start" />
+            </div>
+            <div class="col-6">
+                <label class="form-label" for="ldSerialDigits">Cifre</label>
+                <select class="form-select form-select-sm" id="ldSerialDigits" data-ld-prop="digits">
+                    <option value="0">Som tallet (1)</option>
+                    <option value="2">2 (01)</option>
+                    <option value="3">3 (001)</option>
+                    <option value="4">4 (0001)</option>
+                    <option value="5">5 (00001)</option>
+                    <option value="6">6 (000001)</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label" for="ldSerialPrefix">Tekst før</label>
+                <input type="text" class="form-control form-control-sm" id="ldSerialPrefix" maxlength="@LabelDesignRules.MaxSerialAffixLength" placeholder="Fx Nr. " data-ld-prop="prefix" />
+            </div>
+            <div class="col-6">
+                <label class="form-label" for="ldSerialSuffix">Tekst efter</label>
+                <input type="text" class="form-control form-control-sm" id="ldSerialSuffix" maxlength="@LabelDesignRules.MaxSerialAffixLength" data-ld-prop="suffix" />
+            </div>
+        </div>
+        <div class="form-text mt-2" data-ld-serial-range></div>
+    </div>
+
+    <div class="isd-prop-group" data-ld-show="qr">
+        <label class="form-label" for="ldQrText">Link eller tekst</label>
+        <input type="text" class="form-control form-control-sm" id="ldQrText" maxlength="@LabelDesignRules.MaxQrTextLength" placeholder="https://..." data-ld-prop="text" />
+        <div class="form-text mt-1">Mobilen åbner linket, når QR-koden scannes. Gør den mindst ca. 15 mm bred, så den er nem at scanne.</div>
+    </div>
+
+    <div class="isd-prop-group" data-ld-show="image">
+        <span class="form-label d-block">Billede</span>
+        <div class="isd-media-current">
+            <span class="text-truncate" data-ld-media-name>Intet billede valgt</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-change-media>
+                <i class="bi bi-images me-1"></i> Skift
+            </button>
+        </div>
+        <div class="form-text mt-1">Billedet vises så stort som muligt inden for feltet, uden at blive beskåret.</div>
+    </div>
+
+    @* ── Skrift ── *@
+    <div class="isd-prop-group" data-ld-show="text serial">
+        <span class="form-label d-block">Skrift</span>
+        <div class="isd-prop-row">
+            <div class="input-group input-group-sm isd-size-input" title="Skriftstørrelse i punkter">
+                <input type="number" class="form-control" min="1" step="0.5" data-ld-font-pt aria-label="Skriftstørrelse" />
+                <span class="input-group-text">pt</span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Fremhævning">
+                <input type="checkbox" class="btn-check" id="ldBold" data-ld-prop="bold" />
+                <label class="btn btn-outline-secondary" for="ldBold" title="Fed"><i class="bi bi-type-bold"></i> Fed</label>
+                <input type="checkbox" class="btn-check" id="ldItalic" data-ld-prop="italic" />
+                <label class="btn btn-outline-secondary" for="ldItalic" title="Kursiv"><i class="bi bi-type-italic"></i> Kursiv</label>
+            </div>
+        </div>
+        <input type="range" class="form-range" min="4" step="0.5" data-ld-font-pt aria-label="Skriftstørrelse" />
+        <div class="isd-prop-row">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Vandret justering">
+                <input type="radio" class="btn-check" name="ldAlign" id="ldAlignLeft" value="left" data-ld-prop="align" />
+                <label class="btn btn-outline-secondary" for="ldAlignLeft" title="Venstre"><i class="bi bi-text-left"></i></label>
+                <input type="radio" class="btn-check" name="ldAlign" id="ldAlignCenter" value="center" data-ld-prop="align" />
+                <label class="btn btn-outline-secondary" for="ldAlignCenter" title="Centreret"><i class="bi bi-text-center"></i></label>
+                <input type="radio" class="btn-check" name="ldAlign" id="ldAlignRight" value="right" data-ld-prop="align" />
+                <label class="btn btn-outline-secondary" for="ldAlignRight" title="Højre"><i class="bi bi-text-right"></i></label>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Lodret justering">
+                <input type="radio" class="btn-check" name="ldVAlign" id="ldVAlignTop" value="top" data-ld-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="ldVAlignTop" title="Top"><i class="bi bi-align-top"></i></label>
+                <input type="radio" class="btn-check" name="ldVAlign" id="ldVAlignMiddle" value="middle" data-ld-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="ldVAlignMiddle" title="Midt"><i class="bi bi-align-middle"></i></label>
+                <input type="radio" class="btn-check" name="ldVAlign" id="ldVAlignBottom" value="bottom" data-ld-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="ldVAlignBottom" title="Bund"><i class="bi bi-align-bottom"></i></label>
+            </div>
+        </div>
+        <div class="form-text mt-1">Teksten gøres automatisk mindre, hvis den ikke kan være i feltet.</div>
+    </div>
+
+    <div class="isd-prop-group" data-ld-show="text serial qr">
+        <div class="isd-prop-row">
+            <div>
+                <label class="form-label" for="ldColor" data-ld-color-label>Farve</label>
+                <input type="color" class="form-control form-control-color" id="ldColor" data-ld-prop="color" />
+            </div>
+            <div data-ld-show="text serial">
+                <label class="form-label" for="ldBackground">Baggrund</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" class="form-control form-control-color" id="ldBackground" data-ld-background />
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="ldBackgroundNone" data-ld-background-none />
+                        <label class="form-check-label" for="ldBackgroundNone">Ingen</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Placering ── *@
+    <div class="isd-prop-group">
+        <span class="form-label d-block">Placering og størrelse (mm)</span>
+        <div class="isd-geom">
+            <label>X <input type="number" class="form-control form-control-sm" step="0.5" min="0" data-ld-geom="x" /></label>
+            <label>Y <input type="number" class="form-control form-control-sm" step="0.5" min="0" data-ld-geom="y" /></label>
+            <label>B <input type="number" class="form-control form-control-sm" step="0.5" min="0.5" data-ld-geom="w" /></label>
+            <label>H <input type="number" class="form-control form-control-sm" step="0.5" min="0.5" data-ld-geom="h" /></label>
+        </div>
+        <div class="isd-prop-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-arrange="fill" title="Fyld hele labelen – fx til et baggrundsbillede">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Fyld labelen
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-arrange="center-h" title="Centrér vandret">
+                <i class="bi bi-distribute-horizontal me-1"></i> Centrér ↔
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-arrange="center-v" title="Centrér lodret">
+                <i class="bi bi-distribute-vertical me-1"></i> Centrér ↕
+            </button>
+        </div>
+    </div>
+
+    <div class="isd-prop-group">
+        <span class="form-label d-block">Rækkefølge</span>
+        <div class="isd-prop-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-layer="front"><i class="bi bi-front me-1"></i> Forrest</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-layer="forward"><i class="bi bi-chevron-up me-1"></i> Frem</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-layer="backward"><i class="bi bi-chevron-down me-1"></i> Tilbage</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-layer="back"><i class="bi bi-back me-1"></i> Bagerst</button>
+        </div>
+    </div>
+
+    <div class="isd-prop-actions isd-prop-actions-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-ld-duplicate title="Ctrl+D">
+            <i class="bi bi-copy me-1"></i> Duplikér
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-ld-delete title="Delete">
+            <i class="bi bi-trash me-1"></i> Slet
+        </button>
+    </div>
+</div>

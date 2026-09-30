@@ -1,0 +1,31 @@
+@using web.Constants
+@* Designer → Indstillinger: name and the sheet grid. "Gem" applies them and saves the whole collection. *@
+
+<!-- Indstillinger for label-samling -->
+<div class="modal fade" id="ldSettingsModal" tabindex="-1" aria-labelledby="ldSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" data-ld-settings-form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="ldSettingsModalLabel"><i class="bi bi-gear me-2"></i>Indstillinger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="ldSettingsName">Navn</label>
+                    <input type="text" class="form-control" id="ldSettingsName" required maxlength="@LabelRules.MaxCollectionNameLength" data-ld-setting="name" />
+                </div>
+                <h6 class="mb-2">Label-ark</h6>
+                @await Html.PartialAsync("_LabelSheetFields", "ldSettings")
+                <div class="form-text">Ændres arket, bevarer elementerne deres placering og størrelse i forhold til labelen.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

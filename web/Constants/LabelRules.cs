@@ -16,8 +16,8 @@ namespace web.Constants
         /// <summary>Upper limit for one PDF so a mistyped quantity can't generate an endless document.</summary>
         public const int MaxLabelsPerPdf = 10000;
 
-        /// <summary>Labels (Værktøjer): a collection's name and how many different labels it can hold.</summary>
+        /// <summary>Labels (Værktøjer): a collection's name and how many different label designs it can hold.</summary>
         public const int MaxCollectionNameLength = 200;
-        public const int MaxLabelsPerCollection = 500;
+        public const int MaxLabelsPerCollection = 100;
     }
 }

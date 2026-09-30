@@ -134,7 +134,7 @@ namespace web.Infrastructure.Labels
         /// cut line. They sit exactly on the cut, inside the label padding, so they never touch the text
         /// and are cut away. Every strip cut off the sheet still carries the marks for its next cuts.
         /// </summary>
-        private static string CutMarksSvg(float pageWidth, float pageHeight, float labelWidth, float labelHeight, int across, int down)
+        internal static string CutMarksSvg(float pageWidth, float pageHeight, float labelWidth, float labelHeight, int across, int down)
         {
             var arm = CutMarkArmMm * PointsPerMm;
             var edge = CutMarkEdgeMm * PointsPerMm;
