@@ -31,6 +31,8 @@ using web.Repositories.ActivityListLabels;
 using web.Repositories.ActivityListLabels.Interfaces;
 using web.Repositories.LabelCollections;
 using web.Repositories.LabelCollections.Interfaces;
+using web.Repositories.InfoScreens;
+using web.Repositories.InfoScreens.Interfaces;
 using web.BgSerives;
 using web.Services.AiGateway;
 using web.Services.AiGateway.Interfaces;
@@ -147,6 +149,7 @@ try
     builder.Services.AddScoped<IActivityListService, ActivityListService>();
     builder.Services.AddScoped<IActivityListLabelService, ActivityListLabelService>();
     builder.Services.AddScoped<ILabelCollectionService, LabelCollectionService>();
+    builder.Services.AddScoped<IInfoScreenService, InfoScreenService>();
 
     // QuestPDF (labels på Aktiviteter → Lister): Community-licensen dækker privat/forenings-brug.
     QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;

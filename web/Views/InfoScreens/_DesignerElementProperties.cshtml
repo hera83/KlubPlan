@@ -1,0 +1,154 @@
+@using web.Constants
+@*
+    Designer → properties for the selected element. Fields are bound by data-isd-prop (element field) and
+    data-isd-geom (x/y/w/h); groups are shown for the element types in data-isd-show.
+*@
+
+<div data-isd-panel="element" hidden>
+    <div class="isd-panel-head">
+        <span data-isd-element-label>Element</span>
+        <button type="button" class="btn btn-sm btn-link px-0" data-isd-deselect title="Tilbage til siden (Esc)">
+            <i class="bi bi-x-lg me-1"></i> Luk
+        </button>
+    </div>
+
+    @* ── Indhold ── *@
+    <div class="isd-prop-group" data-isd-show="text">
+        <label class="form-label" for="isdText">Tekst</label>
+        <textarea class="form-control form-control-sm" id="isdText" rows="4" maxlength="@InfoScreenRules.MaxTextLength" data-isd-prop="text"></textarea>
+        <div class="form-text mt-1">Du kan også dobbeltklikke på teksten og skrive direkte på siden.</div>
+    </div>
+
+    <div class="isd-prop-group" data-isd-show="qr">
+        <label class="form-label" for="isdQrText">Link eller tekst</label>
+        <input type="text" class="form-control form-control-sm" id="isdQrText" maxlength="@InfoScreenRules.MaxQrTextLength" placeholder="https://..." data-isd-prop="text" />
+        <div class="form-text mt-1">Mobilen åbner linket, når QR-koden scannes.</div>
+    </div>
+
+    <div class="isd-prop-group" data-isd-show="clock">
+        <label class="form-label" for="isdClockFormat">Vis</label>
+        <select class="form-select form-select-sm" id="isdClockFormat" data-isd-prop="format">
+            <option value="time">Klokkeslæt (14:30)</option>
+            <option value="date">Dato (tirsdag den 22. sep. 2026)</option>
+            <option value="datetime">Dato og klokkeslæt</option>
+        </select>
+    </div>
+
+    <div class="isd-prop-group" data-isd-show="image video">
+        <span class="form-label d-block">Fil</span>
+        <div class="isd-media-current">
+            <span class="text-truncate" data-isd-media-name>Ingen fil valgt</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-change-media>
+                <i class="bi bi-images me-1"></i> Skift
+            </button>
+        </div>
+        <label class="form-label mt-2" for="isdFit">Tilpasning</label>
+        <select class="form-select form-select-sm" id="isdFit" data-isd-prop="fit">
+            <option value="contain">Vis hele (ingen beskæring)</option>
+            <option value="cover">Fyld feltet (beskær kanter)</option>
+        </select>
+    </div>
+
+    @* ── Skrift ── *@
+    <div class="isd-prop-group" data-isd-show="text clock">
+        <span class="form-label d-block">Skrift</span>
+        <div class="isd-prop-row">
+            <select class="form-select form-select-sm" data-isd-prop="fontFamily" aria-label="Skrifttype">
+                <option value="sans">Standard</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Skrivemaskine</option>
+            </select>
+            <div class="input-group input-group-sm isd-size-input" title="Skriftstørrelse i % af sidens højde">
+                <input type="number" class="form-control" min="@InfoScreenRules.MinFontSize" max="@InfoScreenRules.MaxFontSize" step="0.5" data-isd-prop="fontSize" aria-label="Skriftstørrelse" />
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+        <input type="range" class="form-range" min="@InfoScreenRules.MinFontSize" max="30" step="0.5" data-isd-prop="fontSize" aria-label="Skriftstørrelse" />
+        <div class="isd-prop-row">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Fremhævning">
+                <input type="checkbox" class="btn-check" id="isdBold" data-isd-prop="bold" />
+                <label class="btn btn-outline-secondary" for="isdBold" title="Fed"><i class="bi bi-type-bold"></i> Fed</label>
+                <input type="checkbox" class="btn-check" id="isdItalic" data-isd-prop="italic" />
+                <label class="btn btn-outline-secondary" for="isdItalic" title="Kursiv"><i class="bi bi-type-italic"></i> Kursiv</label>
+            </div>
+        </div>
+        <div class="isd-prop-row">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Vandret justering">
+                <input type="radio" class="btn-check" name="isdAlign" id="isdAlignLeft" value="left" data-isd-prop="align" />
+                <label class="btn btn-outline-secondary" for="isdAlignLeft" title="Venstre"><i class="bi bi-text-left"></i></label>
+                <input type="radio" class="btn-check" name="isdAlign" id="isdAlignCenter" value="center" data-isd-prop="align" />
+                <label class="btn btn-outline-secondary" for="isdAlignCenter" title="Centreret"><i class="bi bi-text-center"></i></label>
+                <input type="radio" class="btn-check" name="isdAlign" id="isdAlignRight" value="right" data-isd-prop="align" />
+                <label class="btn btn-outline-secondary" for="isdAlignRight" title="Højre"><i class="bi bi-text-right"></i></label>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Lodret justering">
+                <input type="radio" class="btn-check" name="isdVAlign" id="isdVAlignTop" value="top" data-isd-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="isdVAlignTop" title="Top"><i class="bi bi-align-top"></i></label>
+                <input type="radio" class="btn-check" name="isdVAlign" id="isdVAlignMiddle" value="middle" data-isd-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="isdVAlignMiddle" title="Midt"><i class="bi bi-align-middle"></i></label>
+                <input type="radio" class="btn-check" name="isdVAlign" id="isdVAlignBottom" value="bottom" data-isd-prop="vAlign" />
+                <label class="btn btn-outline-secondary" for="isdVAlignBottom" title="Bund"><i class="bi bi-align-bottom"></i></label>
+            </div>
+        </div>
+    </div>
+
+    <div class="isd-prop-group" data-isd-show="text clock qr">
+        <div class="isd-prop-row">
+            <div>
+                <label class="form-label" for="isdColor" data-isd-color-label>Farve</label>
+                <input type="color" class="form-control form-control-color" id="isdColor" data-isd-prop="color" />
+            </div>
+            <div data-isd-show="text clock">
+                <label class="form-label" for="isdBackground">Baggrund</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" class="form-control form-control-color" id="isdBackground" data-isd-background />
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="isdBackgroundNone" data-isd-background-none />
+                        <label class="form-check-label" for="isdBackgroundNone">Ingen</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Placering ── *@
+    <div class="isd-prop-group">
+        <span class="form-label d-block">Placering og størrelse (% af siden)</span>
+        <div class="isd-geom">
+            <label>X <input type="number" class="form-control form-control-sm" step="0.5" data-isd-geom="x" /></label>
+            <label>Y <input type="number" class="form-control form-control-sm" step="0.5" data-isd-geom="y" /></label>
+            <label>B <input type="number" class="form-control form-control-sm" step="0.5" min="0.5" data-isd-geom="w" /></label>
+            <label>H <input type="number" class="form-control form-control-sm" step="0.5" min="0.5" data-isd-geom="h" /></label>
+        </div>
+        <div class="isd-prop-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-arrange="fill" title="Fyld hele siden – fx til et baggrundsbillede">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Fyld siden
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-arrange="center-h" title="Centrér vandret">
+                <i class="bi bi-distribute-horizontal me-1"></i> Centrér ↔
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-arrange="center-v" title="Centrér lodret">
+                <i class="bi bi-distribute-vertical me-1"></i> Centrér ↕
+            </button>
+        </div>
+    </div>
+
+    <div class="isd-prop-group">
+        <span class="form-label d-block">Rækkefølge</span>
+        <div class="isd-prop-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-layer="front"><i class="bi bi-front me-1"></i> Forrest</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-layer="forward"><i class="bi bi-chevron-up me-1"></i> Frem</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-layer="backward"><i class="bi bi-chevron-down me-1"></i> Tilbage</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-layer="back"><i class="bi bi-back me-1"></i> Bagerst</button>
+        </div>
+    </div>
+
+    <div class="isd-prop-actions isd-prop-actions-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-duplicate title="Ctrl+D">
+            <i class="bi bi-copy me-1"></i> Duplikér
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-isd-delete title="Delete">
+            <i class="bi bi-trash me-1"></i> Slet
+        </button>
+    </div>
+</div>

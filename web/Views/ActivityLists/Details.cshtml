@@ -225,4 +225,6 @@
 @await Html.PartialAsync("~/Views/Shared/Partials/_PrintLabelsModal.cshtml", new web.ViewModels.PrintLabelsModalViewModel { ModalId = "listPrintLabelsModal", ShowFilterScope = true })
 @await Html.PartialAsync("_ListColumnsModal", schema)
 @await Html.PartialAsync("_ListStatusesModal", schema)
-<script src="~/js/activity-list.js" asp-append-version="true"></script>
+@section Scripts {
+    <script src="~/js/activity-list.js" asp-append-version="true"></script>
+}

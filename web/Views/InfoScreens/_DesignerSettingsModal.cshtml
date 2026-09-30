@@ -1,0 +1,54 @@
+@using web.Constants
+@* Designer → Indstillinger: title, active, screen format and transition. "Gem" applies them and saves the whole design. *@
+
+<!-- Indstillinger for infoskærm -->
+<div class="modal fade" id="isdSettingsModal" tabindex="-1" aria-labelledby="isdSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" data-isd-settings-form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="isdSettingsModalLabel"><i class="bi bi-gear me-2"></i>Indstillinger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="isdSettingsTitle">Titel</label>
+                    <input type="text" class="form-control" id="isdSettingsTitle" required maxlength="@InfoScreenRules.MaxTitleLength" data-isd-setting="title" />
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="isdSettingsActive" data-isd-setting="isActive" />
+                        <label class="form-check-label" for="isdSettingsActive">Aktiv</label>
+                    </div>
+                    <div class="form-text mt-0">Kun en aktiv skærm viser diasshowet. En kørende skærm opdager ændringen af sig selv inden for @InfoScreenRules.PollSeconds sekunder.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="isdSettingsAspect">Skærmformat</label>
+                    <select class="form-select" id="isdSettingsAspect" data-isd-setting="aspectRatio">
+                        @foreach (var (key, label) in InfoScreenRules.AspectRatios)
+                        {
+                            <option value="@key">@label</option>
+                        }
+                    </select>
+                    <div class="form-text">Vælg det format, projektoren/skærmen har. Elementer bevarer deres placering i % af siden.</div>
+                </div>
+                <div>
+                    <label class="form-label" for="isdSettingsTransition">Skift mellem sider</label>
+                    <select class="form-select" id="isdSettingsTransition" data-isd-setting="transition">
+                        @foreach (var (key, label) in InfoScreenRules.Transitions)
+                        {
+                            <option value="@key">@label</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

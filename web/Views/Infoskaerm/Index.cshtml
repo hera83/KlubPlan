@@ -1,0 +1,50 @@
+@using web.Constants
+@model web.ViewModels.InfoScreenPlayerPageViewModel
+@{
+    Layout = null;
+}
+@*
+    The running info screen (public, no login). infoscreen-player.js loads the slides from Data, plays
+    them in a loop and re-checks every InfoScreenRules.PollSeconds, so activation and saved changes
+    reach the projector on their own. Pages are drawn by the shared infoscreen-render.js.
+*@
+<!DOCTYPE html>
+<html lang="da" class="isp-html">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@Model.Title - KlubPlan</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/infoscreen.css" asp-append-version="true" />
+</head>
+<body class="isp-body">
+    <div class="isp-root" data-infoscreen-player
+         data-url-data="@Url.Action("Data", new { id = Model.PublicId, preview = Model.Preview })"
+         data-url-media="@Url.Action("Media")"
+         data-url-qr="@Url.Action("Qr")"
+         data-start-slide="@Model.StartSlide"
+         data-poll-seconds="@InfoScreenRules.PollSeconds">
+        <div class="isp-stage" data-isp-stage hidden></div>
+        <div class="isp-message" data-isp-message>
+            <i class="bi bi-hourglass-split"></i>
+            <span data-isp-message-text>Henter infoskærmen…</span>
+        </div>
+    </div>
+
+    @if (Model.Preview)
+    {
+        <div class="isp-badge"><i class="bi bi-eye me-1"></i> Forhåndsvisning – vises også når skærmen er inaktiv</div>
+    }
+
+    <div class="isp-controls">
+        <button type="button" data-isp-prev title="Forrige side (←)"><i class="bi bi-chevron-left"></i> Forrige</button>
+        <button type="button" data-isp-next title="Næste side (→)"><i class="bi bi-chevron-right"></i> Næste</button>
+        <button type="button" data-isp-fullscreen title="Fuld skærm (F)"><i class="bi bi-arrows-fullscreen"></i> Fuld skærm</button>
+    </div>
+
+    <script src="~/js/infoscreen-render.js" asp-append-version="true"></script>
+    <script src="~/js/infoscreen-player.js" asp-append-version="true"></script>
+</body>
+</html>

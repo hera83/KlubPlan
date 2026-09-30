@@ -1,0 +1,53 @@
+@using web.Constants
+@* Designer → properties when no element is selected: the current slide. Fields are bound by data-isd-slide-prop. *@
+
+<div data-isd-panel="slide">
+    <div class="isd-panel-head">
+        <span><i class="bi bi-file-earmark-slides me-1"></i><span data-isd-slide-label>Side</span></span>
+    </div>
+
+    <div class="isd-prop-group">
+        <label class="form-label" for="isdSlideDuration">Visningstid</label>
+        <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="isdSlideDuration" min="@InfoScreenRules.MinDurationSeconds" max="@InfoScreenRules.MaxDurationSeconds" step="1" data-isd-slide-prop="durationSeconds" />
+            <span class="input-group-text">sek</span>
+        </div>
+        <button type="button" class="btn btn-link btn-sm px-0" data-isd-duration-all>
+            <i class="bi bi-files me-1"></i> Brug på alle sider
+        </button>
+    </div>
+
+    <div class="isd-prop-group">
+        <label class="form-label" for="isdSlideBackground">Baggrundsfarve</label>
+        <div class="isd-color-row">
+            <input type="color" class="form-control form-control-color" id="isdSlideBackground" data-isd-slide-prop="background" />
+            <div class="isd-swatches" data-isd-swatches="background">
+                <button type="button" style="background:#000000" data-color="#000000" title="Sort" aria-label="Sort"></button>
+                <button type="button" style="background:#111827" data-color="#111827" title="Mørk" aria-label="Mørk"></button>
+                <button type="button" style="background:#1e3a8a" data-color="#1e3a8a" title="Blå" aria-label="Blå"></button>
+                <button type="button" style="background:#14532d" data-color="#14532d" title="Grøn" aria-label="Grøn"></button>
+                <button type="button" style="background:#c94e24" data-color="#c94e24" title="Orange" aria-label="Orange"></button>
+                <button type="button" style="background:#ffffff" data-color="#ffffff" title="Hvid" aria-label="Hvid"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="isd-prop-group">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="isdSlideHidden" data-isd-slide-prop="isHidden" />
+            <label class="form-check-label" for="isdSlideHidden">Skjul side</label>
+        </div>
+        <div class="form-text mt-0">En skjult side gemmes, men vises ikke på skærmen.</div>
+    </div>
+
+    <div class="isd-prop-actions">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-isd-duplicate-slide>
+            <i class="bi bi-copy me-1"></i> Duplikér side
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-isd-delete-slide>
+            <i class="bi bi-trash me-1"></i> Slet side
+        </button>
+    </div>
+
+    <p class="isd-panel-tip"><i class="bi bi-hand-index me-1"></i>Klik på et element på siden for at redigere det.</p>
+</div>

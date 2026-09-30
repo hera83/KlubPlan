@@ -39,4 +39,6 @@
     @await Html.PartialAsync("~/Views/Shared/Partials/_PrintLabelsModal.cshtml", new web.ViewModels.PrintLabelsModalViewModel { ModalId = "labelCollectionPrintModal" })
 </div>
 
-<script src="~/js/label-collections.js" asp-append-version="true"></script>
+@section Scripts {
+    <script src="~/js/label-collections.js" asp-append-version="true"></script>
+}

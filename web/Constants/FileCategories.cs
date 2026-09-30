@@ -26,5 +26,8 @@ namespace web.Constants
 
         /// <summary>Activity document hotel (Filer-fanen på en aktivitet) — App_files/activities/</summary>
         public const string Activities = "activities";
+
+        /// <summary>Images and videos shown on info screens (Værktøjer → Infoskærme) — App_files/infoscreens/</summary>
+        public const string InfoScreens = "infoscreens";
     }
 }

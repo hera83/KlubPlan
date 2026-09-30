@@ -1,0 +1,32 @@
+@* Designer → Vælg billede/video: the screen's media library + upload (button or drag & drop). *@
+
+<!-- Vælg billede / video -->
+<div class="modal fade" id="isdMediaModal" tabindex="-1" aria-labelledby="isdMediaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="isdMediaModalLabel"><i class="bi bi-images me-2"></i><span data-isd-media-title>Vælg billede</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body" data-isd-media-drop>
+                <label class="isd-upload">
+                    <input type="file" hidden multiple data-isd-media-input />
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span><strong>Upload fra computeren</strong> – eller træk filer herind</span>
+                    <small class="text-muted" data-isd-media-hint></small>
+                </label>
+                <div class="progress mt-2" data-isd-media-progress hidden>
+                    <div class="progress-bar" role="progressbar" style="width:0%"></div>
+                </div>
+                <p class="text-muted small mt-3 mb-2" data-isd-media-count></p>
+                <div class="isd-media-grid" data-isd-media-grid></div>
+                <p class="text-muted fst-italic mb-0" data-isd-media-empty hidden>Ingen filer endnu – upload den første ovenfor.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,145 @@
+/* ════════════════════════════════════════
+   INFOSKÆRM — fælles side-visning (.isc-*) og den kørende skærm (.isp-*)
+   Sidevisningen bruges af designer, miniaturer og afspiller (wwwroot/js/infoscreen-render.js).
+   ════════════════════════════════════════ */
+
+/* En side fylder sin container; container-type gør cqh = 1 % af sidens højde (skriftstørrelser). */
+.isc-slide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+}
+
+.isc-el {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.isc-el.isc-text,
+.isc-el.isc-clock {
+  display: flex;
+  flex-direction: column;
+  padding: 0.8cqh 1.2cqh;
+  line-height: 1.15;
+}
+.isc-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+}
+.isc-el.is-placeholder > .isc-content { opacity: 0.45; font-style: italic; }
+
+.isc-el > img,
+.isc-el > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.isc-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  background: rgba(127, 127, 127, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  font: 600 4cqh/1.2 'Inter', 'Segoe UI', Arial, sans-serif;
+  text-align: center;
+}
+.isc-placeholder > i { font-size: 1.6em; }
+
+/* ── Den kørende skærm (/Infoskaerm) ── */
+html.isp-html,
+.isp-body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.isp-body.is-idle,
+.isp-body.is-idle * { cursor: none !important; }
+
+.isp-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+/* Sidens format bevares; resten af skærmen er sort (letterbox). */
+.isp-stage {
+  --isp-ratio: 1.7778;
+  position: relative;
+  width: min(100vw, calc(100vh * var(--isp-ratio)));
+  height: min(100vh, calc(100vw / var(--isp-ratio)));
+  overflow: hidden;
+  background: #000;
+}
+
+.isp-stage > .isc-slide { transition: opacity 0.8s ease, transform 0.8s ease; }
+.isp-stage > .isc-slide.isp-none { transition: none; }
+.isp-stage > .isc-slide.isp-fade.isp-enter:not(.is-in) { opacity: 0; }
+.isp-stage > .isc-slide.isp-slide.isp-enter:not(.is-in) { transform: translateX(100%); }
+.isp-stage > .isc-slide.isp-slide.is-out { transform: translateX(-100%); }
+
+.isp-message {
+  color: rgba(255, 255, 255, 0.7);
+  font: 500 clamp(1rem, 3vw, 2rem)/1.4 'Inter', 'Segoe UI', Arial, sans-serif;
+  text-align: center;
+  padding: 2rem;
+}
+.isp-message > i {
+  display: block;
+  font-size: 2.5em;
+  margin-bottom: 0.5rem;
+  opacity: 0.6;
+}
+
+.isp-controls {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+.isp-body.is-idle .isp-controls,
+.isp-body.is-idle .isp-badge { opacity: 0; pointer-events: none; }
+
+.isp-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font: 500 0.9rem 'Inter', 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+}
+.isp-controls button:hover { background: rgba(0, 0, 0, 0.85); }
+
+.isp-badge {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(232, 93, 46, 0.9);
+  color: #fff;
+  font: 600 0.85rem 'Inter', 'Segoe UI', Arial, sans-serif;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}

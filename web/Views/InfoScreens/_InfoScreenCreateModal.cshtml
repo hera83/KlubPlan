@@ -1,0 +1,38 @@
+@using web.Constants
+@* Opret infoskærm: title + active/passive → Gem → on to the designer (info-screens.js). *@
+
+<!-- Opret infoskærm -->
+<div class="modal fade" id="infoScreenCreateModal" tabindex="-1" aria-labelledby="infoScreenCreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" asp-action="Create" method="post" data-info-screen-create-form>
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title" id="infoScreenCreateModalLabel"><i class="bi bi-display me-2"></i>Opret infoskærm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="infoScreenCreateTitle">Titel</label>
+                    <input type="text" class="form-control" id="infoScreenCreateTitle" name="Title" required maxlength="@InfoScreenRules.MaxTitleLength"
+                           placeholder="Fx Sponsorer eller Program – hovedscenen" />
+                </div>
+                <span class="form-label d-block">Status</span>
+                <div class="btn-group" role="group" aria-label="Status">
+                    <input type="radio" class="btn-check" name="IsActive" id="infoScreenCreateInactive" value="false" checked />
+                    <label class="btn btn-outline-secondary" for="infoScreenCreateInactive"><i class="bi bi-pause-circle me-1"></i> Passiv</label>
+                    <input type="radio" class="btn-check" name="IsActive" id="infoScreenCreateActive" value="true" />
+                    <label class="btn btn-outline-secondary" for="infoScreenCreateActive"><i class="bi bi-play-circle me-1"></i> Aktiv</label>
+                </div>
+                <div class="form-text">En passiv skærm viser ikke diasshowet endnu – den starter af sig selv, når du aktiverer den.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i> Gem og design sider
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

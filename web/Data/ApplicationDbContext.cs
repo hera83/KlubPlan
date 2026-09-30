@@ -82,6 +82,11 @@ namespace web.Data
         public DbSet<LabelCollection> LabelCollections { get; set; } = null!;
         public DbSet<LabelCollectionItem> LabelCollectionItems { get; set; } = null!;
 
+        // Værktøjer → Infoskærme: slideshows played on projectors/screens via a public link
+        public DbSet<InfoScreen> InfoScreens { get; set; } = null!;
+        public DbSet<InfoScreenSlide> InfoScreenSlides { get; set; } = null!;
+        public DbSet<InfoScreenMedia> InfoScreenMedia { get; set; } = null!;
+
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
         public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
@@ -1095,6 +1100,87 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.LabelCollectionId, e.Order });
+            });
+
+            // Configure InfoScreen
+            builder.Entity<InfoScreen>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.PublicId)
+                    .IsRequired();
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.AspectRatio)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(e => e.Transition)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.Title);
+            });
+
+            // Configure InfoScreenSlide
+            builder.Entity<InfoScreenSlide>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Background)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.ElementsJson)
+                    .IsRequired();
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Screen)
+                    .WithMany(s => s.Slides)
+                    .HasForeignKey(e => e.InfoScreenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.InfoScreenId, e.Order });
+            });
+
+            // Configure InfoScreenMedia
+            builder.Entity<InfoScreenMedia>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.PublicId)
+                    .IsRequired();
+
+                entity.Property(e => e.Kind)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Screen)
+                    .WithMany(s => s.Media)
+                    .HasForeignKey(e => e.InfoScreenId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FileMetadata)
+                    .WithMany()
+                    .HasForeignKey(e => e.FileMetadataId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.PublicId)
+                    .IsUnique();
             });
 
             // Configure CommunicationMessage

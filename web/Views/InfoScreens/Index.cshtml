@@ -1,6 +1,68 @@
-<div>
-    <div class="page-header">
-        <h1><i class="bi bi-display me-2"></i>Infoskærme</h1>
-        <p>Administrer indhold til infoskærme</p>
+@model web.ViewModels.InfoScreenFilterViewModel
+
+<div data-info-screens-page data-url-set-active="@Url.Action("SetActive")">
+    @Html.AntiForgeryToken()
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-display me-2"></i>Infoskærme</h1>
+            <p>Diasshows til projektorer og skærme – fx sponsorer eller dagens program</p>
+        </div>
     </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="infoScreensTableRoot" data-table-endpoint="@Url.Action("ScreensTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <button class="btn btn-icon btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#infoScreensFilterPanel" title="Filtre" aria-label="Filtre">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg titel..." data-table-search autocomplete="off" value="@Model.SearchText" />
+                        </div>
+                    </div>
+                    <div class="table-toolbar-end">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#infoScreenCreateModal" title="Opret infoskærm" aria-label="Opret infoskærm">
+                            <i class="bi bi-plus-lg"></i> Opret
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse mb-3" id="infoScreensFilterPanel">
+                    <div class="table-filter-panel" data-table-filter-panel>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label" for="infoScreensFilterStatus">Status</label>
+                                <select class="form-select" id="infoScreensFilterStatus" name="Status">
+                                    <option value="">Alle</option>
+                                    <option value="active">Aktive</option>
+                                    <option value="inactive">Inaktive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end gap-2">
+                                <button type="button" class="btn btn-primary btn-icon" data-table-filter-save title="Gem filtre" aria-label="Gem filtre">
+                                    <i class="bi bi-floppy2"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-icon" data-table-filter-reset title="Nulstil filtre" aria-label="Nulstil filtre">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_InfoScreensTableBody", Model)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_InfoScreenCreateModal")
+    @await Html.PartialAsync("_InfoScreenDeleteModal")
 </div>
+
+@section Scripts {
+    <script src="~/js/info-screens.js" asp-append-version="true"></script>
+}
