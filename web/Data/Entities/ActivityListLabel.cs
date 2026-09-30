@@ -1,10 +1,12 @@
+using web.Infrastructure.Labels;
+
 namespace web.Data.Entities
 {
     /// <summary>
     /// A label to print for one line in an ActivityList ("Labels" on the line). Quantity is the number
     /// of copies that end up on the label sheets made by "Print labels".
     /// </summary>
-    public class ActivityListLabel
+    public class ActivityListLabel : ILabelEntity
     {
         public int Id { get; set; }
 

@@ -1,3 +1,4 @@
+using web.Infrastructure.Labels;
 using web.Repositories.ActivityListLabels.Dtos;
 using web.Repositories.ActivityLists.Dtos;
 using web.ViewModels;
@@ -24,6 +25,6 @@ namespace web.Repositories.ActivityListLabels.Interfaces
         /// The labels on the lines matching the filter, each repeated Quantity times, in list order on
         /// A4 sheets with no page margin — starting top left on a fresh sheet. Null when the list doesn't exist.
         /// </summary>
-        Task<ActivityListLabelPdfDto?> BuildPdfAsync(ActivityListLabelPrintViewModel input, string? userId, CancellationToken ct = default);
+        Task<LabelPdfResult?> BuildPdfAsync(ActivityListItemFilterViewModel filter, LabelSheetViewModel sheet, string? userId, CancellationToken ct = default);
     }
 }

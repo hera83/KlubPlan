@@ -1,6 +1,7 @@
-namespace web.Repositories.ActivityListLabels.Dtos
+namespace web.Infrastructure.Labels
 {
-    public class ActivityListLabelPdfDto
+    /// <summary>A generated label-sheet PDF (or why it couldn't be made) — see <see cref="LabelSheetPdf.Create"/>.</summary>
+    public class LabelPdfResult
     {
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
@@ -10,6 +11,6 @@ namespace web.Repositories.ActivityListLabels.Dtos
         /// <summary>PDF title — the browser's PDF viewer shows it on the tab.</summary>
         public string Title { get; set; } = "Labels";
 
-        public static ActivityListLabelPdfDto Fail(string error) => new() { Success = false, ErrorMessage = error };
+        public static LabelPdfResult Fail(string error) => new() { Success = false, ErrorMessage = error };
     }
 }

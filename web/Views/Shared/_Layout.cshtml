@@ -75,6 +75,18 @@
                     </div>
 
                     <div class="menu-group">
+                        <div class="menu-group-title">Værktøjer</div>
+                        <a class="menu-item" asp-controller="Labels" asp-action="Index" title="Labels">
+                            <span class="menu-icon"><i class="bi bi-tags"></i></span>
+                            <span class="menu-text">Labels</span>
+                        </a>
+                        <a class="menu-item" asp-controller="InfoScreens" asp-action="Index" title="Infoskærme">
+                            <span class="menu-icon"><i class="bi bi-display"></i></span>
+                            <span class="menu-text">Infoskærme</span>
+                        </a>
+                    </div>
+
+                    <div class="menu-group">
                         <div class="menu-group-title">Administration</div>
                         <a class="menu-item" asp-controller="People" asp-action="Index" title="Personer">
                             <span class="menu-icon"><i class="bi bi-people"></i></span>
@@ -145,6 +157,7 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/data-table.js" asp-append-version="true"></script>
+    <script src="~/js/labels.js" asp-append-version="true"></script>
     <script src="~/js/chat.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

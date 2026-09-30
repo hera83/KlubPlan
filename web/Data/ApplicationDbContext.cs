@@ -78,6 +78,10 @@ namespace web.Data
         public DbSet<ActivityListCellValue> ActivityListCellValues { get; set; } = null!;
         public DbSet<ActivityListLabel> ActivityListLabels { get; set; } = null!;
 
+        // Værktøjer → Labels: named sets of labels printed to A4 label sheets
+        public DbSet<LabelCollection> LabelCollections { get; set; } = null!;
+        public DbSet<LabelCollectionItem> LabelCollectionItems { get; set; } = null!;
+
         // Kommunikation: broadcast messages to Persons/PersonGroups over Email/SMS, with resolved
         // per-recipient audit trail (CommunicationMessageRecipient) and the email outbound queue
         public DbSet<CommunicationMessage> CommunicationMessages { get; set; } = null!;
@@ -1056,6 +1060,41 @@ namespace web.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.ActivityListItemId, e.Order });
+            });
+
+            // Configure LabelCollection
+            builder.Entity<LabelCollection>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.Name);
+            });
+
+            // Configure LabelCollectionItem
+            builder.Entity<LabelCollectionItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Text)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Collection)
+                    .WithMany(c => c.Items)
+                    .HasForeignKey(e => e.LabelCollectionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.LabelCollectionId, e.Order });
             });
 
             // Configure CommunicationMessage

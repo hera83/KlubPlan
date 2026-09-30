@@ -1,0 +1,42 @@
+@model web.ViewModels.LabelCollectionFilterViewModel
+
+<div data-label-collections-page
+     data-url-collection="@Url.Action("Collection")"
+     data-url-pdf="@Url.Action("Pdf")">
+    <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
+        <div>
+            <h1><i class="bi bi-tags me-2"></i>Labels</h1>
+            <p>Saml labels i samlinger og print dem på A4-labelark som PDF</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div data-table-root id="labelCollectionsTableRoot" data-table-endpoint="@Url.Action("CollectionsTable")">
+                <div class="table-toolbar mb-3">
+                    <div class="table-toolbar-start">
+                        <div class="table-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control" placeholder="Søg navn eller labeltekst..." data-table-search autocomplete="off" value="@Model.SearchText" />
+                        </div>
+                    </div>
+                    <div class="table-toolbar-end">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionEditModal" title="Opret label-samling" aria-label="Opret label-samling">
+                            <i class="bi bi-plus-lg"></i> Opret
+                        </button>
+                    </div>
+                </div>
+
+                <div data-table-region>
+                    @await Html.PartialAsync("_LabelCollectionsTableBody", Model)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_LabelCollectionEditModal")
+    @await Html.PartialAsync("_LabelCollectionDeleteModal")
+    @await Html.PartialAsync("~/Views/Shared/Partials/_PrintLabelsModal.cshtml", new web.ViewModels.PrintLabelsModalViewModel { ModalId = "labelCollectionPrintModal" })
+</div>
+
+<script src="~/js/label-collections.js" asp-append-version="true"></script>

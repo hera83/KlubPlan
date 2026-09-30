@@ -1,8 +1,10 @@
 using System.Globalization;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
+using web.Constants;
+using web.ViewModels;
 
-namespace web.Repositories.ActivityListLabels
+namespace web.Infrastructure.Labels
 {
     /// <summary>
     /// Lays labels out on A4 label sheets (QuestPDF). The page has no margin and is split into exactly
@@ -10,8 +12,9 @@ namespace web.Repositories.ActivityListLabels
     /// sheets. Labels fill each sheet from the top left, row by row; every text is centred and sized
     /// to its label: as large as fits, smaller for long texts and small labels. Optional cut marks let
     /// uncut full-sheet paper be cut to the same grid with a paper cutter.
+    /// Shared by every "Print labels" in the app (Labels under Værktøjer, labels on work list lines).
     /// </summary>
-    public static class ActivityListLabelPdf
+    public static class LabelSheetPdf
     {
         /// <summary>Space between the text and the label's edge, as a share of the label's shortest side — keeps text off the cut line.</summary>
         private const float PaddingShare = 0.07f;
@@ -41,6 +44,41 @@ namespace web.Repositories.ActivityListLabels
 
         private const float CutMarkStrokeWidth = 0.4f;
         private const string CutMarkColor = "#8a8a8a";
+
+        /// <summary>
+        /// The labels, each repeated Quantity times in the given order, as a PDF titled "Labels - {title}".
+        /// Fails (with a Danish message for the toast) when there's nothing to print, too much to print
+        /// (<paramref name="tooManyHint"/> is appended to that message), or QuestPDF fails.
+        /// </summary>
+        public static LabelPdfResult Create(string title, IReadOnlyList<LabelRow> labels, LabelSheetViewModel sheet, ILogger logger, string emptyMessage, string? tooManyHint = null)
+        {
+            var copies = labels.Sum(l => l.Quantity);
+            if (copies == 0)
+                return LabelPdfResult.Fail(emptyMessage);
+            if (copies > LabelRules.MaxLabelsPerPdf)
+                return LabelPdfResult.Fail($"Der er {copies} labels, men én PDF kan højst have {LabelRules.MaxLabelsPerPdf}." + (tooManyHint is null ? "" : $" {tooManyHint}"));
+
+            var texts = labels.SelectMany(l => Enumerable.Repeat(l.Text, l.Quantity)).ToList();
+            var pdfTitle = $"Labels - {title}";
+            byte[] content;
+            try
+            {
+                content = Build(pdfTitle, texts, sheet.Across, sheet.Down, sheet.Landscape, sheet.CutMarks);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Labels {Title} could not be generated ({Across}x{Down})", pdfTitle, sheet.Across, sheet.Down);
+                return LabelPdfResult.Fail("PDF'en med labels kunne ikke dannes.");
+            }
+
+            return new LabelPdfResult
+            {
+                Success = true,
+                Content = content,
+                Title = pdfTitle,
+                FileName = FileNames.Sanitize(pdfTitle, "labels") + ".pdf"
+            };
+        }
 
         public static byte[] Build(string title, IReadOnlyList<string> labels, int across, int down, bool landscape, bool cutMarks = false)
         {

@@ -1,0 +1,27 @@
+@using web.Constants
+@model string
+@*
+    Shared label editor: rows of text + number of copies. Used everywhere labels are edited (Labels under
+    Værktøjer, labels on a work list line). window.FvLabels.createEditor (wwwroot/js/labels.js) fills and reads
+    it; the server side is LabelInputViewModel + Infrastructure/Labels/LabelRows. Model = text shown with no rows.
+*@
+
+<div data-label-editor>
+    <div class="label-rows" data-label-rows></div>
+    <p class="text-muted fst-italic mb-0" data-label-rows-empty hidden>@Model</p>
+    <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-label-add>
+        <i class="bi bi-plus-lg me-1"></i> Tilføj label
+    </button>
+    <template data-label-template>
+        <div class="label-row" data-label-row>
+            <textarea class="form-control" rows="2" maxlength="@LabelRules.MaxTextLength" placeholder="Tekst på labelen" data-label-text aria-label="Tekst på labelen"></textarea>
+            <div class="input-group label-qty">
+                <input type="number" class="form-control" min="1" max="@LabelRules.MaxQuantity" step="1" value="1" required data-label-quantity aria-label="Antal kopier" />
+                <span class="input-group-text">stk.</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-icon" data-label-remove title="Fjern label" aria-label="Fjern label">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </template>
+</div>

@@ -1,0 +1,91 @@
+@using web.Constants
+@model web.ViewModels.PrintLabelsModalViewModel
+@*
+    Shared "Print labels" modal: grid of labels on an A4 sheet (across × down, portrait/landscape, cut marks)
+    → PDF in a new tab. window.FvLabels.initPrintModal (wwwroot/js/labels.js) drives the preview, the count and
+    the submit; the server side is LabelSheetViewModel + Infrastructure/Labels/LabelSheetPdf.
+*@
+@{
+    var id = Model.ModalId;
+}
+
+<!-- Print labels -->
+<div class="modal fade" id="@id" tabindex="-1" aria-labelledby="@(id)Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" data-label-print-form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="@(id)Label"><i class="bi bi-printer me-2"></i><span data-label-print-title>Print labels</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <p class="text-muted">
+                            Angiv hvor mange labels der er på ét A4-ark. PDF'en har ingen margin, så labels går helt ud til
+                            papirets kant og passer med arket. Der startes altid øverst til venstre på et nyt ark.
+                        </p>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label" for="@(id)Across">Labels i bredden</label>
+                                <input type="number" class="form-control" id="@(id)Across" name="Across" min="1" max="@LabelRules.MaxAcross" step="1" value="3" required data-label-print-across />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="@(id)Down">Labels i højden</label>
+                                <input type="number" class="form-control" id="@(id)Down" name="Down" min="1" max="@LabelRules.MaxDown" step="1" value="8" required data-label-print-down />
+                            </div>
+                            <div class="col-12">
+                                <span class="form-label d-block">Papirretning</span>
+                                <div class="btn-group" role="group" aria-label="Papirretning">
+                                    <input type="radio" class="btn-check" name="Landscape" id="@(id)Portrait" value="false" checked data-label-print-orientation />
+                                    <label class="btn btn-outline-secondary" for="@(id)Portrait"><i class="bi bi-tablet me-1"></i> Stående</label>
+                                    <input type="radio" class="btn-check" name="Landscape" id="@(id)Landscape" value="true" data-label-print-orientation />
+                                    <label class="btn btn-outline-secondary" for="@(id)Landscape"><i class="bi bi-tablet-landscape me-1"></i> Liggende</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="@(id)CutMarks" name="CutMarks" value="true" data-label-print-cut-marks />
+                                    <label class="form-check-label" for="@(id)CutMarks">Skæremærker</label>
+                                    <div class="form-text mt-0">Små streger ved hver labels hjørner, så et helt (ikke udstanset) ark kan skæres ud med en papirskærer.</div>
+                                </div>
+                            </div>
+                            @if (Model.ShowFilterScope)
+                            {
+                                <div class="col-12">
+                                    <span class="form-label d-block">Labels fra</span>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="printLabelsScope" id="@(id)ScopeAll" value="all" checked data-label-print-scope />
+                                        <label class="form-check-label" for="@(id)ScopeAll">Hele listen</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="printLabelsScope" id="@(id)ScopeFilter" value="filter" data-label-print-scope />
+                                        <label class="form-check-label" for="@(id)ScopeFilter">Kun linjer i nuværende filter</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="label-print-preview">
+                            <div class="label-print-sheet" data-label-print-sheet aria-hidden="true"></div>
+                        </div>
+                        <p class="small text-center mt-2 mb-1" data-label-print-size></p>
+                        <p class="small text-center text-muted mb-0" data-label-print-count></p>
+                    </div>
+                </div>
+                <div class="label-print-hint mt-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Udskriv PDF'en i <strong>Faktisk størrelse / 100 %</strong> – ikke "Tilpas til side" – ellers skalerer printeren siden, og labels passer ikke med arket.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary" data-label-print-submit disabled>
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Generér PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

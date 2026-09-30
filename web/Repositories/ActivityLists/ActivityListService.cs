@@ -776,7 +776,7 @@ namespace web.Repositories.ActivityLists
             return new ActivityListExportDto
             {
                 Content = content,
-                FileName = SanitizeFileName($"{list.Title}{suffix}") + ".xlsx"
+                FileName = FileNames.Sanitize($"{list.Title}{suffix}", "liste") + ".xlsx"
             };
         }
 
@@ -1253,13 +1253,6 @@ namespace web.Repositories.ActivityLists
                 return null;
             var when = updatedAtUtc.Value.ToLocalTime().ToDanishDateTime();
             return string.IsNullOrEmpty(userName) ? $"Ændret {when}" : $"Ændret af {userName} · {when}";
-        }
-
-        internal static string SanitizeFileName(string name)
-        {
-            var invalid = Path.GetInvalidFileNameChars().Concat(new[] { '\\', '/', ':', '*', '?', '"', '<', '>', '|' }).ToHashSet();
-            var cleaned = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
-            return cleaned.Length == 0 ? "liste" : cleaned;
         }
     }
 }

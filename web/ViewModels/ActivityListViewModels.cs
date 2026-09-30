@@ -300,7 +300,7 @@ namespace web.ViewModels
     {
         public int ItemId { get; set; }
         public int RowNumber { get; set; }
-        public List<ActivityListLabelInput> Labels { get; set; } = new();
+        public List<LabelInputViewModel> Labels { get; set; } = new();
     }
 
     /// <summary>"Labels" modal → Gem. Replaces all labels on the line; rows without text are skipped.</summary>
@@ -313,34 +313,7 @@ namespace web.ViewModels
         public int ItemId { get; set; }
 
         [MaxLength(ActivityListRules.MaxLabelsPerItem, ErrorMessage = "En linje kan højst have {1} labels.")]
-        public List<ActivityListLabelInput> Labels { get; set; } = new();
-    }
-
-    public class ActivityListLabelInput
-    {
-        [StringLength(ActivityListRules.MaxLabelTextLength, ErrorMessage = "Teksten på en label må højst være {1} tegn.")]
-        public string? Text { get; set; }
-
-        [Range(1, ActivityListRules.MaxLabelQuantity, ErrorMessage = "Antal skal være mellem {1} og {2}.")]
-        public int Quantity { get; set; } = 1;
-    }
-
-    /// <summary>
-    /// "Print labels": the A4 sheet's grid (labels across × down, portrait or landscape) plus the
-    /// list filter — only set when "Kun linjer i nuværende filter" is chosen.
-    /// </summary>
-    public class ActivityListLabelPrintViewModel : ActivityListItemFilterViewModel
-    {
-        [Range(1, ActivityListRules.MaxLabelsAcross, ErrorMessage = "Labels i bredden skal være mellem {1} og {2}.")]
-        public int Across { get; set; } = 3;
-
-        [Range(1, ActivityListRules.MaxLabelsDown, ErrorMessage = "Labels i højden skal være mellem {1} og {2}.")]
-        public int Down { get; set; } = 8;
-
-        public bool Landscape { get; set; }
-
-        /// <summary>Short cut marks on the lines between labels, for cutting uncut full-sheet label paper with a paper cutter.</summary>
-        public bool CutMarks { get; set; }
+        public List<LabelInputViewModel> Labels { get; set; } = new();
     }
 
     // ── Offentligt link (Arbejdsliste) ──────────────────────────────────────

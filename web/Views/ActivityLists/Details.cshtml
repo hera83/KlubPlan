@@ -222,7 +222,7 @@
 @await Html.PartialAsync("_ListSendLinksModal", Model)
 @await Html.PartialAsync("_ListColumnSumModal", schema)
 @await Html.PartialAsync("_ListLabelsModal")
-@await Html.PartialAsync("_ListPrintLabelsModal")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PrintLabelsModal.cshtml", new web.ViewModels.PrintLabelsModalViewModel { ModalId = "listPrintLabelsModal", ShowFilterScope = true })
 @await Html.PartialAsync("_ListColumnsModal", schema)
 @await Html.PartialAsync("_ListStatusesModal", schema)
 <script src="~/js/activity-list.js" asp-append-version="true"></script>

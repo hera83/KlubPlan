@@ -1,5 +1,4 @@
-@using web.Constants
-@* "Labels" on a line: a text and a number of copies per label. activity-list.js loads the line's labels (ItemLabels) and saves them all at once (SaveItemLabels). *@
+@* "Labels" on a line: the shared label editor. activity-list.js loads the line's labels (ItemLabels) and saves them all at once (SaveItemLabels). *@
 
 <!-- Labels på en linje -->
 <div class="modal fade" id="listLabelsModal" tabindex="-1" aria-labelledby="listLabelsModalLabel" aria-hidden="true">
@@ -15,23 +14,7 @@
                     Skriv teksten til labelen og hvor mange kopier, der skal printes. Linjeskift i teksten kommer med på labelen,
                     og skriftstørrelsen tilpasses automatisk labelens størrelse, når der printes.
                 </p>
-                <div class="list-label-rows" data-list-label-rows></div>
-                <p class="text-muted fst-italic mb-0" data-list-labels-empty hidden>Ingen labels på linjen.</p>
-                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-list-label-add>
-                    <i class="bi bi-plus-lg me-1"></i> Tilføj label
-                </button>
-                <template data-list-label-template>
-                    <div class="list-label-row" data-list-label-row>
-                        <textarea class="form-control" rows="2" maxlength="@ActivityListRules.MaxLabelTextLength" placeholder="Tekst på labelen" data-list-label-text aria-label="Tekst på labelen"></textarea>
-                        <div class="input-group list-label-qty">
-                            <input type="number" class="form-control" min="1" max="@ActivityListRules.MaxLabelQuantity" step="1" value="1" required data-list-label-quantity aria-label="Antal kopier" />
-                            <span class="input-group-text">stk.</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-icon" data-list-label-remove title="Fjern label" aria-label="Fjern label">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </template>
+                @await Html.PartialAsync("~/Views/Shared/Partials/_LabelRowsEditor.cshtml", "Ingen labels på linjen.")
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

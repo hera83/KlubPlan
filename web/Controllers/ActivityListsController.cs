@@ -5,6 +5,7 @@ using Microsoft.Net.Http.Headers;
 using web.Constants;
 using web.Data.Entities;
 using web.Infrastructure;
+using web.Infrastructure.Labels;
 using web.Repositories.ActivityListLabels.Interfaces;
 using web.Repositories.ActivityLists.Dtos;
 using web.Repositories.ActivityLists.Interfaces;
@@ -293,29 +294,29 @@ namespace web.Controllers
             return counts is null ? NotFound() : Json(counts);
         }
 
-        /// <summary>The label sheets as a PDF, shown in the browser (new tab) so it can be printed from there.</summary>
+        /// <summary>
+        /// The label sheets as a PDF, shown in the browser (new tab) so it can be printed from there.
+        /// filter and sheet bind from the same query; the filter fields are only set for "Kun linjer i nuværende filter".
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> LabelsPdf(ActivityListLabelPrintViewModel model, CancellationToken ct)
+        public async Task<IActionResult> LabelsPdf(ActivityListItemFilterViewModel filter, LabelSheetViewModel sheet, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {
                 this.ToastError(FirstModelError() ?? "Labels kunne ikke printes.");
-                return RedirectToAction(nameof(Details), new { id = model.ListId });
+                return RedirectToAction(nameof(Details), new { id = filter.ListId });
             }
 
-            var pdf = await _labelService.BuildPdfAsync(model, UserId, ct);
+            var pdf = await _labelService.BuildPdfAsync(filter, sheet, UserId, ct);
             if (pdf is null)
                 return NotFound();
             if (!pdf.Success)
             {
                 this.ToastWarning(pdf.ErrorMessage!);
-                return RedirectToAction(nameof(Details), new { id = model.ListId });
+                return RedirectToAction(nameof(Details), new { id = filter.ListId });
             }
 
-            var disposition = new ContentDispositionHeaderValue("inline");
-            disposition.SetHttpFileName(pdf.FileName);
-            Response.Headers.ContentDisposition = disposition.ToString();
-            return File(pdf.Content, "application/pdf");
+            return this.InlineLabelPdf(pdf);
         }
 
         private string? FirstModelError()

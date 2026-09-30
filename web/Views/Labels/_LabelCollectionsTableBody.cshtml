@@ -1,0 +1,79 @@
+@using web.Infrastructure
+@model web.ViewModels.LabelCollectionFilterViewModel
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>Labels</th>
+                <th>Kopier</th>
+                <th>Senest ændret</th>
+                <th class="text-end">Handlinger</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Collections.Count == 0)
+            {
+                <tr>
+                    <td colspan="5" class="text-muted">Ingen label-samlinger fundet.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var collection in Model.Collections)
+                {
+                    <tr>
+                        <td>@collection.Name</td>
+                        <td>@collection.LabelCount</td>
+                        <td>@collection.Copies stk.</td>
+                        <td>@collection.ChangedAtUtc.ToLocalTime().ToDanishDateTime()</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionPrintModal"
+                                        data-id="@collection.Id" data-name="@collection.Name" data-labels="@collection.LabelCount" data-copies="@collection.Copies"
+                                        title="Print labels som PDF" aria-label="Print labels som PDF">
+                                    <i class="bi bi-printer"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionEditModal"
+                                        data-id="@collection.Id" title="Rediger" aria-label="Rediger">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#labelCollectionDeleteModal"
+                                        data-id="@collection.Id" data-name="@collection.Name" title="Slet" aria-label="Slet">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="table-footer">
+    <p class="table-footer-count">
+        @if (Model.TotalCount == 0)
+        {
+            <text>Ingen resultater</text>
+        }
+        else
+        {
+            <text>Viser @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) af @Model.TotalCount</text>
+        }
+    </p>
+    <div class="table-footer-end">
+        <span class="table-pagesize-label">Pr. side</span>
+        <select class="table-pagesize" data-table-page-size aria-label="Pr. side">
+            <option value="10" selected="@(Model.PageSize == 10)">10</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100</option>
+        </select>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_Pagination.cshtml", new web.ViewModels.PaginationViewModel
+        {
+            Page = Model.Page,
+            TotalPages = (int)Math.Ceiling(Model.TotalCount / (double)Model.PageSize)
+        })
+    </div>
+</div>

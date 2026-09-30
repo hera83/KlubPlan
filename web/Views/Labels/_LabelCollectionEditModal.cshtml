@@ -1,0 +1,35 @@
+@using web.Constants
+@* Opret/rediger label-samling: name + the shared label editor. label-collections.js loads (Collection) and saves (Save) it. *@
+
+<!-- Opret/rediger label-samling -->
+<div class="modal fade" id="labelCollectionEditModal" tabindex="-1" aria-labelledby="labelCollectionEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <form class="modal-content" asp-action="Save" method="post" data-label-collection-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" data-label-collection-id />
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelCollectionEditModalLabel" data-label-collection-title><i class="bi bi-tags me-2"></i>Opret label-samling</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Luk"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="labelCollectionName">Navn</label>
+                    <input type="text" class="form-control" id="labelCollectionName" name="Name" required maxlength="@LabelRules.MaxCollectionNameLength" data-label-collection-name />
+                </div>
+                <p class="text-muted">
+                    Skriv teksten til hver label og hvor mange kopier, der skal printes. Linjeskift i teksten kommer med på labelen,
+                    og skriftstørrelsen tilpasses automatisk labelens størrelse, når der printes.
+                </p>
+                @await Html.PartialAsync("~/Views/Shared/Partials/_LabelRowsEditor.cshtml", "Ingen labels i samlingen.")
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Annuller
+                </button>
+                <button type="submit" class="btn btn-primary" data-label-collection-submit>
+                    <i class="bi bi-floppy me-1"></i> Gem
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
