@@ -587,6 +587,7 @@
             across: Number(printAcross.value),
             down: Number(printDown.value),
             landscape: printForm.querySelector('[data-list-print-orientation]:checked')?.value === 'true',
+            cutMarks: printForm.querySelector('[data-list-print-cut-marks]')?.checked === true,
             filtered: printForm.querySelector('[data-list-print-scope]:checked')?.value === 'filter'
         });
 
@@ -660,11 +661,13 @@
                 if (saved.down) printDown.value = saved.down;
                 const orientation = printForm.querySelector(`[data-list-print-orientation][value="${saved.landscape ? 'true' : 'false'}"]`);
                 if (orientation) orientation.checked = true;
+                const cutMarks = printForm.querySelector('[data-list-print-cut-marks]');
+                if (cutMarks) cutMarks.checked = saved.cutMarks === true;
             } catch { /* no storage — keep the defaults */ }
         };
         const savePrintSettings = (s) => {
             try {
-                localStorage.setItem(printStorageKey, JSON.stringify({ across: s.across, down: s.down, landscape: s.landscape }));
+                localStorage.setItem(printStorageKey, JSON.stringify({ across: s.across, down: s.down, landscape: s.landscape, cutMarks: s.cutMarks }));
             } catch { /* no storage */ }
         };
 
@@ -688,6 +691,7 @@
             params.set('Across', s.across);
             params.set('Down', s.down);
             params.set('Landscape', s.landscape);
+            params.set('CutMarks', s.cutMarks);
             savePrintSettings(s);
             window.open(`${ds.urlLabelsPdf}?${params}`, '_blank', 'noopener');
             bootstrap.Modal.getInstance(printModalEl)?.hide();

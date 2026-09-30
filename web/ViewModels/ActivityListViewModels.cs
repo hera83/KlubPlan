@@ -338,6 +338,9 @@ namespace web.ViewModels
         public int Down { get; set; } = 8;
 
         public bool Landscape { get; set; }
+
+        /// <summary>Short cut marks on the lines between labels, for cutting uncut full-sheet label paper with a paper cutter.</summary>
+        public bool CutMarks { get; set; }
     }
 
     // ── Offentligt link (Arbejdsliste) ──────────────────────────────────────

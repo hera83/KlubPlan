@@ -131,7 +131,7 @@ namespace web.Repositories.ActivityListLabels
             byte[] content;
             try
             {
-                content = ActivityListLabelPdf.Build(pdfTitle, texts, input.Across, input.Down, input.Landscape);
+                content = ActivityListLabelPdf.Build(pdfTitle, texts, input.Across, input.Down, input.Landscape, input.CutMarks);
             }
             catch (Exception ex)
             {
