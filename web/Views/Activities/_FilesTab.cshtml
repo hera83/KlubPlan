@@ -1,5 +1,5 @@
 @using web.Constants
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.ActivityFilesViewModel
 
 @*
@@ -10,7 +10,7 @@
      data-activity-id="@Model.ActivityId"
      data-folder-id="@Model.CurrentFolderId"
      data-max-bytes="@ActivityFileRules.MaxFileSizeBytes"
-     data-max-size-text="@ByteSizeFormatter.FormatDanish(ActivityFileRules.MaxFileSizeBytes)"
+     data-max-size-text="@ByteSizeHelper.FormatDanish(ActivityFileRules.MaxFileSizeBytes)"
      data-blocked-extensions="@string.Join(",", ActivityFileRules.BlockedExtensions)"
      data-url-details="@Url.Action("Details", "Activities", new { id = Model.ActivityId })"
      data-url-panel="@Url.Action("Panel", "ActivityFiles")"
@@ -84,7 +84,7 @@
     <p class="form-text mt-2 mb-0">
         <i class="bi bi-info-circle me-1"></i>
         Træk filer eller mapper ind på siden for at uploade — eller træk dem mellem mapperne for at flytte.
-        Filer med samme navn gemmes som en ny version. Maks. @ByteSizeFormatter.FormatDanish(ActivityFileRules.MaxFileSizeBytes) pr. fil — programfiler kan ikke uploades.
+        Filer med samme navn gemmes som en ny version. Maks. @ByteSizeHelper.FormatDanish(ActivityFileRules.MaxFileSizeBytes) pr. fil — programfiler kan ikke uploades.
     </p>
 
     <!-- Upload-status (nederst til højre) -->

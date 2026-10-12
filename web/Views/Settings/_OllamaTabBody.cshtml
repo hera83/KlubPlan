@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.OllamaSettingsViewModel
 
 <div class="row g-3 mb-3">
@@ -84,7 +84,7 @@
                                 </td>
                                 <td>@(m.ParameterSize ?? "–")</td>
                                 <td>@(m.QuantizationLevel ?? "–")</td>
-                                <td>@ByteSizeFormatter.Format(m.Size)</td>
+                                <td>@ByteSizeHelper.Format(m.Size)</td>
                                 <td>@(m.ModifiedAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">

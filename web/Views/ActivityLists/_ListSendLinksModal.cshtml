@@ -1,4 +1,4 @@
-@using web.Repositories.ActivityLists
+@using web.Constants
 @model web.ViewModels.ActivityListDetailsViewModel
 @{
     // Only external contacts get a link — administrators in the workgroup log in and use this page.
@@ -63,7 +63,7 @@
                                     </span>
                                 </label>
                                 <span class="text-muted small text-nowrap"><span data-list-member-count="@member.Id">@member.AssignedCount</span> linjer</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-list-copy-link="@ActivityListService.BuildPublicLink(baseUrl, Model.Id, member.PublicId)"
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon" data-list-copy-link="@ActivityListRules.BuildPublicLink(baseUrl, Model.Id, member.PublicId)"
                                         title="Kopiér link" aria-label="Kopiér link til @member.Name">
                                     <i class="bi bi-link-45deg"></i>
                                 </button>

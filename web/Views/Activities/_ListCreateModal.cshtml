@@ -1,5 +1,5 @@
 @using web.Constants
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.ActivityDetailsViewModel
 
 <!-- Opret liste -->
@@ -29,7 +29,7 @@
                                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
                             <div class="form-text">
                                 <i class="bi bi-info-circle me-1"></i>Første række bliver kolonneoverskrifter, og hver række derunder bliver en linje.
-                                Status, Note og Tilknyttet tilføjes automatisk. Maks. @ByteSizeFormatter.FormatDanish(ActivityListRules.MaxImportBytes).
+                                Status, Note og Tilknyttet tilføjes automatisk. Maks. @ByteSizeHelper.FormatDanish(ActivityListRules.MaxImportBytes).
                             </div>
                         </div>
                     </div>

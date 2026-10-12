@@ -1,0 +1,54 @@
+namespace web.Constants;
+
+/// <summary>Limits and defaults for the activity "Lister" tab (work lists imported from Excel).</summary>
+public static class ActivityListRules
+{
+    /// <summary>Max size of the uploaded Excel file (10 MB).</summary>
+    public const long MaxImportBytes = 10L * 1024 * 1024;
+
+    public const int MaxImportRows = 10000;
+
+    public const int MaxImportColumns = 100;
+
+    public const int MaxCellLength = 4000;
+
+    public const int MaxNoteLength = 2000;
+
+    /// <summary>Labels on a line ("Labels"-knappen). Text, quantity and sheet limits are in LabelRules.</summary>
+    public const int MaxLabelsPerItem = 50;
+
+    /// <summary>Field names used by the inline editing endpoint.</summary>
+    public const string FieldStatus = "status";
+    public const string FieldNote = "note";
+    public const string FieldAssigned = "assigned";
+    public const string FieldColumn = "column";
+
+    /// <summary>Special values for the "Tilknyttet" filter (besides a workgroup member id).</summary>
+    public const string AssignedMine = "mine";
+    public const string AssignedNone = "none";
+
+    /// <summary>Color keys a status can use — each maps to --clr-{key} / .badge-{key}. Label is the Danish UI name.</summary>
+    public static readonly IReadOnlyList<(string Key, string Label)> StatusColors = new[]
+    {
+        ("muted", "Grå"),
+        ("info", "Blå"),
+        ("ok", "Grøn"),
+        ("warn", "Gul"),
+        ("alarm", "Rød")
+    };
+
+    /// <summary>Statuses every new list starts with. The first one is the default for new lines.</summary>
+    public static readonly IReadOnlyList<(string Name, string Color)> DefaultStatuses = new[]
+    {
+        ("Ikke startet", "muted"),
+        ("Ok", "ok"),
+        ("Ikke ok", "alarm"),
+        ("Kræver opfølgning", "warn")
+    };
+
+    public static bool IsValidColor(string? color) => StatusColors.Any(c => c.Key == color);
+
+    /// <summary>An external contact's personal link to their lines: /Arbejdsliste?Id={listId}&amp;UId={memberPublicId}.</summary>
+    public static string BuildPublicLink(string baseUrl, int listId, Guid memberPublicId)
+        => $"{baseUrl.TrimEnd('/')}/Arbejdsliste?Id={listId}&UId={memberPublicId}";
+}

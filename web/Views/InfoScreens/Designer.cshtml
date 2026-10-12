@@ -1,12 +1,12 @@
 @using System.Text.Json
 @using web.Constants
-@using web.Repositories.InfoScreens
+@using web.Repositories.InfoScreens.Mappers
 @model web.ViewModels.InfoScreenDesignerViewModel
 @{
     ViewData["Title"] = Model.Design.Title;
     var publicLink = $"{Url.Action("Index", "Infoskaerm", null, Context.Request.Scheme)}?Id={Model.PublicId}";
     // The default encoder escapes <, > and &, so the JSON is safe inside the <script> block.
-    var seedJson = JsonSerializer.Serialize(new { design = Model.Design, media = Model.Media }, InfoScreenService.JsonOptions);
+    var seedJson = JsonSerializer.Serialize(new { design = Model.Design, media = Model.Media }, InfoScreenMapper.JsonOptions);
 }
 
 @*

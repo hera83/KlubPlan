@@ -1,0 +1,10 @@
+root = true
+
+[*.cs]
+# Kodestil (se .claude/project.md): file-scoped namespaces og primary constructors.
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_prefer_primary_constructors = true:suggestion
+
+[**/data/Migrations/*.cs]
+# Genereret af dotnet ef, redigeres aldrig i hånden.
+generated_code = true

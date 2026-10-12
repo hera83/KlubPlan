@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.OllamaSettingsViewModel
 
 <div class="table-responsive">
@@ -25,7 +25,7 @@
                 {
                     <tr>
                         <td>@m.Name <span class="badge-ok ms-1">Aktiv</span></td>
-                        <td>@ByteSizeFormatter.Format(m.SizeVram)</td>
+                        <td>@ByteSizeHelper.Format(m.SizeVram)</td>
                         <td>@(m.ExpiresAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                     </tr>
                 }

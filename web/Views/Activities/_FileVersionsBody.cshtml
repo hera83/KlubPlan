@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.ActivityFileVersionsViewModel
 
 <div data-files-versions data-file-id="@Model.FileId" data-file-name="@Model.FileName">
@@ -34,7 +34,7 @@
                         </td>
                         <td>@version.CreatedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                         <td class="d-none d-sm-table-cell">@(string.IsNullOrEmpty(version.UploadedByName) ? "–" : version.UploadedByName)</td>
-                        <td class="text-end">@ByteSizeFormatter.FormatDanish(version.SizeBytes)</td>
+                        <td class="text-end">@ByteSizeHelper.FormatDanish(version.SizeBytes)</td>
                         <td class="text-end text-nowrap">
                             <div class="d-inline-flex gap-1">
                                 @if (Model.CanPreview)

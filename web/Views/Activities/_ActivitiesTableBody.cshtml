@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.ActivityFilterViewModel
 @{
     var isAdmin = User.IsInRole(web.Constants.AppRoles.Administrator) || User.IsInRole(web.Constants.AppRoles.Developer);

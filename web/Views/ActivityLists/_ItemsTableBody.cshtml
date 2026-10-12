@@ -1,7 +1,7 @@
 @using System.Text.Json
-@using web.Data.Entities
-@using web.Infrastructure
-@using web.Repositories.ActivityLists
+@using web.Data.Models
+@using web.Extensions
+@using web.ViewModels.Mappers
 @model web.ViewModels.ActivityListItemsViewModel
 @{
     var schema = Model.Schema;
@@ -61,7 +61,7 @@
             @foreach (var row in Model.Rows)
             {
                 var status = row.StatusId.HasValue ? statuses.GetValueOrDefault(row.StatusId.Value) : null;
-                var updatedText = ActivityListService.UpdatedText(row.UpdatedByName, row.UpdatedAtUtc);
+                var updatedText = ActivityListsMapper.UpdatedText(row.UpdatedByName, row.UpdatedAtUtc);
                 var labelTitle = row.LabelCopies > 0 ? $"Labels ({row.LabelCopies} stk.)" : "Tilføj label";
                 <tr data-list-item="@row.Id" data-row-number="@row.RowNumber" data-values="@JsonSerializer.Serialize(row.Values)">
                     <td class="list-col-nr text-muted" data-label="#">

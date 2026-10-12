@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.AiGatewaySettingsViewModel
 
 <div class="row g-3 mb-3">
@@ -114,7 +114,7 @@
                             <tr>
                                 <td>@d.FileName</td>
                                 <td>@(d.GroupName ?? "–")</td>
-                                <td>@ByteSizeFormatter.Format(d.SizeBytes)</td>
+                                <td>@ByteSizeHelper.Format(d.SizeBytes)</td>
                                 <td>@(d.Status ?? "–")</td>
                                 <td>@d.UploadedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                                 <td class="text-end">
@@ -174,7 +174,7 @@
                                 </td>
                                 <td>@(m.ParameterSize ?? "–")</td>
                                 <td>@(m.QuantizationLevel ?? "–")</td>
-                                <td>@ByteSizeFormatter.Format(m.Size)</td>
+                                <td>@ByteSizeHelper.Format(m.Size)</td>
                                 <td>@(m.ModifiedAt?.ToLocalTime().ToDanishDateTime() ?? "–")</td>
                             </tr>
                         }

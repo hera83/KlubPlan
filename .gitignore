@@ -1,44 +1,43 @@
-## App-specifikke mapper (skal aldrig committes)
-**/App_dbs/
-**/App_files/
-
-## Lokale secrets (indeholder rigtige API-keys/passwords, må aldrig committes)
-**/appsettings.Development.json
-.env
+## Alle mapper, der starter med punktum (IDE, værktøjer, AI: .vs, .vscode, .idea, .claude, .github, .config …)
 .*/
 
-## Build outputs
+## AI-instrukser (bevidst lokale, følger med template-mappen, ikke git clone)
+CLAUDE.md
+
+## Kompileret output
 [Bb]in/
 [Oo]bj/
-out/
+[Oo]ut/
+*.dll
+*.pdb
 
-## Visual Studio
-*.user
-*.userosscache
-*.suo
+## Secrets (rigtige nøgler og passwords må aldrig i git)
+appsettings.Development.json
+.env
+.env.*
+!.env.example
 
-## EF Core / SQLite (ekstra sikkerhed udover App_dbs/)
+## Databaser: kun app_dbs/.gitkeep committes
+**/app_dbs/**
+!**/app_dbs/.gitkeep
 *.db
 *.db-shm
 *.db-wal
 
-## Logs
-*.log
+## Appens filer: mappestrukturen bevares via .gitkeep, filerne ignoreres
+**/app_files/**
+!**/app_files/**/
+!**/app_files/**/.gitkeep
 
-## OS-specifikke filer
+## Lokal støj: IDE, OS, logs og NuGet
+*.user
+*.userosscache
+*.suo
+*.log
 .DS_Store
 Thumbs.db
-
-## NuGet
 *.nupkg
 **/packages/
 project.lock.json
 project.fragment.lock.json
 artifacts/
-
-## .NET Core
-*.dll
-*.pdb
-
-## Andre midlertidige filer
-CLAUDE.md

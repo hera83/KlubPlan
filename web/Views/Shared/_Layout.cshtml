@@ -1,9 +1,9 @@
 @using web.Constants
 @using web.Data
-@using web.Data.Entities
+@using web.Data.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@inject ApplicationDbContext Db
+@inject WebDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @{
     var currentUser = await UserManager.GetUserAsync(User);

@@ -10,8 +10,7 @@
 
 Et ASP.NET Core MVC-webprojekt (.NET 10) til klubadministration — brugere/roller,
 personer/grupper, formularer, beskeder (SMS/mail), årshjul m.m. Se
-[CLAUDE.md](CLAUDE.md) og [.github/copilot-instructions.md](.github/copilot-instructions.md)
-for arkitektur og konventioner.
+`CLAUDE.md` og `.claude/` (lokale AI-instrukser, ikke i git) for arkitektur og konventioner.
 
 ## Kør med Docker Compose
 
@@ -34,9 +33,10 @@ bruger (som automatisk får rollen "Developer").
 
 ### Data og persistens
 
-SQLite-databaserne (`app.db`, `logs.db`) og uploadede filer gemmes i de bind-mountede
-mapper `./App_dbs` og `./App_files` i projektroden, så data overlever `docker compose down`
-og genopbygning af image'et. Disse mapper er allerede git-ignorerede.
+SQLite-databaserne (`app.db`, `log.db`) og uploadede filer gemmes i de navngivne volumes
+`web_app_dbs` og `web_app_files` (mountet på `/app/app_dbs` og `/app/app_files`), så data
+overlever `docker compose down` og genopbygning af image'et. Containeren kører som non-root
+og i dansk tid (`TZ=Europe/Copenhagen`).
 
 ### Kendte begrænsninger i denne fase
 

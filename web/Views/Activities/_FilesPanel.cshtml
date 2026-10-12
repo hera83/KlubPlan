@@ -1,4 +1,4 @@
-@using web.Infrastructure
+@using web.Extensions
 @model web.ViewModels.ActivityFilesViewModel
 @{
     var currentName = Model.Breadcrumbs.Last().Name;
@@ -149,7 +149,7 @@
                             </td>
                             <td class="d-none d-md-table-cell text-muted">@file.ModifiedAtUtc.ToLocalTime().ToDanishDateTime()</td>
                             <td class="d-none d-lg-table-cell text-muted">@(string.IsNullOrEmpty(file.ModifiedByName) ? "–" : file.ModifiedByName)</td>
-                            <td class="d-none d-sm-table-cell text-end text-muted">@ByteSizeFormatter.FormatDanish(file.SizeBytes)</td>
+                            <td class="d-none d-sm-table-cell text-end text-muted">@ByteSizeHelper.FormatDanish(file.SizeBytes)</td>
                             <td class="text-end text-nowrap">
                                 <div class="d-inline-flex gap-1">
                                     <a class="btn btn-sm btn-secondary btn-icon" href="@FileUrl("Download", file.Id)" draggable="false" title="Download" aria-label="Download">
@@ -182,7 +182,7 @@
             }
         </p>
         <p class="table-footer-count">
-            <i class="bi bi-hdd me-1"></i>Aktiviteten i alt: @Model.TotalFileCount fil@(Model.TotalFileCount == 1 ? "" : "er") · @ByteSizeFormatter.FormatDanish(Model.TotalSizeBytes) inkl. tidligere versioner
+            <i class="bi bi-hdd me-1"></i>Aktiviteten i alt: @Model.TotalFileCount fil@(Model.TotalFileCount == 1 ? "" : "er") · @ByteSizeHelper.FormatDanish(Model.TotalSizeBytes) inkl. tidligere versioner
         </p>
     </div>
 </div>

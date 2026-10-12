@@ -1,11 +1,11 @@
 @using System.Text.Json
 @using web.Constants
-@using web.Repositories.LabelCollections
+@using web.Repositories.LabelCollections.Mappers
 @model web.ViewModels.LabelDesignerViewModel
 @{
     ViewData["Title"] = Model.Design.Name;
     // The default encoder escapes <, > and &, so the JSON is safe inside the <script> block.
-    var seedJson = JsonSerializer.Serialize(new { design = Model.Design, media = Model.Media }, LabelCollectionService.JsonOptions);
+    var seedJson = JsonSerializer.Serialize(new { design = Model.Design, media = Model.Media }, LabelCollectionMapper.JsonOptions);
 }
 
 @*
