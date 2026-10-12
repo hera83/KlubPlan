@@ -2,17 +2,12 @@ using System.Net;
 
 namespace web.Services.AiGateway;
 
-public class AiGatewayHttpClientFactory
+public class AiGatewayHttpClientFactory(IHttpClientFactory httpClientFactory)
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public AiGatewayHttpClientFactory(IHttpClientFactory httpClientFactory)
-    {
-        _httpClientFactory = httpClientFactory;
-    }
-
     public HttpClient Create(string baseUrl, string? apiKey, int requestTimeoutSeconds)
     {
+        // appsettings.json har "BaseUrl": "" - uden dette tjek ville new Uri(...) kaste en
+        // UriFormatException, som ingen controller fanger.
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
             throw new AiGatewayException(HttpStatusCode.InternalServerError,
@@ -20,7 +15,7 @@ public class AiGatewayHttpClientFactory
                 "AiGateway:BaseUrl i appsettings.Production.json) til AiGatewayens URL.");
         }
 
-        var client = _httpClientFactory.CreateClient("AiGateway");
+        var client = httpClientFactory.CreateClient("AiGateway");
         client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/", UriKind.Absolute);
         client.Timeout = TimeSpan.FromSeconds(requestTimeoutSeconds > 0 ? requestTimeoutSeconds : 300);
 
